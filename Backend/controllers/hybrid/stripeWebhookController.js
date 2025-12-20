@@ -123,8 +123,8 @@ const handleWebhook = async (req, res) => {
           }
       
           // Decrease stock safely
-          const newStock = Math.max(product.stock - cartItem.quantity, 0);
-          await product.update({ stock: newStock });
+          const newStock = Math.max(product.quantity - cartItem.quantity, 0);
+          await product.update({ quantity: newStock });
       
           // Record the order item
           await OrderItem.create({
@@ -134,7 +134,7 @@ const handleWebhook = async (req, res) => {
             price: product.price,
           });
       
-          console.log(`Updated stock for ${product.name}: ${product.stock} → ${newStock}`);
+          console.log(`Updated stock for ${product.name}: ${product.quantity} → ${newStock}`);
         })
       );
       
@@ -222,7 +222,7 @@ const cancelCheckoutSession = async (req, res) => {
     });
 
     for (const cartItem of cartItems) {
-      cartItem.product.stock += cartItem.quantity; // Restore stock
+      cartItem.product.quantity += cartItem.quantity; // Restore stock
       await cartItem.product.save();
     }
 
