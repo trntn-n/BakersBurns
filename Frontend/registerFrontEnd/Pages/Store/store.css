@@ -1,5 +1,6 @@
 /* =======================
    Store Component Styles
+   Shopify-ish tiles using your existing CSS variables
    ======================= */
 
 /* Store Container */
@@ -8,137 +9,200 @@
   margin-top: 0%;
   background-color: var(--bg-overlay);
   z-index: 101;
-  height: 100vh;
+
+  min-height: 100vh;   /* ✅ can grow past viewport */
+  height: auto;        /* ✅ don't clamp to 100vh */
   width: 100vw;
 }
-
 
 
 /* Product Grid */
 .store-product-grid {
   display: grid;
-  grid-template-columns: 1fr;
   gap: 16px;
   padding-top: 10vh;
-  
+  padding-left: 16px;
+  padding-right: 16px;
+
+  /* Shopify-ish: fluid columns that wrap */
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  align-items: start;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .store-product-grid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
+    padding-left: 24px;
+    padding-right: 24px;
   }
 }
 
-.store-container__header {
-  font-size: calc(3rem + 2vw);
-  color: var(--header-color);
-  text-align: center;
-}
-/* Product Tile - Horizontal Layout */
+/* Product Tile (Card) */
 .store-product-tile {
-  
   background-color: var(--tile-bg);
   border: 1px solid var(--tile-border);
-  border-radius: 8px;
-  padding: 20px;
+  border-radius: 12px;
   box-shadow: var(--tile-shadow);
+
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  text-align: left;
- 
-  height:100%;
-  width: 80vw;
-  max-width: 600px;
+  flex-direction: column;
+  overflow: hidden;
+
+  width: 100%;
+  max-width: none;
+  margin: 0;
+
   cursor: pointer;
-  margin: 1rem auto;
-  gap: 16px;
+  transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
-/* Product Image */
+.store-product-tile:hover {
+  transform: translateY(-2px);
+}
+
+/* =========================================================
+   Image section (top) - full width + clear divider
+   ========================================================= */
 .store-product-image {
-  flex: 0 0 auto;
-  width: 150px;
-  height: 150px;
+  position: relative;
+  width: 100%;
+
+  /* consistent tile image */
+  aspect-ratio: 1 / 1;
   overflow: hidden;
-  border-radius: 8px;
+
+  /* divider between image and content */
+  border-bottom: 1px solid var(--tile-border);
 }
 
 .store-product-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
-/* Product Info */
+/* Discount badge (overlay) */
+.store-discount-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+
+  padding: 6px 10px;
+  border-radius: 999px;
+
+  font-weight: 700;
+  font-size: 0.85rem;
+
+  /* use your variables */
+  background-color: var(--info-title-bg);
+  color: var(--info-title-color);
+  border: 1px solid var(--tile-border);
+
+  box-shadow: var(--tile-shadow);
+}
+
+/* =========================================================
+   Info section (bottom) - internal borders per row
+   ========================================================= */
 .store-product-info {
-  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  height: 150px;
-  
+  padding: 0; /* we pad per “row” so borders align nicely */
 }
 
+/* Title row */
 .store-product-info__title {
-  font-size: 1.5rem;
-  margin-bottom: 8px;
+  margin: 0;
+  padding: 12px;
+
+  font-size: 1.1rem;
+  font-family: Arial, Helvetica, sans-serif;
+
   color: var(--info-title-color);
   background-color: var(--info-title-bg);
-  padding: 8px;
-  border-radius: 8px;
-  font-family:Arial, Helvetica, sans-serif;
+
+  /* internal divider */
+  border-bottom: 1px solid var(--tile-border);
+
+  /* optional: keep titles tidy */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
+/* Price row */
 .store-product-price {
-  font-size: 1.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+
+  padding: 12px;
+
+  /* internal divider */
+  border-bottom: 1px solid var(--tile-border);
+
+  font-size: 1.2rem;
   font-weight: bold;
+
+  /* keep tile background consistent */
+  background-color: var(--tile-bg);
 }
 
 .store-product-price__original {
+  margin: 0;
   text-decoration: line-through;
   color: red;
-  font-size: 1.2rem;
-  margin-right: 8px;
+  font-size: 1rem;
 }
 
 .store-product-price__active {
+  margin: 0;
   color: white;
-  font-size: 1.5rem;
+  font-size: 1.2rem;
 }
 
 .store-product-price__discounted {
+  margin: 0;
   color: green;
-  font-size: 1.8rem;
+  font-size: 1.25rem;
   font-weight: bold;
 }
 
-/* Sale End Message */
+/* Sale End row */
 .store-sale-end {
-  margin-top: 8px;
+  margin: 0;
+  padding: 10px 12px;
+
   font-size: 0.85rem;
   color: var(--sale-end-color);
   font-weight: bold;
+
+  background-color: var(--tile-bg);
 }
 
 /* Mobile Adjustments */
 @media (max-width: 480px) {
-  .store-product-tile {
-    padding:10%;
-    gap: 8px;
-    max-width: 100%;
+  .store-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding-left: 12px;
+    padding-right: 12px;
   }
-  .store-product-image {
-    width: 100px;
-    height: 100px;
-  }
-  .store-product-info {
-    height: 100px;
-  }
+
   .store-product-info__title {
-    font-size: 1.2rem;
+    font-size: 1rem;
+    padding: 10px;
   }
+
   .store-product-price {
-    font-size: 1.2rem;
+    font-size: 1.05rem;
+    padding: 10px;
+  }
+
+  .store-sale-end {
+    padding: 8px 10px;
   }
 }
