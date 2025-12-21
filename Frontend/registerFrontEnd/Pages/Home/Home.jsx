@@ -149,7 +149,7 @@ const Home = () => {
         viewport={{ once: true, amount: 0.2 }}
         variants={fadeIn}
       >
-        <h2 className="home-title" style={titleStyle}>Get In Touch</h2>
+        <h2 className="home-title" >Get In Touch</h2>
         <p className="contact-description">
           For commissions, inquiries, or collaborations, feel free to contact me. Let's create something beautiful together!
         </p>
@@ -163,7 +163,7 @@ const Home = () => {
           viewport={{ once: true, amount: 0.5 }}
           variants={fadeIn}
         >
-          <motion.h2 className="upcoming-event-title" style={titleStyle}>Upcoming Event</motion.h2>
+          <motion.h2 className="upcoming-event-title">Upcoming Event</motion.h2>
           <h3 className="upcoming-event-name">{upcomingEvent.name}</h3>
           <p className="upcoming-event-date">
             {moment(upcomingEvent.date).format('MMMM Do, YYYY')}
@@ -185,11 +185,11 @@ const Home = () => {
         <div className="about-content">
           <Link  to='/about'>
           <motion.h1 
-            className="home-title"
+            className="about-title"
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 1 }}
-            style={titleStyle}
+           
           >
             About the Artist
           </motion.h1>

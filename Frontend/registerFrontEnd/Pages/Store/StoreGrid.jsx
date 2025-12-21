@@ -63,8 +63,8 @@ const StoreGrid = () => {
                 />
               </div>
               <div className="store-grid-item-info">
-                <h3>{product.name}</h3>
-                <p>${parseFloat(product.price).toFixed(2)}</p>
+                <h3 >{product.name}</h3>
+                <p className="title">${parseFloat(product.price).toFixed(2)}</p>
               </div>
             </div>
           ))
