@@ -1,35 +1,71 @@
+//cartController.js
+'use strict';
+
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
 const GuestCart = require('../../models/guestCart');
 const Product = require('../../models/product');
 const User = require('../../models/user');
-const Token = require('../../models/token'); // Adjust the path as needed
+const Token = require('../../models/token');
+const sequelize = require('../../config/database');
 
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-const stripe = require('stripe')(process.env.STRIPE_TEST_SECRET_KEY);
+const stripeSecretKey = process.env.STRIPE_TEST_SECRET_KEY;
 
-// Add to Guest Cart
+if (!stripeSecretKey) {
+  throw new Error(
+    'Missing STRIPE_TEST_SECRET_KEY environment variable.'
+  );
+}
+
+const stripe = require('stripe')(stripeSecretKey);
+
+/**
+ * Add or update an item in a guest cart.
+ */
 const addToGuestCart = async (req, res) => {
-  const { sessionId, productId, quantity } = req.body;
+  const { sessionId, productId } = req.body;
+  const quantity = Number(req.body.quantity);
 
-  if (!sessionId || !productId || !quantity) {
-    return res.status(400).json({ message: "Session ID, product ID, and quantity are required." });
+  if (
+    !sessionId ||
+    !productId ||
+    !Number.isInteger(quantity)
+  ) {
+    return res.status(400).json({
+      message:
+        'Session ID, product ID, and an integer quantity are required.',
+    });
   }
 
   try {
-    // 🔹 Fetch product details from the database
     const product = await Product.findByPk(productId);
 
     if (!product) {
-      return res.status(404).json({ message: "Product not found." });
+      return res.status(404).json({
+        message: 'Product not found.',
+      });
     }
 
     if (quantity <= 0) {
-      await GuestCart.destroy({ where: { sessionId, productId } });
-      return res.status(200).json({ message: "Item removed from cart." });
+      await GuestCart.destroy({
+        where: {
+          sessionId,
+          productId,
+        },
+      });
+
+      return res.status(200).json({
+        message: 'Item removed from cart.',
+      });
     }
 
-    // 🔹 Check if the product already exists in the guest cart
-    const existingCartItem = await GuestCart.findOne({ where: { sessionId, productId } });
+    const existingCartItem = await GuestCart.findOne({
+      where: {
+        sessionId,
+        productId,
+      },
+    });
 
     if (existingCartItem) {
       existingCartItem.quantity = quantity;
@@ -39,67 +75,77 @@ const addToGuestCart = async (req, res) => {
         sessionId,
         productId,
         quantity,
-        price: product.price,        // Fetch price from Product table
+        price: product.price,
         thumbnail: product.thumbnail,
-        weight: product.weight,      // Fetch weight from Product table
-        length: product.length,      // Fetch length from Product table
-        width: product.width,        // Fetch width from Product table
-        height: product.height,      // Fetch height from Product table
-        unit: product.unit,          // Fetch unit from Product table
+        weight: product.weight,
+        length: product.length,
+        width: product.width,
+        height: product.height,
+        unit: product.unit,
       });
     }
 
-    res.status(200).json({ message: "Item added/updated in cart successfully." });
+    return res.status(200).json({
+      message: 'Item added or updated successfully.',
+    });
   } catch (error) {
-    console.error("Error adding item to guest cart:", error.message, error.stack);
-    res.status(500).json({ message: "Failed to add item to cart." });
+    console.error(
+      'Error adding item to guest cart:',
+      error
+    );
+
+    return res.status(500).json({
+      message: 'Failed to add item to cart.',
+    });
   }
 };
 
-
-
-
-// Get Guest Cart Items
-// Get Guest Cart Items
+/**
+ * Return the contents of a guest cart.
+ */
 const getCartItems = async (req, res) => {
   const { sessionId } = req.body;
 
-  console.log("Received session ID:", sessionId);
-
   if (!sessionId) {
-    return res.status(400).json({ message: "Session ID is required." });
+    return res.status(400).json({
+      message: 'Session ID is required.',
+    });
   }
 
   try {
     const cartItems = await GuestCart.findAll({
-      where: { sessionId },
+      where: {
+        sessionId,
+      },
+      include: [
+        {
+          model: Product,
+          as: 'Product',
+          attributes: ['id', 'name'],
+          required: false,
+        },
+      ],
       attributes: [
-        "productId",
-        "quantity",
-        "price",
-        "thumbnail",
-        "weight",
-        "length",
-        "width",
-        "height",
-        "unit",
-      ], // ✅ Explicitly select fields
+        'productId',
+        'quantity',
+        'price',
+        'thumbnail',
+        'weight',
+        'length',
+        'width',
+        'height',
+        'unit',
+      ],
     });
 
-    console.log("Cart items fetched from DB:", cartItems);
-
-    if (cartItems.length === 0) {
-      return res.status(200).json({ cartDetails: [] });
-    }
-
-    // Build cart response with all necessary details
     const cartDetails = cartItems.map((item) => ({
       id: item.productId,
-      name: `Test`, // Replace this with the actual product name if necessary
-      price: item.price,
+      name: item.Product?.name || 'Unknown product',
+      price: Number(item.price),
       thumbnail: item.thumbnail,
       quantity: item.quantity,
-      total: item.price * item.quantity,
+      total:
+        Number(item.price) * item.quantity,
       weight: item.weight,
       length: item.length,
       width: item.width,
@@ -107,373 +153,807 @@ const getCartItems = async (req, res) => {
       unit: item.unit,
     }));
 
-    console.log("Cart details sent to frontend:", cartDetails); // ✅ Confirm correct data
-
-    res.status(200).json({ cartDetails });
+    return res.status(200).json({
+      cartDetails,
+    });
   } catch (error) {
-    console.error("Error fetching cart items:", error);
-    res.status(500).json({ error: error.message });
+    console.error(
+      'Error fetching guest cart items:',
+      error
+    );
+
+    return res.status(500).json({
+      message: 'Failed to retrieve cart items.',
+      error: error.message,
+    });
   }
 };
 
-
+/**
+ * Delete a single item from a guest cart.
+ */
 const deleteCartItem = async (req, res) => {
   const { sessionId, productId } = req.body;
 
   if (!sessionId || !productId) {
-    return res.status(400).json({ message: 'Session ID and product ID are required.' });
+    return res.status(400).json({
+      message:
+        'Session ID and product ID are required.',
+    });
   }
 
   try {
     const deletedRows = await GuestCart.destroy({
-      where: { sessionId, productId },
+      where: {
+        sessionId,
+        productId,
+      },
     });
 
     if (deletedRows === 0) {
-      return res.status(404).json({ message: 'Cart item not found.' });
-    }
-
-    res.status(200).json({ message: 'Cart item deleted successfully.' });
-  } catch (error) {
-    console.error('Error deleting cart item:', error);
-    res.status(500).json({ message: 'Failed to delete cart item.' });
-  }
-};
-const updateShippingDetails = async (req, res) => {
-  const { sessionId, shippingDetails } = req.body;
-  
-  // Ensure that sessionId and shippingDetails are provided.
-  if (!sessionId || !shippingDetails) {
-    return res.status(400).json({ message: 'Session ID and shipping details are required.' });
-  }
-  
-  const { selectedCarrier, selectedService, shippingCost } = shippingDetails;
-  
-  if (!selectedCarrier || !selectedService || shippingCost === undefined) {
-    return res.status(400).json({ message: 'Incomplete shipping details.' });
-  }
-  
-  try {
-    // Update all rows in the GuestCart for this session.
-    await GuestCart.update(
-      {
-        selectedCarrier,
-        selectedService,
-        shippingCost,
-      },
-      { where: { sessionId } }
-    );
-    
-    return res.status(200).json({ message: 'Shipping details updated successfully.' });
-  } catch (error) {
-    console.error('Error updating shipping details:', error);
-    return res.status(500).json({ message: 'Failed to update shipping details.' });
-  }
-};
-
-// Lock Inventory
-const lockInventory = async (req, res, next) => {
-  const { sessionId } = req.body;
-
-  if (!sessionId) {
-    return res.status(400).json({ message: 'Session ID is required.' });
-  }
-
-  const t = await sequelize.transaction();
-
-  try {
-    const cartItems = await GuestCart.findAll({
-      where: { sessionId },
-      include: [Product],
-      transaction: t,
-      lock: t.LOCK.UPDATE, // prevent concurrent modifications
-    });
-
-    for (const cartItem of cartItems) {
-      const product = cartItem.Product;
-      if (!product) {
-        await t.rollback();
-        return res.status(404).json({ message: `Product ${cartItem.productId} not found.` });
-      }
-
-      if (product.quantity < cartItem.quantity) {
-        await t.rollback();
-        return res.status(400).json({ message: `Not enough stock for ${product.name}.` });
-      }
-
-      product.quantity -= cartItem.quantity;
-      await product.save({ transaction: t });
-    }
-
-    await t.commit();
-    next();
-  } catch (error) {
-    await t.rollback();
-    console.error('Error locking inventory:', error);
-    res.status(500).json({ message: 'Error locking inventory' });
-  }
-};
-
-// Unlock Inventory
-const unlockInventory = async (cartItems) => {
-  try {
-    for (const cartItem of cartItems) {
-      const product = await Product.findByPk(cartItem.productId);
-
-      if (product) {
-        product.quantity += cartItem.quantity;
-        await product.save();
-      }
-    }
-  } catch (error) {
-    console.error('Error unlocking inventory:', error.message, error.stack);
-  }
-};
-
-
-
-const createCheckoutSession = async (req, res) => {
-  try {
-    const { sessionId, metadata } = req.body;
-
-    if (!sessionId) {
-      return res.status(400).json({ message: 'Session ID is required.' });
-    }
-
-    // Validate metadata for acceptance of terms
-    if (
-      !metadata ||
-      !metadata.hasAcceptedPrivacy ||
-      !metadata.hasAcceptedTermsOfService
-    ) {
-      return res.status(400).json({
-        message: 'Must accept Terms and Conditions and Privacy Policy to proceed.',
-        redirect: '/accept-privacy-terms',
+      return res.status(404).json({
+        message: 'Cart item not found.',
       });
     }
 
-    // Retrieve shipping details from the GuestCart (assumes all items share the same shipping info)
-    const shippingInfo = await GuestCart.findOne({
-      where: { sessionId },
-      attributes: ['selectedCarrier', 'selectedService', 'shippingCost'],
+    return res.status(200).json({
+      message: 'Cart item deleted successfully.',
     });
-
-    if (
-      !shippingInfo ||
-      !shippingInfo.selectedCarrier ||
-      !shippingInfo.selectedService ||
-      shippingInfo.shippingCost == null
-    ) {
-      return res.status(400).json({ message: 'Shipping details are incomplete.' });
-    }
-
-    // Fetch cart items with associated product details
-    const cartItems = await GuestCart.findAll({
-      where: { sessionId },
-      include: [
-        {
-          model: Product,
-          as: 'Product',
-        },
-      ],
-    });
-
-    if (cartItems.length === 0) {
-      return res.status(400).json({ message: 'Cart is empty.' });
-    }
-
-    // OPTIONAL: Light inventory check
-    // (We do NOT subtract here - real lock/inventory decrement happens post-payment in the success flow or webhook.)
-    for (const cartItem of cartItems) {
-      const product = cartItem.Product;
-      if (!product) {
-        return res
-          .status(404)
-          .json({ message: `Product with ID ${cartItem.productId} not found.` });
-      }
-      if (product.quantity < cartItem.quantity) {
-        return res
-          .status(400)
-          .json({ message: `Not enough quantity for ${product.name}.` });
-      }
-    }
-
-    // Prepare Stripe line items from the cart items
-    const lineItems = cartItems.map((item) => ({
-      price_data: {
-        currency: 'usd',
-        product_data: {
-          name: item.Product.name,
-          images: [`${process.env.BASE_URL}/uploads/${item.Product.thumbnail}`],
-        },
-        unit_amount: Math.round(item.Product.price * 100), // in cents
-      },
-      quantity: item.quantity,
-    }));
-     
-
-    // Add a separate shipping line item
-    const shippingLineItem = {
-      price_data: {
-        currency: 'usd',
-        product_data: {
-          name: `Shipping (${shippingInfo.selectedCarrier} - ${shippingInfo.selectedService})`,
-        },
-        unit_amount: Math.round(shippingInfo.shippingCost * 100), // in cents
-      },
-      quantity: 1,
-    };
-
-    lineItems.push(shippingLineItem);
-
-    //Payment transfer to connected account
-    const connectedAccountId = process.env.BAKERS_BURNS_ACCOUNT_ID;
-    if(!connectedAccountId || !connectedAccountId.startsWith("acct_")) {
-      return res.status(500).json({
-        message: '[FAILED] process.env.BAKERS_BURNS_ACCOUNT_ID  is null or invalid check environment variables.',
-      })
-
-    }
-    const stripeMetadata = {
-      sessionId: String(sessionId),
-      hasAcceptedPrivacy: String(metadata.hasAcceptedPrivacy),
-      hasAcceptedTermsOfService: String(metadata.hasAcceptedTermsOfService),
-      selectedCarrier: String(shippingInfo.selectedCarrier),
-      selectedService: String(shippingInfo.selectedService),
-      shippingCost: String(shippingInfo.shippingCost),
-    };
-
-    const paymentIntentData = {
-      transfer_data: {
-        destination: connectedAccountId,
-      },
-      metadata: stripeMetadata,
-    }
-    // Create Stripe checkout session
-    // (No expires_at since Stripe requires min 30 minutes. We'll rely on default or remove it entirely.)
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: lineItems,
-      mode: 'payment',
-
-      metadata: stripeMetadata,
-
-      payment_intent_data: paymentIntentData,
-      // Remove expires_at or set to a value >= 30 minutes. For typical usage, omit it entirely.
-      expires_at: Math.floor(Date.now() / 1000) + 60 * 30, // optional if you want a 30-min expiry
-
-      success_url: `${process.env.REGISTER_FRONTEND}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.REGISTER_FRONTEND}/cancel?session_id={CHECKOUT_SESSION_ID}`,
-
-      shipping_address_collection: {
-        allowed_countries: ['US', 'CA'],
-      },
-      billing_address_collection: 'required',
-    });
-
-    console.log('✅ Stripe Session Created:', session.id);
-    res.status(200).json({ url: session.url });
   } catch (error) {
-    console.error('❌ Error creating checkout session:', error);
-    res.status(500).json({ message: 'Error creating checkout session' });
+    console.error(
+      'Error deleting guest cart item:',
+      error
+    );
+
+    return res.status(500).json({
+      message: 'Failed to delete cart item.',
+    });
   }
 };
 
+/**
+ * Save shipping information for every item
+ * associated with the guest session.
+ */
+const updateShippingDetails = async (req, res) => {
+  const {
+    sessionId,
+    shippingDetails,
+  } = req.body;
 
+  if (!sessionId || !shippingDetails) {
+    return res.status(400).json({
+      message:
+        'Session ID and shipping details are required.',
+    });
+  }
 
+  const {
+    selectedCarrier,
+    selectedService,
+    shippingCost,
+  } = shippingDetails;
 
-// Cancel Checkout Session
-const cancelCheckoutSession = async (req, res) => {
+  const parsedShippingCost =
+    Number(shippingCost);
+
+  if (
+    !selectedCarrier ||
+    !selectedService ||
+    !Number.isFinite(parsedShippingCost) ||
+    parsedShippingCost < 0
+  ) {
+    return res.status(400).json({
+      message:
+        'Shipping details are incomplete or invalid.',
+    });
+  }
+
   try {
-    const { sessionId } = req.body;
+    const [updatedRows] =
+      await GuestCart.update(
+        {
+          selectedCarrier,
+          selectedService,
+          shippingCost: parsedShippingCost,
+        },
+        {
+          where: {
+            sessionId,
+          },
+        }
+      );
+
+    if (updatedRows === 0) {
+      return res.status(404).json({
+        message:
+          'No cart items were found for this session.',
+      });
+    }
+
+    return res.status(200).json({
+      message:
+        'Shipping details updated successfully.',
+    });
+  } catch (error) {
+    console.error(
+      'Error updating shipping details:',
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        'Failed to update shipping details.',
+    });
+  }
+};
+
+/**
+ * Reserve inventory before checkout.
+ *
+ * Only use this middleware if your route calls
+ * lockInventory before createCheckoutSession.
+ */
+const lockInventory = async (
+  req,
+  res,
+  next
+) => {
+  const { sessionId } = req.body;
+
+  if (!sessionId) {
+    return res.status(400).json({
+      message: 'Session ID is required.',
+    });
+  }
+
+  const transaction =
+    await sequelize.transaction();
+
+  try {
+    const cartItems =
+      await GuestCart.findAll({
+        where: {
+          sessionId,
+        },
+        include: [
+          {
+            model: Product,
+            as: 'Product',
+            required: true,
+          },
+        ],
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+    if (cartItems.length === 0) {
+      await transaction.rollback();
+
+      return res.status(400).json({
+        message: 'Cart is empty.',
+      });
+    }
+
+    for (const cartItem of cartItems) {
+      const product = cartItem.Product;
+
+      if (
+        product.quantity <
+        cartItem.quantity
+      ) {
+        await transaction.rollback();
+
+        return res.status(400).json({
+          message:
+            `Not enough quantity for ${product.name}.`,
+        });
+      }
+
+      product.quantity -=
+        cartItem.quantity;
+
+      await product.save({
+        transaction,
+      });
+    }
+
+    await transaction.commit();
+
+    return next();
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+
+    console.error(
+      'Error locking inventory:',
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        'Failed to reserve inventory.',
+    });
+  }
+};
+
+/**
+ * Restore inventory previously reserved by
+ * lockInventory.
+ */
+const unlockInventory = async (
+  cartItems
+) => {
+  const transaction =
+    await sequelize.transaction();
+
+  try {
+    for (const cartItem of cartItems) {
+      const product =
+        await Product.findByPk(
+          cartItem.productId,
+          {
+            transaction,
+            lock:
+              transaction.LOCK.UPDATE,
+          }
+        );
+
+      if (!product) {
+        console.warn(
+          `Unable to restore inventory. ` +
+          `Product ${cartItem.productId} was not found.`
+        );
+
+        continue;
+      }
+
+      product.quantity +=
+        cartItem.quantity;
+
+      await product.save({
+        transaction,
+      });
+    }
+
+    await transaction.commit();
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+
+    console.error(
+      'Error unlocking inventory:',
+      error
+    );
+
+    throw error;
+  }
+};
+
+/**
+ * Create a Stripe Checkout Session for a
+ * guest cart.
+ *
+ * The resulting PaymentIntent uses a destination
+ * charge to transfer the payment to the Bakers
+ * Burns connected account.
+ */
+const createCheckoutSession = async (
+  req,
+  res
+) => {
+  try {
+    const {
+      sessionId,
+      metadata,
+    } = req.body;
 
     if (!sessionId) {
-      console.error("No sessionId provided in request.");
-      return res.status(400).json({ message: 'Session ID is required.' });
+      return res.status(400).json({
+        message:
+          'Session ID is required.',
+      });
     }
 
-    console.log("Received sessionId:", sessionId);
+    if (
+      metadata?.hasAcceptedPrivacy !==
+        true ||
+      metadata
+        ?.hasAcceptedTermsOfService !==
+        true
+    ) {
+      return res.status(400).json({
+        message:
+          'You must accept the Terms of Service and Privacy Policy to continue.',
+        redirect:
+          '/accept-privacy-terms',
+      });
+    }
 
-    const cartItems = await GuestCart.findAll({
-      where: { sessionId },
-      include: [{ model: Product, as: 'Product' }],
-    });
+    const shippingInfo =
+      await GuestCart.findOne({
+        where: {
+          sessionId,
+        },
+        attributes: [
+          'selectedCarrier',
+          'selectedService',
+          'shippingCost',
+        ],
+      });
 
-    console.log("Cart Items Fetched:", cartItems);
+    const shippingCost = Number(
+      shippingInfo?.shippingCost
+    );
+
+    if (
+      !shippingInfo?.selectedCarrier ||
+      !shippingInfo?.selectedService ||
+      !Number.isFinite(shippingCost) ||
+      shippingCost < 0
+    ) {
+      return res.status(400).json({
+        message:
+          'Shipping details are incomplete or invalid.',
+      });
+    }
+
+    const cartItems =
+      await GuestCart.findAll({
+        where: {
+          sessionId,
+        },
+        include: [
+          {
+            model: Product,
+            as: 'Product',
+            required: true,
+          },
+        ],
+      });
 
     if (cartItems.length === 0) {
-      console.error(`No cart items found for sessionId: ${sessionId}`);
-      return res.status(400).json({ message: 'No cart data found for session' });
+      return res.status(400).json({
+        message: 'Cart is empty.',
+      });
     }
 
-    // Unlock inventory
     for (const cartItem of cartItems) {
-      const product = cartItem.Product;
-      if (product) {
-        product.quantity += cartItem.quantity;
-        await product.save();
-        console.log(
-          `Unlocked inventory for product: ${product.name}, quantity restored: ${cartItem.quantity}`
-        );
+      const product =
+        cartItem.Product;
+
+      if (
+        product.quantity <
+        cartItem.quantity
+      ) {
+        return res.status(400).json({
+          message:
+            `Not enough quantity for ${product.name}.`,
+        });
       }
     }
 
-    res.status(200).json({ message: 'Inventory unlocked successfully' });
+    const lineItems = cartItems.map(
+      (item) => {
+        const productPrice =
+          Number(item.Product.price);
+
+        if (
+          !Number.isFinite(productPrice) ||
+          productPrice < 0
+        ) {
+          throw new Error(
+            `Invalid price for product ${item.Product.id}.`
+          );
+        }
+
+        const imageUrl =
+          item.Product.thumbnail &&
+          process.env.BASE_URL
+            ? `${process.env.BASE_URL}/uploads/${item.Product.thumbnail}`
+            : undefined;
+
+        return {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name:
+                item.Product.name,
+              ...(imageUrl
+                ? {
+                    images: [
+                      imageUrl,
+                    ],
+                  }
+                : {}),
+            },
+            unit_amount:
+              Math.round(
+                productPrice * 100
+              ),
+          },
+          quantity:
+            item.quantity,
+        };
+      }
+    );
+
+    lineItems.push({
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name:
+            `Shipping (` +
+            `${shippingInfo.selectedCarrier} - ` +
+            `${shippingInfo.selectedService})`,
+        },
+        unit_amount:
+          Math.round(
+            shippingCost * 100
+          ),
+      },
+      quantity: 1,
+    });
+
+    const connectedAccountId =
+      process.env
+        .BAKERS_BURNS_ACCOUNT_ID;
+
+    if (
+      !connectedAccountId?.startsWith(
+        'acct_'
+      )
+    ) {
+      console.error(
+        'BAKERS_BURNS_ACCOUNT_ID is missing or invalid.'
+      );
+
+      return res.status(500).json({
+        message:
+          'The connected Stripe account is not configured correctly.',
+      });
+    }
+
+    /*
+     * This confirms which connected account
+     * Stripe sees and prints its capabilities.
+     *
+     * Remove or reduce this logging after the
+     * transfer capability issue is resolved.
+     */
+    const connectedAccount =
+      await stripe.accounts.retrieve(
+        connectedAccountId
+      );
+
+    console.log(
+      '========== STRIPE CONNECTED ACCOUNT =========='
+    );
+
+    console.log({
+      id:
+        connectedAccount.id,
+      type:
+        connectedAccount.type,
+      capabilities:
+        connectedAccount.capabilities,
+      charges_enabled:
+        connectedAccount.charges_enabled,
+      payouts_enabled:
+        connectedAccount.payouts_enabled,
+      currently_due:
+        connectedAccount.requirements
+          ?.currently_due,
+      pending_verification:
+        connectedAccount.requirements
+          ?.pending_verification,
+      disabled_reason:
+        connectedAccount.requirements
+          ?.disabled_reason,
+    });
+
+    console.log(
+      '=============================================='
+    );
+
+    const stripeMetadata = {
+      sessionId:
+        String(sessionId),
+      hasAcceptedPrivacy:
+        'true',
+      hasAcceptedTermsOfService:
+        'true',
+      selectedCarrier:
+        String(
+          shippingInfo.selectedCarrier
+        ),
+      selectedService:
+        String(
+          shippingInfo.selectedService
+        ),
+      shippingCost:
+        String(shippingCost),
+    };
+
+    const checkoutSession =
+      await stripe.checkout.sessions.create(
+        {
+          payment_method_types: [
+            'card',
+          ],
+
+          mode: 'payment',
+
+          line_items:
+            lineItems,
+
+          metadata:
+            stripeMetadata,
+
+          payment_intent_data: {
+            transfer_data: {
+              destination:
+                connectedAccountId,
+            },
+
+            metadata:
+              stripeMetadata,
+          },
+
+          expires_at:
+            Math.floor(
+              Date.now() / 1000
+            ) +
+            60 * 30,
+
+          success_url:
+            `${process.env.REGISTER_FRONTEND}/success` +
+            '?session_id={CHECKOUT_SESSION_ID}',
+
+          cancel_url:
+            `${process.env.REGISTER_FRONTEND}/cancel` +
+            '?session_id={CHECKOUT_SESSION_ID}',
+
+          shipping_address_collection: {
+            allowed_countries: [
+              'US',
+              'CA',
+            ],
+          },
+
+          billing_address_collection:
+            'required',
+        }
+      );
+
+    console.log(
+      'Stripe Checkout Session created:',
+      checkoutSession.id
+    );
+
+    return res.status(200).json({
+      url:
+        checkoutSession.url,
+      sessionId:
+        checkoutSession.id,
+    });
   } catch (error) {
-    console.error('Error unlocking inventory:', error);
-    res.status(500).json({ message: 'Failed to unlock inventory' });
+    console.error(
+      'Error creating Stripe Checkout Session:',
+      {
+        type:
+          error.type,
+        code:
+          error.code,
+        message:
+          error.message,
+        requestId:
+          error.requestId,
+      }
+    );
+
+    return res.status(500).json({
+      message:
+        'Failed to create Checkout Session.',
+      error:
+        error.message,
+    });
   }
 };
-const setPassword = async (req, res) => {
-  const { token, password } = req.body;
 
-  if (!token || !password) {
-    return res.status(400).json({ message: 'Token and password are required' });
+/**
+ * Restore inventory when a checkout that previously
+ * reserved inventory is canceled.
+ *
+ * Do not use this inventory restoration unless
+ * lockInventory ran before checkout creation.
+ */
+const cancelCheckoutSession = async (
+  req,
+  res
+) => {
+  const { sessionId } = req.body;
+
+  if (!sessionId) {
+    return res.status(400).json({
+      message:
+        'Session ID is required.',
+    });
   }
 
   try {
-    // Step 1: Verify the token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const email = decoded.email;
+    const cartItems =
+      await GuestCart.findAll({
+        where: {
+          sessionId,
+        },
+      });
 
-    // Step 2: Validate the token in the database
-    const storedToken = await Token.findOne({ where: { token, type: 'password_setup' } });
-    if (!storedToken || new Date(storedToken.expiresAt) < new Date()) {
-      return res.status(400).json({ message: 'Invalid or expired token' });
+    if (cartItems.length === 0) {
+      return res.status(404).json({
+        message:
+          'No cart data was found for this session.',
+      });
     }
 
-    // Step 3: Validate the user exists
-    const user = await User.findOne({ where: { email } });
+    await unlockInventory(
+      cartItems
+    );
+
+    return res.status(200).json({
+      message:
+        'Reserved inventory restored successfully.',
+    });
+  } catch (error) {
+    console.error(
+      'Error canceling checkout:',
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        'Failed to restore inventory.',
+    });
+  }
+};
+
+/**
+ * Convert a guest user into a registered user
+ * by setting a password.
+ */
+const setPassword = async (
+  req,
+  res
+) => {
+  const {
+    token,
+    password,
+  } = req.body;
+
+  if (!token || !password) {
+    return res.status(400).json({
+      message:
+        'Token and password are required.',
+    });
+  }
+
+  try {
+    const decoded =
+      jwt.verify(
+        token,
+        process.env.JWT_SECRET
+      );
+
+    const email =
+      decoded.email;
+
+    if (!email) {
+      return res.status(400).json({
+        message:
+          'The password-setup token does not contain an email address.',
+      });
+    }
+
+    const storedToken =
+      await Token.findOne({
+        where: {
+          token,
+          type:
+            'password_setup',
+        },
+      });
+
+    if (
+      !storedToken ||
+      new Date(
+        storedToken.expiresAt
+      ) < new Date()
+    ) {
+      return res.status(400).json({
+        message:
+          'Invalid or expired token.',
+      });
+    }
+
+    const user =
+      await User.findOne({
+        where: {
+          email,
+        },
+      });
+
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({
+        message:
+          'User not found.',
+      });
     }
 
-    // Step 4: Hash the new password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password =
+      await bcrypt.hash(
+        password,
+        10
+      );
 
-    // Step 5: Update the user’s password
-    user.password = hashedPassword;
-    user.isGuest = false; // Convert guest to registered user
+    user.isGuest = false;
+
     await user.save();
 
-    // Step 6: Remove the token from the database
-    await Token.destroy({ where: { token } });
+    await Token.destroy({
+      where: {
+        token,
+        type:
+          'password_setup',
+      },
+    });
 
-    return res.status(200).json({ message: 'Password has been set successfully. You can now log in.' });
+    return res.status(200).json({
+      message:
+        'Password set successfully. You can now log in.',
+    });
   } catch (error) {
-    console.error('Error in setPassword:', error.message);
-    return res.status(500).json({ message: 'An error occurred while setting the password.' });
+    console.error(
+      'Error setting password:',
+      error
+    );
+
+    if (
+      error.name ===
+      'JsonWebTokenError'
+    ) {
+      return res.status(400).json({
+        message:
+          'Invalid password-setup token.',
+      });
+    }
+
+    if (
+      error.name ===
+      'TokenExpiredError'
+    ) {
+      return res.status(400).json({
+        message:
+          'Password-setup token has expired.',
+      });
+    }
+
+    return res.status(500).json({
+      message:
+        'Failed to set password.',
+    });
   }
 };
 
 module.exports = {
   addToGuestCart,
   getCartItems,
+  deleteCartItem,
+  updateShippingDetails,
   lockInventory,
   unlockInventory,
   createCheckoutSession,
   cancelCheckoutSession,
-  deleteCartItem,
-  setPassword, 
-  updateShippingDetails
+  setPassword,
 };
