@@ -176,6 +176,8 @@ updateCookieBeforeCheckout();
               >
                 Agree
               </button>
+              
+              <p style={{marginTop: 20, padding:10}}>You must scroll to the bottom to click agree</p>
               <button onClick={handleDisagree}>I Don't Agree</button>
             </div>
           </div>
@@ -196,6 +198,8 @@ updateCookieBeforeCheckout();
               >
                 Agree
               </button>
+              
+              <p style={{marginTop: 20, padding:10}}>You must scroll to the bottom to click agree</p>
               <button onClick={handleDisagree}>I Don't Agree</button>
             </div>
           </div>
