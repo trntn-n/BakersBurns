@@ -24,6 +24,7 @@ const { encrypt } = require('../../utils/encrypt');
 const { sendOrderEmail } = require('../../utils/orderEmail');
 const {unlockInventory} = require('../register/cartController');
 const { v4: uuidv4 } = require('uuid');
+const {sequelize } = require('../../models/index');
 
 const handleWebhook = async (req, res) => {
   const signature = req.headers['stripe-signature'];
