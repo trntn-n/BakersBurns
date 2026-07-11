@@ -1,4 +1,4 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = require('stripe')(process.env.STRIPE_TEST_SECRET_KEY);
 const Cart = require('../../models/cart');
 const Product = require('../../models/product');
 const sequelize = require('../../config/database');
@@ -148,7 +148,21 @@ const createCheckoutSession = async (req, res) => {
       quantity: item.quantity,
     }));
     const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60;
-
+    const account = await stripe.accounts.retrieve(
+      process.env.BAKERS_BURNS_ACCOUNT_ID
+    );
+    
+    console.log("========== STRIPE CONNECTED ACCOUNT ==========");
+    console.log({
+      id: account.id,
+      capabilities: account.capabilities,
+      charges_enabled: account.charges_enabled,
+      payouts_enabled: account.payouts_enabled,
+      currently_due: account.requirements?.currently_due,
+      pending_verification: account.requirements?.pending_verification,
+      disabled_reason: account.requirements?.disabled_reason,
+    });
+    console.log("==============================================");
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],

@@ -5,7 +5,7 @@ const Token = require('../../models/token'); // Adjust the path as needed
 
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = require('stripe')(process.env.STRIPE_TEST_SECRET_KEY);
 
 // Add to Guest Cart
 const addToGuestCart = async (req, res) => {
