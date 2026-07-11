@@ -1,5 +1,16 @@
 //stripeWebhookController.js
-const stripe = require('stripe')(process.env.STRIPE_TEST_SECRET_KEY);
+const stripe_mode = process.env.STRIPE_MODE === "test"
+let stripe_m, stripe_webhook_m;
+
+if(stripe_mode) {
+  stripe_m = process.env.STRIPE_TEST_SECRET_KEY;
+  stripe_webhook_m = process.env.STRIPE_TEST_WEBHOOK_SECRET;
+} else {
+  stripe_m = process.env.STRIPE_SECRET_KEY;
+  stripe_webhook_m = process.env.STRIPE_WEBHOOK_SECRET;
+}
+
+const stripe = require('stripe')(stripe_m);
 const Order = require('../../models/order');
 const Product = require('../../models/product');
 const Cart = require('../../models/cart');
@@ -17,9 +28,7 @@ const { v4: uuidv4 } = require('uuid');
 const handleWebhook = async (req, res) => {
   const signature = req.headers['stripe-signature'];
 
-  const webhookSecret =
-    process.env.STRIPE_TEST_WEBHOOK_SECRET ||
-    process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = stripe_webhook_m;
 
   if (!webhookSecret) {
     console.error('Stripe webhook secret is missing.');

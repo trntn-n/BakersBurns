@@ -1,6 +1,12 @@
 //cartController.js
 'use strict';
-
+const stripe_mode = process.env.STRIPE_MODE === "test";
+let stripe_m;
+if (stripe_mode) {
+  stripe_m = process.env.STRIPE_TEST_SECRET_KEY;
+} else {
+  stripe_m = process.env.STRIPE_SECRET_KEY;
+}
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -10,15 +16,13 @@ const User = require('../../models/user');
 const Token = require('../../models/token');
 const sequelize = require('../../config/database');
 
-const stripeSecretKey = process.env.STRIPE_TEST_SECRET_KEY;
-
-if (!stripeSecretKey) {
+if (!stripe_m) {
   throw new Error(
     'Missing STRIPE_TEST_SECRET_KEY environment variable.'
   );
 }
 
-const stripe = require('stripe')(stripeSecretKey);
+const stripe = require('stripe')(stripe_m);
 
 /**
  * Add or update an item in a guest cart.
