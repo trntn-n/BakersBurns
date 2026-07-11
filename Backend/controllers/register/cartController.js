@@ -310,6 +310,7 @@ const createCheckoutSession = async (req, res) => {
       },
       quantity: item.quantity,
     }));
+     
 
     // Add a separate shipping line item
     const shippingLineItem = {
@@ -325,25 +326,45 @@ const createCheckoutSession = async (req, res) => {
 
     lineItems.push(shippingLineItem);
 
+    //Payment transfer to connected account
+    const connectedAccountId = process.env.BAKERS_BURNS_ACCOUNT_ID;
+    if(!connectedAccountId || !connectedAccountId.startsWith("acct_")) {
+      return res.status(500).json({
+        message: '[FAILED] process.env.BAKERS_BURNS_ACCOUNT_ID  is null or invalid check environment variables.',
+      })
+
+    }
+    const stripeMetadata = {
+      sessionId: String(sessionId),
+      hasAcceptedPrivacy: String(metadata.hasAcceptedPrivacy),
+      hasAcceptedTermsOfService: String(metadata.hasAcceptedTermsOfService),
+      selectedCarrier: String(shippingInfo.selectedCarrier),
+      selectedService: String(shippingInfo.selectedService),
+      shippingCost: String(shippingInfo.shippingCost),
+    };
+
+    const paymentIntentData = {
+      transfer_data: {
+        destination: connectedAccountId,
+      },
+      metadata: stripeMetadata,
+    }
     // Create Stripe checkout session
     // (No expires_at since Stripe requires min 30 minutes. We'll rely on default or remove it entirely.)
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
+
+      metadata: stripeMetadata,
+
+      payment_intent_data: paymentIntentData,
       // Remove expires_at or set to a value >= 30 minutes. For typical usage, omit it entirely.
       expires_at: Math.floor(Date.now() / 1000) + 60 * 30, // optional if you want a 30-min expiry
 
       success_url: `${process.env.REGISTER_FRONTEND}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.REGISTER_FRONTEND}/cancel?session_id={CHECKOUT_SESSION_ID}`,
-      metadata: {
-        sessionId,
-        hasAcceptedPrivacy: metadata.hasAcceptedPrivacy,
-        hasAcceptedTermsOfService: metadata.hasAcceptedTermsOfService,
-        selectedCarrier: shippingInfo.selectedCarrier,
-        selectedService: shippingInfo.selectedService,
-        shippingCost: shippingInfo.shippingCost,
-      },
+
       shipping_address_collection: {
         allowed_countries: ['US', 'CA'],
       },

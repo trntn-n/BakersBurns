@@ -37,7 +37,7 @@ async function fixDatabaseEntries() {
     { model: Gallery, field: 'image' },
     { model: SocialLink, field: 'image' },
   ];
-
+ 
   for (const { model, field } of models) {
     try {
       const records = await model.findAll({

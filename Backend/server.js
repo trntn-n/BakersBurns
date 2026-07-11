@@ -218,12 +218,6 @@ app.use('/admin', express.static(path.join(__dirname, 'public/admin')));
 app.use('/terms-of-service', express.static(path.join(__dirname, 'public/static/terms-of-service.html')));
 app.use('/privacy-policy', express.static(path.join(__dirname, 'public/static/privacy-policy.html')));
 
-
-
-
-
-
-
 // Error handling
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -234,8 +228,6 @@ app.use((req, res, next) => {
   res.status(404).json({ message: 'Not Found' });
 });
 
-
-
 //CRON
 const { checkShippedOrders } = require("./controllers/carrier/cronjobs/upsCronJob.js");
 const { checkShippedOrdersUsps } = require("./controllers/carrier/cronjobs/uspsCronJob.js");
@@ -243,10 +235,6 @@ const {startDiscountCron} = require('./controllers/admin/cron/discountCronJob.js
 const cleanupMediaCron = require('./utils/mediaCronJob');
 const scheduleCronJob = require('./utils/ordersCronJob');
 const { register } = require('module');
-
-
-
-
 
 cron.schedule('* * * * *', () => {
   console.log('Cron job running every minute...');

@@ -1,3 +1,4 @@
+//stripeWebhookController.js
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Order = require('../../models/order');
 const Product = require('../../models/product');
