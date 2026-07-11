@@ -440,49 +440,53 @@ const unlockInventory = async (
  * charge to transfer the payment to the Bakers
  * Burns connected account.
  */
-const createCheckoutSession = async (
-  req,
-  res
-) => {
+const createCheckoutSession = async (req, res) => {
   try {
-    const {
-      sessionId,
-      metadata,
-    } = req.body;
+    const { sessionId, metadata } = req.body;
 
     if (!sessionId) {
       return res.status(400).json({
-        message:
-          'Session ID is required.',
+        message: 'Session ID is required.',
       });
     }
 
     if (
-      metadata?.hasAcceptedPrivacy !==
-        true ||
-      metadata
-        ?.hasAcceptedTermsOfService !==
-        true
+      metadata?.hasAcceptedPrivacy !== true ||
+      metadata?.hasAcceptedTermsOfService !== true
     ) {
       return res.status(400).json({
         message:
           'You must accept the Terms of Service and Privacy Policy to continue.',
-        redirect:
-          '/accept-privacy-terms',
+        redirect: '/accept-privacy-terms',
       });
     }
 
-    const shippingInfo =
-      await GuestCart.findOne({
-        where: {
-          sessionId,
-        },
-        attributes: [
-          'selectedCarrier',
-          'selectedService',
-          'shippingCost',
-        ],
-      });
+    if (!process.env.REGISTER_FRONTEND) {
+      throw new Error('Missing REGISTER_FRONTEND environment variable.');
+    }
+
+    /*
+     * Bakers Burns is a Standard connected account.
+     * We create the Checkout Session directly on that account
+     * instead of using transfer_data.destination.
+     */
+    const connectedAccountId =
+      process.env.BAKERS_BURNS_ACCOUNT_ID;
+
+    if (!connectedAccountId?.startsWith('acct_')) {
+      throw new Error(
+        'BAKERS_BURNS_ACCOUNT_ID is missing or invalid.'
+      );
+    }
+
+    const shippingInfo = await GuestCart.findOne({
+      where: { sessionId },
+      attributes: [
+        'selectedCarrier',
+        'selectedService',
+        'shippingCost',
+      ],
+    });
 
     const shippingCost = Number(
       shippingInfo?.shippingCost
@@ -495,24 +499,20 @@ const createCheckoutSession = async (
       shippingCost < 0
     ) {
       return res.status(400).json({
-        message:
-          'Shipping details are incomplete or invalid.',
+        message: 'Shipping details are incomplete or invalid.',
       });
     }
 
-    const cartItems =
-      await GuestCart.findAll({
-        where: {
-          sessionId,
+    const cartItems = await GuestCart.findAll({
+      where: { sessionId },
+      include: [
+        {
+          model: Product,
+          as: 'Product',
+          required: true,
         },
-        include: [
-          {
-            model: Product,
-            as: 'Product',
-            required: true,
-          },
-        ],
-      });
+      ],
+    });
 
     if (cartItems.length === 0) {
       return res.status(400).json({
@@ -521,191 +521,134 @@ const createCheckoutSession = async (
     }
 
     for (const cartItem of cartItems) {
-      const product =
-        cartItem.Product;
+      const product = cartItem.Product;
 
-      if (
-        product.quantity <
-        cartItem.quantity
-      ) {
+      if (!product) {
+        return res.status(404).json({
+          message:
+            `Product ${cartItem.productId} could not be found.`,
+        });
+      }
+
+      if (cartItem.quantity <= 0) {
         return res.status(400).json({
           message:
-            `Not enough quantity for ${product.name}.`,
+            `Invalid quantity for ${product.name}.`,
         });
+      }
+
+      if (product.quantity < cartItem.quantity) {
+        return res.status(400).json({
+          message:
+            `Not enough quantity available for ${product.name}.`,
+        });
+      }
+
+      const productPrice = Number(product.price);
+
+      if (
+        !Number.isFinite(productPrice) ||
+        productPrice < 0
+      ) {
+        throw new Error(
+          `Invalid price for product ${product.id}.`
+        );
       }
     }
 
-    const lineItems = cartItems.map(
-      (item) => {
-        const productPrice =
-          Number(item.Product.price);
+    const lineItems = cartItems.map((cartItem) => {
+      const product = cartItem.Product;
+      const productPrice = Number(product.price);
 
-        if (
-          !Number.isFinite(productPrice) ||
-          productPrice < 0
-        ) {
-          throw new Error(
-            `Invalid price for product ${item.Product.id}.`
-          );
-        }
+      const imageUrl =
+        product.thumbnail && process.env.BASE_URL
+          ? `${process.env.BASE_URL}/uploads/${product.thumbnail}`
+          : null;
 
-        const imageUrl =
-          item.Product.thumbnail &&
-          process.env.BASE_URL
-            ? `${process.env.BASE_URL}/uploads/${item.Product.thumbnail}`
-            : undefined;
+      return {
+        price_data: {
+          currency: 'usd',
 
-        return {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name:
-                item.Product.name,
-              ...(imageUrl
-                ? {
-                    images: [
-                      imageUrl,
-                    ],
-                  }
-                : {}),
-            },
-            unit_amount:
-              Math.round(
-                productPrice * 100
-              ),
+          product_data: {
+            name: product.name,
+
+            ...(imageUrl
+              ? {
+                  images: [imageUrl],
+                }
+              : {}),
           },
-          quantity:
-            item.quantity,
-        };
-      }
-    );
+
+          unit_amount: Math.round(productPrice * 100),
+        },
+
+        quantity: cartItem.quantity,
+      };
+    });
 
     lineItems.push({
       price_data: {
         currency: 'usd',
+
         product_data: {
           name:
             `Shipping (` +
             `${shippingInfo.selectedCarrier} - ` +
             `${shippingInfo.selectedService})`,
         },
-        unit_amount:
-          Math.round(
-            shippingCost * 100
-          ),
+
+        unit_amount: Math.round(shippingCost * 100),
       },
+
       quantity: 1,
     });
 
-    const connectedAccountId =
-      process.env
-        .BAKERS_BURNS_ACCOUNT_ID;
-
-    if (
-      !connectedAccountId?.startsWith(
-        'acct_'
-      )
-    ) {
-      console.error(
-        'BAKERS_BURNS_ACCOUNT_ID is missing or invalid.'
-      );
-
-      return res.status(500).json({
-        message:
-          'The connected Stripe account is not configured correctly.',
-      });
-    }
-
-    /*
-     * This confirms which connected account
-     * Stripe sees and prints its capabilities.
-     *
-     * Remove or reduce this logging after the
-     * transfer capability issue is resolved.
-     */
-    const connectedAccount =
-      await stripe.accounts.retrieve(
-        connectedAccountId
-      );
-
-    console.log(
-      '========== STRIPE CONNECTED ACCOUNT =========='
-    );
-
-    console.log({
-      id:
-        connectedAccount.id,
-      type:
-        connectedAccount.type,
-      capabilities:
-        connectedAccount.capabilities,
-      charges_enabled:
-        connectedAccount.charges_enabled,
-      payouts_enabled:
-        connectedAccount.payouts_enabled,
-      currently_due:
-        connectedAccount.requirements
-          ?.currently_due,
-      pending_verification:
-        connectedAccount.requirements
-          ?.pending_verification,
-      disabled_reason:
-        connectedAccount.requirements
-          ?.disabled_reason,
-    });
-
-    console.log(
-      '=============================================='
-    );
-
     const stripeMetadata = {
-      sessionId:
-        String(sessionId),
-      hasAcceptedPrivacy:
-        'true',
-      hasAcceptedTermsOfService:
-        'true',
+      sessionId: String(sessionId),
+      connectedAccountId,
+      hasAcceptedPrivacy: 'true',
+      hasAcceptedTermsOfService: 'true',
       selectedCarrier:
-        String(
-          shippingInfo.selectedCarrier
-        ),
+        String(shippingInfo.selectedCarrier),
       selectedService:
-        String(
-          shippingInfo.selectedService
-        ),
+        String(shippingInfo.selectedService),
       shippingCost:
         String(shippingCost),
     };
 
+    /*
+     * Direct charge:
+     *
+     * The Checkout Session and PaymentIntent are created
+     * on the Bakers Burns connected account.
+     *
+     * Do not include transfer_data.destination here.
+     */
     const checkoutSession =
       await stripe.checkout.sessions.create(
         {
-          payment_method_types: [
-            'card',
-          ],
-
           mode: 'payment',
 
-          line_items:
-            lineItems,
+          payment_method_types: ['card'],
 
-          metadata:
-            stripeMetadata,
+          line_items: lineItems,
+
+          metadata: stripeMetadata,
 
           payment_intent_data: {
-            transfer_data: {
-              destination:
-                connectedAccountId,
-            },
+            metadata: stripeMetadata,
 
-            metadata:
-              stripeMetadata,
+            /*
+             * Add this only when DCFLUX should collect a fee:
+             *
+             * application_fee_amount: 100,
+             *
+             * Stripe amounts are in cents, so 100 = $1.00.
+             */
           },
 
           expires_at:
-            Math.floor(
-              Date.now() / 1000
-            ) +
+            Math.floor(Date.now() / 1000) +
             60 * 30,
 
           success_url:
@@ -717,48 +660,39 @@ const createCheckoutSession = async (
             '?session_id={CHECKOUT_SESSION_ID}',
 
           shipping_address_collection: {
-            allowed_countries: [
-              'US',
-              'CA',
-            ],
+            allowed_countries: ['US', 'CA'],
           },
 
-          billing_address_collection:
-            'required',
+          billing_address_collection: 'required',
+        },
+        {
+          stripeAccount: connectedAccountId,
         }
       );
 
-    console.log(
-      'Stripe Checkout Session created:',
-      checkoutSession.id
-    );
+    console.log('Direct-charge Checkout Session created:', {
+      sessionId: checkoutSession.id,
+      connectedAccountId,
+    });
 
     return res.status(200).json({
-      url:
-        checkoutSession.url,
-      sessionId:
-        checkoutSession.id,
+      url: checkoutSession.url,
+      sessionId: checkoutSession.id,
     });
   } catch (error) {
     console.error(
-      'Error creating Stripe Checkout Session:',
+      'Error creating direct-charge Checkout Session:',
       {
-        type:
-          error.type,
-        code:
-          error.code,
-        message:
-          error.message,
-        requestId:
-          error.requestId,
+        type: error.type,
+        code: error.code,
+        message: error.message,
+        requestId: error.requestId,
       }
     );
 
     return res.status(500).json({
-      message:
-        'Failed to create Checkout Session.',
-      error:
-        error.message,
+      message: 'Failed to create Checkout Session.',
+      error: error.message,
     });
   }
 };
