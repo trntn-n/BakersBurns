@@ -230,6 +230,7 @@ const CartPage = () => {
       {/* Carrier Rate Components */}
       {zipSubmitted && (
         <div className="carrier-buttons">
+          <p>Please select a carrier</p>
           <UPSRates
             receiverZip={receiverZip}
             totalWeight={totalWeight}
