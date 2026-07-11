@@ -1,4 +1,4 @@
-const stripe = require('stripe')(process.env.STRIPE_TEST_SECRET_KEY);
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Cart = require('../../models/cart');
 const Product = require('../../models/product');
 const sequelize = require('../../config/database');
