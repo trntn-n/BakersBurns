@@ -372,7 +372,11 @@ const handleWebhook = async (req, res) => {
               transaction,
             }
           );
-
+          console.log("Product email image data:", {
+            productId: product.id,
+            productName: product.name,
+            thumbnail: product.thumbnail,
+          });
           orderItemsForEmail.push({
             name: product.name,
             quantity: purchasedQuantity,
@@ -431,12 +435,14 @@ const handleWebhook = async (req, res) => {
        * Send emails only after the database transaction commits.
        * An email failure should not roll back a completed payment/order.
        */
+      
       try {
         await sendOrderEmail(
           isNewGuest
             ? 'newGuest'
             : 'existingUser',
           customerEmail,
+          
           {
             orderNumber: order.id,
             total,
