@@ -57,13 +57,22 @@ termsAcceptedAt: {
       pendingUser.userName = xss(pendingUser.userName);
       pendingUser.email = xss(pendingUser.email);
       pendingUser.password = xss(pendingUser.password);
-      pendingUser.phoneNumber = pendingUser.phoneNumber ? xss(pendingUser.phoneNumber) : null;
-      pendingUser.verificationToken = xss(pendingUser.verificationToken);
-      pendingUser.isOptedInForPromotions = xss(pendingUser.isOptedInForPromotions);
-      pendingUser.isOptedInForEmailUpdates = xss(pendingUser.isOptedInForEmailUpdates);
-      
-    }
-  }
+  
+      pendingUser.phoneNumber = pendingUser.phoneNumber
+        ? xss(pendingUser.phoneNumber)
+        : null;
+  
+      pendingUser.verificationToken = xss(
+        pendingUser.verificationToken
+      );
+  
+      pendingUser.isOptedInForPromotions =
+        pendingUser.isOptedInForPromotions === true;
+  
+      pendingUser.isOptedInForEmailUpdates =
+        pendingUser.isOptedInForEmailUpdates === true;
+    },
+  },
 });
 
 module.exports = PendingUsers;
