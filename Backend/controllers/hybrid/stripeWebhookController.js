@@ -377,6 +377,7 @@ const handleWebhook = async (req, res) => {
             name: product.name,
             quantity: purchasedQuantity,
             price: product.price,
+            image: product.thumbnail
           });
 
           console.log(
@@ -437,6 +438,7 @@ const handleWebhook = async (req, res) => {
             : 'existingUser',
           customerEmail,
           {
+            orderNumber: order.id,
             total,
             orderItems: orderItemsForEmail,
             orderUrl:
@@ -470,6 +472,7 @@ const handleWebhook = async (req, res) => {
             'adminNotification',
             adminEmails.join(','),
             {
+              orderNumber: order.id,
               total,
               orderItems: orderItemsForEmail,
               status: 'processing',
