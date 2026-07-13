@@ -258,7 +258,7 @@ sequelize.authenticate()
   .then(async () => {
     console.log('✅ Database connected successfully.');
 
-    const ENABLE_SYNC = false;
+    const ENABLE_SYNC = true;
 
     if (ENABLE_SYNC) {
       await db.sequelize.sync({ alter: true });
