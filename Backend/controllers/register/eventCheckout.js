@@ -23,7 +23,7 @@ const stripe = require('stripe')(
   stripeSecretKey
 );
 
-const Event = require('../../models/event');
+const Event = require('../../models/events');
 
 /**
  * Create a Stripe Checkout Session for a paid event preorder.
