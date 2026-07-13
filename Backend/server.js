@@ -32,6 +32,7 @@ const helmet = require('helmet');
 } = require('./utils/rateLimiter'); 
 // Import routes
 const cartRoutes = require('./routes/user/cartRoutes');
+
 const emailVerificationRoutes = require('./routes/verificationRoutes');
 const productRoutes = require('./routes/admin/productRoutes');
 const userRoutes = require('./routes/user/userRoutes');
