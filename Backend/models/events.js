@@ -48,6 +48,7 @@ const Event = sequelize.define(
         this.setDataValue('frequency', sanitizeString(value));
       },
     },
+    
 
     days: {
       type: DataTypes.STRING,

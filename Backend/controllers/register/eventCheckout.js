@@ -52,14 +52,14 @@ const createEventCheckoutSession = async (
 ) => {
   try {
     const {
-      eventId,
-      metadata,
-    } = req.body;
-
-    const quantity = Number(
-      req.body.quantity ?? 1
-    );
-
+        eventId,
+        occurrenceDate,
+        metadata,
+      } = req.body;
+      
+      const quantity = Number(
+        req.body.quantity ?? 1
+      );
     /*
      * Validate request information.
      */
@@ -121,25 +121,24 @@ const createEventCheckoutSession = async (
      * Never accept the event price from the frontend.
      */
     const eventRecord =
-      await Event.findByPk(eventId);
+    await Event.findByPk(eventId);
 
     if (!eventRecord) {
-      return res.status(404).json({
-        message:
-          'Event not found.',
-      });
+    return res.status(404).json({
+        message: 'Event not found.',
+    });
     }
 
-    /*
-     * Adjust these property names if your Event model
-     * uses different names.
-     */
-    const eventName =
-      eventRecord.title ||
-      eventRecord.name;
+    const eventName = eventRecord.name;
+    const eventPrice = Number(eventRecord.price);
 
-    const eventPrice =
-      Number(eventRecord.price);
+    const isPurchase = eventRecord.isPurchase;
+
+    if (isPurchase !== true) {
+    return res.status(400).json({
+        message: 'This event is not configured as a paid event.',
+    });
+    }
 
     if (!eventName) {
       throw new Error(
@@ -157,21 +156,7 @@ const createEventCheckoutSession = async (
       });
     }
 
-    /*
-     * Optional event-status validation.
-     *
-     * This only runs when the model contains these fields.
-     */
-    if (
-      eventRecord.isPaid !== undefined &&
-      eventRecord.isPaid !== null &&
-      eventRecord.isPaid !== true
-    ) {
-      return res.status(400).json({
-        message:
-          'This event is not configured as a paid event.',
-      });
-    }
+
 
     if (
       eventRecord.isActive !== undefined &&
@@ -308,6 +293,10 @@ const createEventCheckoutSession = async (
 
       eventId:
         String(eventRecord.id),
+        
+      occurrenceDate: occurrenceDate
+        ? String(occurrenceDate)
+        : '',
 
       quantity:
         String(quantity),
