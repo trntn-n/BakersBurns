@@ -14,78 +14,120 @@ const getAllUserEvents = async (req, res) => {
 }
 
 const getUpcomingEvent = async (req, res) => {
-  try {
-      // Fetch the current date and time
+    try {
       const currentDate = moment().format('YYYY-MM-DD');
       const currentTime = moment().format('HH:mm:ss');
-
-      // Query for the next upcoming event
-      const upcomingEvent = await Event.findOne({
-          where: {
-              [Op.or]: [
-                  {
-                      // Events that are ongoing or will happen in the future
-                      startDate: {
-                          [Op.lte]: currentDate  // Start date is today or earlier
-                      },
-                      endDate: {
-                          [Op.gte]: currentDate  // End date is today or later
-                      },
-                      // On the current date, check if the event is still active based on time
-                      [Op.or]: [
-                          {
-                              startDate: currentDate,
-                              startTime: {
-                                  [Op.gte]: currentTime
-                              }
-                          },
-                          {
-                              startDate: { [Op.lt]: currentDate } // Events that started on previous days
-                          }
-                      ]
-                  },
-                  {
-                      // Events that start in the future
-                      startDate: {
-                          [Op.gt]: currentDate
-                      }
-                  }
-              ]
-          },
-          order: [
-              ['startDate', 'ASC'],  // Sort by start date ascending
-              ['startTime', 'ASC'],   // Sort by start time ascending
-          ],
+  
+      console.log('Upcoming event endpoint called:', {
+        currentDate,
+        currentTime,
       });
-
-      // Check if an event was found
+  
+      const upcomingEvent = await Event.findOne({
+        where: {
+          [Op.or]: [
+            {
+              startDate: {
+                [Op.lte]: currentDate,
+              },
+              endDate: {
+                [Op.gte]: currentDate,
+              },
+            },
+            {
+              startDate: {
+                [Op.gt]: currentDate,
+              },
+            },
+          ],
+        },
+        order: [
+          ['startDate', 'ASC'],
+          ['startTime', 'ASC'],
+        ],
+      });
+  
+      console.log(
+        'Upcoming event query result:',
+        upcomingEvent
+          ? upcomingEvent.get({ plain: true })
+          : null
+      );
+  
       if (!upcomingEvent) {
-          return res.status(404).json({ message: 'No upcoming events found' });
+        console.log('No upcoming event was found.');
+  
+        return res.status(404).json({
+          message: 'No upcoming events found',
+        });
       }
-
-      // Return the upcoming event data
-      res.status(200).json(upcomingEvent);
-  } catch (error) {
-      console.error('Error fetching upcoming event:', error);
-      res.status(500).json({ message: 'Error fetching upcoming event' });
-  }
-};
+  
+      return res.status(200).json(upcomingEvent);
+    } catch (error) {
+      console.error(
+        'Error fetching upcoming event:',
+        error
+      );
+  
+      return res.status(500).json({
+        message: 'Error fetching upcoming event',
+      });
+    }
+  };
 
 const getAllEvents = async (req, res) => {
     try {
-        const events = await Event.findAll({
-         order: [
-            [startDate, 'ASC'],
-            [startTime, 'ASX'],
-         ],
+      const events = await Event.findAll({
+        order: [
+          ['startDate', 'ASC'],
+          ['startTime', 'ASC'],
+        ],
+      });
+  
+      const formattedEvents = events.map((event) => {
+        const plainEvent = event.get({
+          plain: true,
         });
-        res.status(200).json(events);
+  
+        return {
+          ...plainEvent,
+  
+          startDate: plainEvent.startDate || null,
+          endDate:
+            plainEvent.endDate ||
+            plainEvent.startDate ||
+            null,
+  
+          days: Array.isArray(plainEvent.days)
+            ? plainEvent.days.join(',')
+            : plainEvent.days || '',
+  
+          isPurchase:
+            plainEvent.isPurchase === true ||
+            plainEvent.isPurchase === 1 ||
+            plainEvent.isPurchase === '1' ||
+            String(plainEvent.isPurchase).toLowerCase() ===
+              'true',
+  
+          price:
+            Number.isFinite(Number(plainEvent.price))
+              ? Number(plainEvent.price)
+              : 0,
+        };
+      });
+  
+      return res.status(200).json(formattedEvents);
     } catch (error) {
-        console.error('Error fetching all events:', error)
-;
-        res.status(500).json({ message: 'Error fetching all events' });
+      console.error(
+        'Error fetching all events:',
+        error
+      );
+  
+      return res.status(500).json({
+        message: 'Error fetching events',
+      });
     }
- }
+  };
 
 
 module.exports = {
