@@ -1,3 +1,4 @@
+/* Events.jsx */
 import React, {
   useEffect,
   useMemo,
@@ -8,9 +9,13 @@ import moment from 'moment';
 import { registerApi } from '../../config/axios';
 import './Event.css';
 
-const CHECKOUT_ENDPOINT =
-  '/register-events/checkout';
+const EVENTS_ENDPOINT = '/register-events/all';
+const CHECKOUT_ENDPOINT = '/register-events/checkout';
 
+/*
+ * Converts database/backend boolean values into
+ * a predictable JavaScript boolean.
+ */
 const normalizeBoolean = (value) => {
   if (
     value === true ||
@@ -20,13 +25,40 @@ const normalizeBoolean = (value) => {
     return true;
   }
 
+  if (
+    value === false ||
+    value === 0 ||
+    value === '0' ||
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+    return false;
+  }
+
   if (typeof value === 'string') {
-    return value.trim().toLowerCase() === 'true';
+    const normalizedValue = value
+      .trim()
+      .toLowerCase();
+
+    return [
+      'true',
+      'yes',
+      'y',
+      'on',
+    ].includes(normalizedValue);
   }
 
   return false;
 };
 
+/*
+ * Supports days arriving as:
+ *
+ * ["Monday", "Wednesday"]
+ * "Monday,Wednesday"
+ * '["Monday","Wednesday"]'
+ */
 const normalizeDays = (days) => {
   if (Array.isArray(days)) {
     return days
@@ -34,14 +66,170 @@ const normalizeDays = (days) => {
       .filter(Boolean);
   }
 
-  if (typeof days === 'string') {
-    return days
-      .split(',')
-      .map((day) => day.trim())
-      .filter(Boolean);
+  if (typeof days !== 'string') {
+    return [];
   }
 
-  return [];
+  const trimmedDays = days.trim();
+
+  if (!trimmedDays) {
+    return [];
+  }
+
+  try {
+    const parsedDays = JSON.parse(trimmedDays);
+
+    if (Array.isArray(parsedDays)) {
+      return parsedDays
+        .map((day) => String(day).trim())
+        .filter(Boolean);
+    }
+  } catch (error) {
+    // The value is probably comma-separated rather than JSON.
+  }
+
+  return trimmedDays
+    .split(',')
+    .map((day) => day.trim())
+    .filter(Boolean);
+};
+
+/*
+ * Normalizes backend/database field names so the
+ * component works with either snake_case or camelCase.
+ */
+const normalizeEvent = (event) => {
+  if (!event || typeof event !== 'object') {
+    return null;
+  }
+
+  const rawPrice =
+    event.price ??
+    event.ticket_price ??
+    event.ticketPrice ??
+    0;
+
+  const parsedPrice = Number(rawPrice);
+
+  return {
+    ...event,
+
+    id:
+      event.id ??
+      event.event_id ??
+      event.eventId,
+
+    name:
+      event.name ??
+      event.event_name ??
+      event.eventName ??
+      event.title ??
+      'Untitled event',
+
+    description:
+      event.description ??
+      event.event_description ??
+      event.eventDescription ??
+      '',
+
+    startDate:
+      event.startDate ??
+      event.start_date ??
+      event.date ??
+      null,
+
+    endDate:
+      event.endDate ??
+      event.end_date ??
+      event.startDate ??
+      event.start_date ??
+      event.date ??
+      null,
+
+    startTime:
+      event.startTime ??
+      event.start_time ??
+      null,
+
+    endTime:
+      event.endTime ??
+      event.end_time ??
+      null,
+
+    frequency:
+      (
+        event.frequency ??
+        event.event_frequency ??
+        'single'
+      )
+        .toString()
+        .trim()
+        .toLowerCase(),
+
+    days: normalizeDays(
+      event.days ??
+      event.event_days ??
+      event.selectedDays ??
+      event.selected_days
+    ),
+
+    isPurchase: normalizeBoolean(
+      event.isPurchase ??
+      event.is_purchase ??
+      event.purchaseRequired ??
+      event.purchase_required
+    ),
+
+    price: Number.isFinite(parsedPrice)
+      ? parsedPrice
+      : 0,
+  };
+};
+
+const parseEventDateTime = (
+  date,
+  time = '00:00'
+) => {
+  if (!date) {
+    return moment.invalid();
+  }
+
+  const dateOnly = moment(
+    date,
+    [
+      'YYYY-MM-DD',
+      moment.ISO_8601,
+    ],
+    true
+  );
+
+  if (!dateOnly.isValid()) {
+    return moment.invalid();
+  }
+
+  const parsedTime = moment(
+    time || '00:00',
+    [
+      'HH:mm:ss',
+      'HH:mm',
+      'h:mm A',
+      'hh:mm A',
+    ],
+    true
+  );
+
+  const eventDateTime = dateOnly.clone();
+
+  if (parsedTime.isValid()) {
+    eventDateTime
+      .hour(parsedTime.hour())
+      .minute(parsedTime.minute())
+      .second(parsedTime.second());
+  } else {
+    eventDateTime.startOf('day');
+  }
+
+  return eventDateTime;
 };
 
 const formatTime = (time) => {
@@ -49,18 +237,19 @@ const formatTime = (time) => {
     return '';
   }
 
-  const parsed = moment(
+  const parsedTime = moment(
     time,
     [
       'HH:mm:ss',
       'HH:mm',
       'h:mm A',
+      'hh:mm A',
     ],
     true
   );
 
-  return parsed.isValid()
-    ? parsed.format('h:mm A')
+  return parsedTime.isValid()
+    ? parsedTime.format('h:mm A')
     : time;
 };
 
@@ -72,64 +261,108 @@ const formatPrice = (price) => {
     : '0.00';
 };
 
+/*
+ * Expands recurring events into individual calendar
+ * occurrences between startDate and endDate.
+ */
 const buildOccurrences = (event) => {
   if (!event?.startDate) {
     return [];
   }
 
-  const start = moment(
+  const startDate = moment(
     event.startDate,
-    'YYYY-MM-DD',
+    [
+      'YYYY-MM-DD',
+      moment.ISO_8601,
+    ],
     true
   );
 
-  const end = moment(
+  const endDate = moment(
     event.endDate || event.startDate,
-    'YYYY-MM-DD',
+    [
+      'YYYY-MM-DD',
+      moment.ISO_8601,
+    ],
     true
   );
 
-  if (!start.isValid()) {
+  if (!startDate.isValid()) {
     return [];
   }
 
-  const safeEnd = end.isValid()
-    ? end
-    : start.clone();
+  const safeEndDate = endDate.isValid()
+    ? endDate
+    : startDate.clone();
+
+  /*
+   * Prevent malformed end dates from causing the
+   * recurrence loop to run backward.
+   */
+  if (safeEndDate.isBefore(startDate, 'day')) {
+    safeEndDate.set({
+      year: startDate.year(),
+      month: startDate.month(),
+      date: startDate.date(),
+    });
+  }
 
   const isSingleEvent =
     event.frequency === 'single' ||
-    start.isSame(safeEnd, 'day');
+    event.frequency === 'once' ||
+    startDate.isSame(safeEndDate, 'day');
 
   if (isSingleEvent) {
     return [
       {
         ...event,
         occurrenceDate:
-          start.format('YYYY-MM-DD'),
+          startDate.format('YYYY-MM-DD'),
       },
     ];
   }
 
-  const selectedDays = normalizeDays(event.days);
+  const selectedDays = normalizeDays(event.days)
+    .map((day) => day.toLowerCase());
 
+  /*
+   * If a repeating event has no days selected,
+   * show it on its start date rather than hiding it.
+   */
   if (selectedDays.length === 0) {
     return [
       {
         ...event,
         occurrenceDate:
-          start.format('YYYY-MM-DD'),
+          startDate.format('YYYY-MM-DD'),
       },
     ];
   }
 
   const occurrences = [];
-  const cursor = start.clone();
+  const cursor = startDate.clone();
 
-  while (cursor.isSameOrBefore(safeEnd, 'day')) {
-    const dayName = cursor.format('dddd');
+  while (
+    cursor.isSameOrBefore(safeEndDate, 'day')
+  ) {
+    const fullDayName = cursor
+      .format('dddd')
+      .toLowerCase();
 
-    if (selectedDays.includes(dayName)) {
+    const shortDayName = cursor
+      .format('ddd')
+      .toLowerCase();
+
+    const matchingDay = selectedDays.some(
+      (selectedDay) =>
+        selectedDay === fullDayName ||
+        selectedDay === shortDayName ||
+        fullDayName.startsWith(selectedDay) ||
+        selectedDay.startsWith(shortDayName)
+    );
+
+    if (matchingDay) {
       occurrences.push({
         ...event,
         occurrenceDate:
@@ -145,6 +378,7 @@ const buildOccurrences = (event) => {
 
 const EventCalendar = () => {
   const [events, setEvents] = useState([]);
+
   const [currentMonth, setCurrentMonth] =
     useState(moment().startOf('month'));
 
@@ -152,6 +386,7 @@ const EventCalendar = () => {
     useState(moment().format('YYYY-MM-DD'));
 
   const [loading, setLoading] = useState(true);
+
   const [fetchError, setFetchError] =
     useState('');
 
@@ -162,58 +397,92 @@ const EventCalendar = () => {
     useState('');
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchEvents = async () => {
       try {
         setLoading(true);
         setFetchError('');
 
+        /*
+         * This uses the same events route as the
+         * upcoming-events section on the home page.
+         */
         const response = await registerApi.get(
-          '/register-events/all'
+          EVENTS_ENDPOINT
         );
 
-        const receivedEvents = Array.isArray(
+        /*
+         * Supports any of these response shapes:
+         *
+         * [event, event]
+         * { events: [event, event] }
+         * { data: [event, event] }
+         */
+        const responseEvents = Array.isArray(
           response.data
         )
           ? response.data
-          : [];
+          : Array.isArray(response.data?.events)
+            ? response.data.events
+            : Array.isArray(response.data?.data)
+              ? response.data.data
+              : [];
 
-        setEvents(receivedEvents);
+        const normalizedEvents = responseEvents
+          .map(normalizeEvent)
+          .filter(Boolean);
+
+        if (isMounted) {
+          setEvents(normalizedEvents);
+        }
       } catch (error) {
         console.error(
           'Failed to fetch events:',
           error
         );
 
-        setFetchError(
-          error.response?.data?.message ||
-          'We could not load the event calendar.'
-        );
+        if (isMounted) {
+          setFetchError(
+            error.response?.data?.message ||
+            'We could not load the event calendar.'
+          );
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchEvents();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const occurrences = useMemo(() => {
     return events
       .flatMap(buildOccurrences)
-      .sort((first, second) => {
-        const firstDate = moment(
-          `${first.occurrenceDate} ${
-            first.startTime || '00:00'
-          }`
-        );
+      .filter((event) => event.occurrenceDate)
+      .sort((firstEvent, secondEvent) => {
+        const firstDateTime =
+          parseEventDateTime(
+            firstEvent.occurrenceDate,
+            firstEvent.startTime
+          );
 
-        const secondDate = moment(
-          `${second.occurrenceDate} ${
-            second.startTime || '00:00'
-          }`
-        );
+        const secondDateTime =
+          parseEventDateTime(
+            secondEvent.occurrenceDate,
+            secondEvent.startTime
+          );
 
-        return firstDate.valueOf() -
-          secondDate.valueOf();
+        return (
+          firstDateTime.valueOf() -
+          secondDateTime.valueOf()
+        );
       });
   }, [events]);
 
@@ -234,14 +503,39 @@ const EventCalendar = () => {
     );
   }, [occurrences]);
 
+  /*
+   * Uses the current exact time rather than only the
+   * current day. This prevents an event that already
+   * ended earlier today from being selected as next.
+   */
   const upcomingEvents = useMemo(() => {
-    const today = moment().startOf('day');
+    const now = moment();
 
     return occurrences.filter((event) => {
-      return moment(
-        event.occurrenceDate,
-        'YYYY-MM-DD'
-      ).isSameOrAfter(today, 'day');
+      const eventDateTime =
+        parseEventDateTime(
+          event.occurrenceDate,
+          event.startTime
+        );
+
+      if (!eventDateTime.isValid()) {
+        return false;
+      }
+
+      /*
+       * Events without a start time remain upcoming
+       * through the end of their scheduled day.
+       */
+      if (!event.startTime) {
+        return moment(
+          event.occurrenceDate,
+          'YYYY-MM-DD'
+        )
+          .endOf('day')
+          .isSameOrAfter(now);
+      }
+
+      return eventDateTime.isSameOrAfter(now);
     });
   }, [occurrences]);
 
@@ -250,24 +544,57 @@ const EventCalendar = () => {
       ? upcomingEvents[0]
       : null;
 
+  /*
+   * Automatically move the calendar and selected-date
+   * panel to the nearest upcoming event after loading.
+   */
+  useEffect(() => {
+    if (!featuredEvent?.occurrenceDate) {
+      return;
+    }
+
+    const featuredDate = moment(
+      featuredEvent.occurrenceDate,
+      'YYYY-MM-DD',
+      true
+    );
+
+    if (!featuredDate.isValid()) {
+      return;
+    }
+
+    setSelectedDate(
+      featuredDate.format('YYYY-MM-DD')
+    );
+
+    setCurrentMonth(
+      featuredDate.clone().startOf('month')
+    );
+  }, [
+    featuredEvent?.id,
+    featuredEvent?.occurrenceDate,
+  ]);
+
   const selectedEvents =
     eventsByDate[selectedDate] || [];
 
   const calendarDays = useMemo(() => {
-    const start = currentMonth
+    const calendarStart = currentMonth
       .clone()
       .startOf('month')
       .startOf('week');
 
-    const end = currentMonth
+    const calendarEnd = currentMonth
       .clone()
       .endOf('month')
       .endOf('week');
 
     const days = [];
-    const cursor = start.clone();
+    const cursor = calendarStart.clone();
 
-    while (cursor.isSameOrBefore(end, 'day')) {
+    while (
+      cursor.isSameOrBefore(calendarEnd, 'day')
+    ) {
       days.push(cursor.clone());
       cursor.add(1, 'day');
     }
@@ -276,10 +603,10 @@ const EventCalendar = () => {
   }, [currentMonth]);
 
   const selectDay = (date) => {
-    const formattedDate =
-      date.format('YYYY-MM-DD');
+    setSelectedDate(
+      date.format('YYYY-MM-DD')
+    );
 
-    setSelectedDate(formattedDate);
     setCheckoutError('');
   };
 
@@ -302,8 +629,15 @@ const EventCalendar = () => {
   const goToCurrentMonth = () => {
     const today = moment();
 
-    setCurrentMonth(today.clone().startOf('month'));
-    setSelectedDate(today.format('YYYY-MM-DD'));
+    setCurrentMonth(
+      today.clone().startOf('month')
+    );
+
+    setSelectedDate(
+      today.format('YYYY-MM-DD')
+    );
+
+    setCheckoutError('');
   };
 
   const beginCheckout = async (event) => {
@@ -331,7 +665,8 @@ const EventCalendar = () => {
 
       const checkoutUrl =
         response.data?.url ||
-        response.data?.checkoutUrl;
+        response.data?.checkoutUrl ||
+        response.data?.checkout_url;
 
       if (!checkoutUrl) {
         throw new Error(
@@ -359,6 +694,10 @@ const EventCalendar = () => {
     event,
     className = ''
   ) => {
+    if (!event) {
+      return null;
+    }
+
     const isPurchase = normalizeBoolean(
       event.isPurchase
     );
@@ -374,7 +713,12 @@ const EventCalendar = () => {
     return (
       <button
         type="button"
-        className={`customer-event-purchase-button ${className}`}
+        className={[
+          'customer-event-purchase-button',
+          className,
+        ]
+          .filter(Boolean)
+          .join(' ')}
         disabled={checkoutEventId === event.id}
         onClick={() => beginCheckout(event)}
       >
@@ -423,7 +767,13 @@ const EventCalendar = () => {
           </div>
         )}
 
-        {featuredEvent && (
+        {loading && (
+          <div className="customer-events-empty">
+            Loading upcoming events...
+          </div>
+        )}
+
+        {!loading && featuredEvent && (
           <section className="featured-event">
             <div className="featured-event-date">
               <span className="featured-event-month">
@@ -452,9 +802,11 @@ const EventCalendar = () => {
 
               <h2>{featuredEvent.name}</h2>
 
-              <p>
-                {featuredEvent.description}
-              </p>
+              {featuredEvent.description && (
+                <p>
+                  {featuredEvent.description}
+                </p>
+              )}
 
               <div className="featured-event-meta">
                 <span>
@@ -570,15 +922,19 @@ const EventCalendar = () => {
 
                 const cellClassName = [
                   'customer-calendar-day',
+
                   isSelected
                     ? 'customer-calendar-day--selected'
                     : '',
+
                   isToday
                     ? 'customer-calendar-day--today'
                     : '',
+
                   !isCurrentMonth
                     ? 'customer-calendar-day--outside'
                     : '',
+
                   dateEvents.length > 0
                     ? 'customer-calendar-day--has-event'
                     : '',
@@ -611,7 +967,7 @@ const EventCalendar = () => {
                         .slice(0, 3)
                         .map((event, index) => (
                           <span
-                            key={`${event.id}-${index}`}
+                            key={`${event.id}-${event.occurrenceDate}-${index}`}
                           />
                         ))}
                     </span>
@@ -655,17 +1011,19 @@ const EventCalendar = () => {
                     >
                       <div className="customer-event-card-heading">
                         <div>
-                          <span>
-                            {formatTime(
-                              event.startTime
-                            )}
+                          {event.startTime && (
+                            <span>
+                              {formatTime(
+                                event.startTime
+                              )}
 
-                            {event.endTime
-                              ? ` – ${formatTime(
-                                  event.endTime
-                                )}`
-                              : ''}
-                          </span>
+                              {event.endTime
+                                ? ` – ${formatTime(
+                                    event.endTime
+                                  )}`
+                                : ''}
+                            </span>
+                          )}
 
                           <h3>{event.name}</h3>
                         </div>
@@ -682,9 +1040,11 @@ const EventCalendar = () => {
                         )}
                       </div>
 
-                      <p>
-                        {event.description}
-                      </p>
+                      {event.description && (
+                        <p>
+                          {event.description}
+                        </p>
+                      )}
 
                       <div className="customer-event-card-action">
                         {renderPurchaseButton(
