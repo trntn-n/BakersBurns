@@ -10,7 +10,7 @@ import { registerApi } from '../../config/axios';
 import './Event.css';
 
 const EVENTS_ENDPOINT = '/register-events/all';
-const CHECKOUT_ENDPOINT = '/register-events/checkout';
+const CHECKOUT_ENDPOINT = '/register-events/checkout-events';
 
 /*
  * Converts database/backend boolean values into
