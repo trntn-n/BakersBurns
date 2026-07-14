@@ -27,6 +27,7 @@ const Navbar = () => {
     "/login": "Login",
     "/store": "Store",
     "/cart": "Cart",
+    "/events" : "Events",
     "/about": "About",
     "/gallery": "Gallery",
     "/privacy-policy": "Privacy Policy",
@@ -376,7 +377,12 @@ const Navbar = () => {
             >
               <CartLink />
             </li>
-
+            <li
+              className="nav-item"
+              onClick={closeMenu}
+            >
+              <Link to="/events">Events</Link>
+            </li>
             <li
               className="nav-item"
               onClick={closeMenu}
@@ -399,7 +405,7 @@ const Navbar = () => {
                 Privacy Policy
               </Link>
             </li>
-
+            
             <li
               className="nav-item-tiny"
               onClick={closeMenu}
