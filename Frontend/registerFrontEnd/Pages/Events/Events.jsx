@@ -14,7 +14,7 @@ import moment from "moment";
 
 import { registerApi } from "../../config/axios";
 import "./Event.css";
-import TicketQuantityModal from "../../Components/events/TicketQuantityModal";
+import TicketQuantityModal from "./TicketQuantityModal";
 
 const EVENTS_ENDPOINT =
   "/register-events/all";
