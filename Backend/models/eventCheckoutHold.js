@@ -7,7 +7,7 @@ const EventCheckoutHold = sequelize.define(
   'EventCheckoutHold',
   {
     id: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
     },
@@ -27,7 +27,7 @@ const EventCheckoutHold = sequelize.define(
     },
 
     userId: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: true,
       field: 'user_id',
     },
