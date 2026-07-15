@@ -4,10 +4,10 @@ let stripe_m, stripe_webhook_m;
 
 if(stripe_mode) {
   stripe_m = process.env.STRIPE_TEST_SECRET_KEY;
-  stripe_webhook_m = process.env.STRIPE_TEST_WEBHOOK_SECRET;
+  stripe_webhook_m = process.env.STRIPE_TEST_CART_WEBHOOK_SECRET;
 } else {
   stripe_m = process.env.STRIPE_SECRET_KEY;
-  stripe_webhook_m = process.env.STRIPE_WEBHOOK_SECRET;
+  stripe_webhook_m = process.env.STRIPE_CART_WEBHOOK_SECRET;
 }
 
 const stripe = require('stripe')(stripe_m);
@@ -26,7 +26,7 @@ const {unlockInventory} = require('../register/cartController');
 const { v4: uuidv4 } = require('uuid');
 const {sequelize } = require('../../models/index');
 
-const handleWebhook = async (req, res) => {
+const handleCartWebhook = async (req, res) => {
   const signature = req.headers['stripe-signature'];
 
   const webhookSecret = stripe_webhook_m;
@@ -587,4 +587,4 @@ const cancelCheckoutSession = async (req, res) => {
     });
   }
 };
-module.exports = { handleWebhook, cancelCheckoutSession };
+module.exports = { handleCartWebhook, cancelCheckoutSession };

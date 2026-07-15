@@ -8,10 +8,15 @@ const Message = require('./messages');
 const Thread = require('./threads');
 const OrderItem = require('./orderItem');
 const Media = require('./media');
-const GuestCart = require('./guestCart')
+const GuestCart = require('./guestCart');
 const RateLimiterLogs = require("./rateLimiterLogs");
 const SocialLinks = require('./socialLinks');
 const Invoice = require('./invoice');
+const EventOccurrence = require('./eventOccurrence');
+const EventReservation = require('./eventReservation');
+const EventRegistration = require('./eventsRegistration');
+const EventCheckoutHold = require('./eventCheckoutHold');
+const Event = require('./events');
 
 
 
@@ -28,6 +33,11 @@ const db = {
   GuestCart,
   SocialLinks,
   Invoice,
+  Event,
+  EventOccurrence,
+  EventReservation,
+  EventRegistration,
+  EventCheckoutHold
 };
 
 // Manually define associations within each model
@@ -104,13 +114,115 @@ Media.belongsTo(Product, {
   foreignKey: 'productId',
   as: 'mediaProduct', // Unique alias for Media -> Product association
 });
+Event.associate = (models) => {
+  Event.hasMany(
+    models.EventOccurrence,
+    {
+      foreignKey: 'eventId',
+      as: 'occurrences',
+      onDelete: 'CASCADE',
+    }
+  );
 
+  Event.hasMany(
+    models.EventCheckoutHold,
+    {
+      foreignKey: 'eventId',
+      as: 'checkoutHolds',
+      onDelete: 'CASCADE',
+    }
+  );
+
+  Event.hasMany(
+    models.EventReservation,
+    {
+      foreignKey: 'eventId',
+      as: 'reservations',
+      onDelete: 'CASCADE',
+    }
+  );
+};
+
+EventOccurrence.associate = (
+  models
+) => {
+  EventOccurrence.belongsTo(
+    models.Event,
+    {
+      foreignKey: 'eventId',
+      as: 'event',
+    }
+  );
+
+  EventOccurrence.hasMany(
+    models.EventReservation,
+    {
+      foreignKey: 'occurrenceId',
+      as: 'reservations',
+      onDelete: 'CASCADE',
+    }
+  );
+};
+
+EventCheckoutHold.associate = (
+  models
+) => {
+  EventCheckoutHold.belongsTo(
+    models.Event,
+    {
+      foreignKey: 'eventId',
+      as: 'event',
+    }
+  );
+
+  EventCheckoutHold.belongsTo(
+    models.User,
+    {
+      foreignKey: 'userId',
+      as: 'user',
+      constraints: false,
+    }
+  );
+};
+
+EventReservation.associate = (
+  models
+) => {
+  EventReservation.belongsTo(
+    models.Event,
+    {
+      foreignKey: 'eventId',
+      as: 'event',
+    }
+  );
+
+  EventReservation.belongsTo(
+    models.EventOccurrence,
+    {
+      foreignKey: 'occurrenceId',
+      as: 'occurrence',
+    }
+  );
+
+  EventReservation.belongsTo(
+    models.User,
+    {
+      foreignKey: 'userId',
+      as: 'user',
+      constraints: false,
+    }
+  );
+};
 // Call the associate method to set up relationships for each model
 Object.keys(db).forEach((modelName) => {
-  if (db[modelName].associate) {
+  if (
+    typeof db[modelName].associate ===
+    'function'
+  ) {
     db[modelName].associate(db);
   }
 });
+
 
 GuestCart.belongsTo(Product,
    { foreignKey: 'productId',

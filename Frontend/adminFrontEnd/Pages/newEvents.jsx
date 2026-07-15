@@ -1,7 +1,17 @@
+/* admin/newEvents.jsx */
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import {
+  motion,
+  AnimatePresence,
+} from 'framer-motion';
+
 import moment from 'moment';
+
 import { adminApi } from '../config/axios';
 import '../Pagecss/events.css';
 
@@ -26,11 +36,13 @@ const emptyEvent = {
   days: [],
   isPurchase: false,
   price: '',
+  maxTicketQuantity: '',
 };
 
 const Events = () => {
   const [events, setEvents] = useState([]);
   const [calendarEvents, setCalendarEvents] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -38,33 +50,389 @@ const Events = () => {
   const [validationError, setValidationError] = useState('');
   const [editEventId, setEditEventId] = useState(null);
 
-  const [currentDate, setCurrentDate] = useState(moment());
+  const [currentDate, setCurrentDate] = useState(
+    moment().startOf('month')
+  );
+
+  const [selectedDate, setSelectedDate] = useState(
+    moment().format('YYYY-MM-DD')
+  );
 
   const [newEvent, setNewEvent] = useState({
     ...emptyEvent,
   });
 
   const normalizePurchaseValue = (value) => {
-    if (value === true || value === 1 || value === '1') {
+    if (
+      value === true ||
+      value === 1 ||
+      value === '1'
+    ) {
       return true;
     }
 
+    if (
+      value === false ||
+      value === 0 ||
+      value === '0' ||
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
+      return false;
+    }
+
     if (typeof value === 'string') {
-      return value.trim().toLowerCase() === 'true';
+      const normalizedValue = value.trim().toLowerCase();
+
+      return [
+        'true',
+        'yes',
+        'y',
+        'on',
+      ].includes(normalizedValue);
     }
 
     return false;
   };
 
+  const normalizeNumberValue = (
+    value,
+    fallback = 0
+  ) => {
+    const parsedValue = Number(value);
+
+    return Number.isFinite(parsedValue)
+      ? parsedValue
+      : fallback;
+  };
+
+  const normalizeIntegerValue = (
+    value,
+    fallback = 0
+  ) => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
+      return fallback;
+    }
+
+    const parsedValue = Number(value);
+
+    return Number.isInteger(parsedValue)
+      ? parsedValue
+      : fallback;
+  };
+
+  const normalizeDays = (days) => {
+    if (Array.isArray(days)) {
+      return days
+        .map((day) => String(day).trim())
+        .filter(Boolean);
+    }
+
+    if (typeof days !== 'string') {
+      return [];
+    }
+
+    const trimmedDays = days.trim();
+
+    if (!trimmedDays) {
+      return [];
+    }
+
+    try {
+      const parsedDays = JSON.parse(trimmedDays);
+
+      if (Array.isArray(parsedDays)) {
+        return parsedDays
+          .map((day) => String(day).trim())
+          .filter(Boolean);
+      }
+    } catch (parseError) {
+      /*
+       * Probably comma-separated instead of JSON.
+       */
+    }
+
+    return trimmedDays
+      .split(',')
+      .map((day) => day.trim())
+      .filter(Boolean);
+  };
+
   const getDayNameFromDate = (date) => {
-    if (!date || !moment(date, 'YYYY-MM-DD', true).isValid()) {
+    if (
+      !date ||
+      !moment(date, 'YYYY-MM-DD', true).isValid()
+    ) {
       return '';
     }
 
     return moment(date).format('dddd');
   };
 
-  const isSingleEvent = newEvent.frequency === 'single';
+  const formatTime = (time) => {
+    if (!time) {
+      return '—';
+    }
+
+    const parsedTime = moment(
+      time,
+      [
+        'HH:mm:ss',
+        'HH:mm',
+        'h:mm A',
+        'hh:mm A',
+      ],
+      true
+    );
+
+    return parsedTime.isValid()
+      ? parsedTime.format('h:mm A')
+      : time;
+  };
+
+  const parseEventDateTime = (
+    date,
+    time = '23:59'
+  ) => {
+    if (!date) {
+      return moment.invalid();
+    }
+
+    const dateOnly = moment(
+      date,
+      [
+        'YYYY-MM-DD',
+        moment.ISO_8601,
+      ],
+      true
+    );
+
+    if (!dateOnly.isValid()) {
+      return moment.invalid();
+    }
+
+    const parsedTime = moment(
+      time || '23:59',
+      [
+        'HH:mm:ss',
+        'HH:mm',
+        'h:mm A',
+        'hh:mm A',
+      ],
+      true
+    );
+
+    const eventDateTime = dateOnly.clone();
+
+    if (parsedTime.isValid()) {
+      eventDateTime
+        .hour(parsedTime.hour())
+        .minute(parsedTime.minute())
+        .second(parsedTime.second());
+    } else {
+      eventDateTime.endOf('day');
+    }
+
+    return eventDateTime;
+  };
+
+  const normalizeEventRecord = (event) => {
+    if (
+      !event ||
+      typeof event !== 'object'
+    ) {
+      return null;
+    }
+
+    const rawStartDate =
+      event.startDate ??
+      event.start_date ??
+      event.date ??
+      '';
+
+    const rawEndDate =
+      event.endDate ??
+      event.end_date ??
+      rawStartDate;
+
+    const parsedPrice = normalizeNumberValue(
+      event.price ??
+        event.event_price ??
+        event.ticketPrice ??
+        event.ticket_price,
+      0
+    );
+
+    const maxTicketQuantity =
+      normalizeIntegerValue(
+        event.maxTicketQuantity ??
+          event.max_ticket_quantity ??
+          event.ticketLimit ??
+          event.ticket_limit,
+        0
+      );
+
+    const ticketsSold =
+      normalizeIntegerValue(
+        event.ticketsSold ??
+          event.tickets_sold ??
+          event.quantitySold ??
+          event.quantity_sold,
+        0
+      );
+
+    return {
+      ...event,
+
+      id:
+        event.id ??
+        event.eventId ??
+        event.event_id,
+
+      name:
+        event.name ??
+        event.eventName ??
+        event.event_name ??
+        event.title ??
+        'Untitled event',
+
+      description:
+        event.description ??
+        event.eventDescription ??
+        event.event_description ??
+        '',
+
+      frequency:
+        (
+          event.frequency ??
+          event.event_frequency ??
+          'single'
+        )
+          .toString()
+          .trim()
+          .toLowerCase(),
+
+      startDate: rawStartDate
+        ? moment(rawStartDate).format('YYYY-MM-DD')
+        : '',
+
+      endDate: rawEndDate
+        ? moment(rawEndDate).format('YYYY-MM-DD')
+        : rawStartDate
+          ? moment(rawStartDate).format('YYYY-MM-DD')
+          : '',
+
+      startTime:
+        event.startTime ??
+        event.start_time ??
+        '',
+
+      endTime:
+        event.endTime ??
+        event.end_time ??
+        '',
+
+      days: normalizeDays(
+        event.days ??
+          event.event_days ??
+          event.selectedDays ??
+          event.selected_days
+      ),
+
+      isPurchase: normalizePurchaseValue(
+        event.isPurchase ??
+          event.is_purchase ??
+          event.purchaseRequired ??
+          event.purchase_required
+      ),
+
+      price: parsedPrice,
+
+      maxTicketQuantity,
+
+      ticketsSold,
+    };
+  };
+
+  const isEventSingleOccurrence = (event) => {
+    const startDate = moment(
+      event.startDate,
+      'YYYY-MM-DD',
+      true
+    );
+
+    const endDate = moment(
+      event.endDate || event.startDate,
+      'YYYY-MM-DD',
+      true
+    );
+
+    return (
+      event.frequency === 'single' ||
+      event.frequency === 'once' ||
+      (
+        startDate.isValid() &&
+        endDate.isValid() &&
+        startDate.isSame(endDate, 'day')
+      )
+    );
+  };
+
+  const getTicketsSoldForDate = (
+    event,
+    dateKey
+  ) => {
+    const salesByDate =
+      event.ticketsSoldByDate ??
+      event.tickets_sold_by_date ??
+      event.ticketSalesByDate ??
+      event.ticket_sales_by_date ??
+      event.reservationsByDate ??
+      event.reservations_by_date ??
+      {};
+
+    const dateSpecificValue =
+      salesByDate?.[dateKey] ??
+      salesByDate?.[
+        moment(dateKey).format('YYYY-MM-DD')
+      ];
+
+    if (
+      dateSpecificValue !== null &&
+      dateSpecificValue !== undefined
+    ) {
+      return normalizeIntegerValue(
+        dateSpecificValue,
+        0
+      );
+    }
+
+    /*
+     * For a single event, using the total sold count is safe.
+     * For recurring events, do not spread total sales across
+     * every occurrence. Recurring availability should come
+     * from a backend per-date count.
+     */
+    if (isEventSingleOccurrence(event)) {
+      return normalizeIntegerValue(
+        event.ticketsSold ??
+          event.tickets_sold ??
+          event.quantitySold ??
+          event.quantity_sold,
+        0
+      );
+    }
+
+    return 0;
+  };
+
+  const isSingleEvent =
+    newEvent.frequency === 'single';
 
   const resetForm = () => {
     setNewEvent({
@@ -85,16 +453,22 @@ const Events = () => {
     setShowAddEventForm(true);
   };
 
-  const openEventFormForDate = (selectedDate) => {
-    const formattedDate = moment(selectedDate).format('YYYY-MM-DD');
-    const selectedDay = getDayNameFromDate(formattedDate);
+  const openEventFormForDate = (selectedDateValue) => {
+    const formattedDate = moment(
+      selectedDateValue
+    ).format('YYYY-MM-DD');
+
+    const selectedDay =
+      getDayNameFromDate(formattedDate);
 
     setNewEvent({
       ...emptyEvent,
       frequency: 'single',
       startDate: formattedDate,
       endDate: formattedDate,
-      days: selectedDay ? [selectedDay] : [],
+      days: selectedDay
+        ? [selectedDay]
+        : [],
     });
 
     setEditEventId(null);
@@ -114,7 +488,12 @@ const Events = () => {
       setNewEvent((previousEvent) => ({
         ...previousEvent,
         isPurchase: checked,
-        price: checked ? previousEvent.price : '',
+        price: checked
+          ? previousEvent.price
+          : '',
+        maxTicketQuantity: checked
+          ? previousEvent.maxTicketQuantity
+          : '',
       }));
 
       return;
@@ -123,14 +502,19 @@ const Events = () => {
     if (name === 'frequency') {
       setNewEvent((previousEvent) => {
         if (value === 'single') {
-          const selectedDate = previousEvent.startDate;
-          const selectedDay = getDayNameFromDate(selectedDate);
+          const selectedDateValue =
+            previousEvent.startDate;
+
+          const selectedDay =
+            getDayNameFromDate(selectedDateValue);
 
           return {
             ...previousEvent,
             frequency: value,
-            endDate: selectedDate,
-            days: selectedDay ? [selectedDay] : [],
+            endDate: selectedDateValue,
+            days: selectedDay
+              ? [selectedDay]
+              : [],
           };
         }
 
@@ -138,12 +522,17 @@ const Events = () => {
           ...previousEvent,
           frequency: value,
           endDate:
-            previousEvent.endDate || previousEvent.startDate,
+            previousEvent.endDate ||
+            previousEvent.startDate,
           days:
             previousEvent.days.length > 0
               ? previousEvent.days
               : previousEvent.startDate
-                ? [getDayNameFromDate(previousEvent.startDate)]
+                ? [
+                    getDayNameFromDate(
+                      previousEvent.startDate
+                    ),
+                  ].filter(Boolean)
                 : [],
         };
       });
@@ -153,14 +542,19 @@ const Events = () => {
 
     if (name === 'startDate') {
       setNewEvent((previousEvent) => {
-        if (previousEvent.frequency === 'single') {
-          const selectedDay = getDayNameFromDate(value);
+        if (
+          previousEvent.frequency === 'single'
+        ) {
+          const selectedDay =
+            getDayNameFromDate(value);
 
           return {
             ...previousEvent,
             startDate: value,
             endDate: value,
-            days: selectedDay ? [selectedDay] : [],
+            days: selectedDay
+              ? [selectedDay]
+              : [],
           };
         }
 
@@ -173,13 +567,20 @@ const Events = () => {
       return;
     }
 
-    if (type === 'checkbox' && name === 'days') {
+    if (
+      type === 'checkbox' &&
+      name === 'days'
+    ) {
       setNewEvent((previousEvent) => ({
         ...previousEvent,
         days: checked
-          ? [...previousEvent.days, value]
+          ? [
+              ...previousEvent.days,
+              value,
+            ]
           : previousEvent.days.filter(
-              (selectedDay) => selectedDay !== value
+              (selectedDay) =>
+                selectedDay !== value
             ),
       }));
 
@@ -201,68 +602,107 @@ const Events = () => {
       ...previousEvent,
       days: previousEvent.days.includes(day)
         ? previousEvent.days.filter(
-            (selectedDay) => selectedDay !== day
+            (selectedDay) =>
+              selectedDay !== day
           )
-        : [...previousEvent.days, day],
+        : [
+            ...previousEvent.days,
+            day,
+          ],
     }));
   };
 
   const handleEditEvent = (event) => {
-    const parsedDays = Array.isArray(event.days)
-      ? event.days
-      : typeof event.days === 'string'
-        ? event.days
-            .split(',')
-            .map((day) => day.trim())
-            .filter(Boolean)
-        : [];
+    const normalizedEvent =
+      normalizeEventRecord(event);
 
-    const startDate = event.startDate
-      ? moment(event.startDate).format('YYYY-MM-DD')
-      : '';
+    if (!normalizedEvent) {
+      return;
+    }
 
-    const endDate = event.endDate
-      ? moment(event.endDate).format('YYYY-MM-DD')
-      : startDate;
+    const parsedDays =
+      normalizeDays(normalizedEvent.days);
+
+    const startDate =
+      normalizedEvent.startDate
+        ? moment(
+            normalizedEvent.startDate
+          ).format('YYYY-MM-DD')
+        : '';
+
+    const endDate =
+      normalizedEvent.endDate
+        ? moment(
+            normalizedEvent.endDate
+          ).format('YYYY-MM-DD')
+        : startDate;
 
     const inferredSingleEvent =
-      event.frequency === 'single' ||
+      normalizedEvent.frequency ===
+        'single' ||
       (
         startDate &&
         endDate &&
-        moment(startDate).isSame(endDate, 'day') &&
+        moment(startDate).isSame(
+          endDate,
+          'day'
+        ) &&
         parsedDays.length <= 1
       );
 
-    const frequency = inferredSingleEvent
-      ? 'single'
-      : event.frequency || 'weekly';
+    const frequency =
+      inferredSingleEvent
+        ? 'single'
+        : normalizedEvent.frequency ||
+          'weekly';
 
-    const isPurchase = normalizePurchaseValue(
-      event.isPurchase
-    );
+    const isPurchase =
+      normalizePurchaseValue(
+        normalizedEvent.isPurchase
+      );
 
-    const normalizedDays = inferredSingleEvent
-      ? [getDayNameFromDate(startDate)].filter(Boolean)
-      : parsedDays;
+    const normalizedDays =
+      inferredSingleEvent
+        ? [
+            getDayNameFromDate(startDate),
+          ].filter(Boolean)
+        : parsedDays;
+
+    const maxTicketQuantity =
+      normalizeIntegerValue(
+        normalizedEvent.maxTicketQuantity ??
+          normalizedEvent.max_ticket_quantity,
+        0
+      );
 
     setNewEvent({
-      name: event.name || '',
-      description: event.description || '',
+      name: normalizedEvent.name || '',
+      description:
+        normalizedEvent.description || '',
       frequency,
       startDate,
-      endDate: inferredSingleEvent ? startDate : endDate,
-      startTime: event.startTime || '',
-      endTime: event.endTime || '',
+      endDate: inferredSingleEvent
+        ? startDate
+        : endDate,
+      startTime:
+        normalizedEvent.startTime || '',
+      endTime:
+        normalizedEvent.endTime || '',
       days: normalizedDays,
       isPurchase,
       price:
-        isPurchase && Number(event.price) > 0
-          ? String(event.price)
+        isPurchase &&
+        Number(normalizedEvent.price) > 0
+          ? String(normalizedEvent.price)
+          : '',
+      maxTicketQuantity:
+        isPurchase &&
+        maxTicketQuantity > 0
+          ? String(maxTicketQuantity)
           : '',
     });
 
-    setEditEventId(event.id);
+    setEditEventId(normalizedEvent.id);
     setValidationError('');
     setShowAddEventForm(true);
   };
@@ -279,20 +719,30 @@ const Events = () => {
       days,
       isPurchase,
       price,
+      maxTicketQuantity,
     } = newEvent;
 
     if (!String(name).trim()) {
-      setValidationError('Enter an event name.');
+      setValidationError(
+        'Enter an event name.'
+      );
+
       return false;
     }
 
     if (!String(description).trim()) {
-      setValidationError('Enter an event description.');
+      setValidationError(
+        'Enter an event description.'
+      );
+
       return false;
     }
 
     if (!frequency) {
-      setValidationError('Select an event frequency.');
+      setValidationError(
+        'Select an event frequency.'
+      );
+
       return false;
     }
 
@@ -306,8 +756,14 @@ const Events = () => {
       return false;
     }
 
-    if (!isSingleEvent && !endDate) {
-      setValidationError('Select an end date.');
+    if (
+      !isSingleEvent &&
+      !endDate
+    ) {
+      setValidationError(
+        'Select an end date.'
+      );
+
       return false;
     }
 
@@ -335,7 +791,10 @@ const Events = () => {
 
     if (
       !isSingleEvent &&
-      moment(endDate).isBefore(moment(startDate), 'day')
+      moment(endDate).isBefore(
+        moment(startDate),
+        'day'
+      )
     ) {
       setValidationError(
         'The end date cannot be before the start date.'
@@ -346,16 +805,30 @@ const Events = () => {
 
     const startsAt = moment(
       `${startDate} ${startTime}`,
-      'YYYY-MM-DD HH:mm'
+      [
+        'YYYY-MM-DD HH:mm',
+        'YYYY-MM-DD HH:mm:ss',
+      ],
+      true
     );
 
     const endsAt = moment(
-      `${isSingleEvent ? startDate : endDate} ${endTime}`,
-      'YYYY-MM-DD HH:mm'
+      `${
+        isSingleEvent
+          ? startDate
+          : endDate
+      } ${endTime}`,
+      [
+        'YYYY-MM-DD HH:mm',
+        'YYYY-MM-DD HH:mm:ss',
+      ],
+      true
     );
 
     if (
       isSingleEvent &&
+      startsAt.isValid() &&
+      endsAt.isValid() &&
       endsAt.isSameOrBefore(startsAt)
     ) {
       setValidationError(
@@ -378,6 +851,24 @@ const Events = () => {
 
         return false;
       }
+
+      const parsedMaxTicketQuantity =
+        maxTicketQuantity === ''
+          ? 0
+          : Number(maxTicketQuantity);
+
+      if (
+        !Number.isInteger(
+          parsedMaxTicketQuantity
+        ) ||
+        parsedMaxTicketQuantity < 0
+      ) {
+        setValidationError(
+          'Enter a valid max ticket quantity. Use 0 or leave it blank for unlimited tickets.'
+        );
+
+        return false;
+      }
     }
 
     setValidationError('');
@@ -394,26 +885,43 @@ const Events = () => {
 
     const payloadEndDate = singleEvent
       ? payloadStartDate
-      : moment(newEvent.endDate).format('YYYY-MM-DD');
+      : moment(
+          newEvent.endDate
+        ).format('YYYY-MM-DD');
 
     const payloadDays = singleEvent
-      ? [getDayNameFromDate(payloadStartDate)]
+      ? [
+          getDayNameFromDate(
+            payloadStartDate
+          ),
+        ]
       : newEvent.days;
 
     const isPurchase =
       newEvent.isPurchase === true;
 
-    const parsedPrice = Number(newEvent.price);
+    const parsedPrice = Number(
+      newEvent.price
+    );
+
+    const parsedMaxTicketQuantity =
+      parseInt(
+        newEvent.maxTicketQuantity || '0',
+        10
+      );
 
     return {
       name: newEvent.name.trim(),
-      description: newEvent.description.trim(),
+      description:
+        newEvent.description.trim(),
       frequency: newEvent.frequency,
       startDate: payloadStartDate,
       endDate: payloadEndDate,
       startTime: newEvent.startTime,
       endTime: newEvent.endTime,
-      days: payloadDays.filter(Boolean).join(','),
+      days: payloadDays
+        .filter(Boolean)
+        .join(','),
       isPurchase,
       price:
         isPurchase &&
@@ -421,59 +929,135 @@ const Events = () => {
         parsedPrice > 0
           ? parsedPrice
           : 0,
+      maxTicketQuantity:
+        isPurchase &&
+        Number.isInteger(
+          parsedMaxTicketQuantity
+        ) &&
+        parsedMaxTicketQuantity > 0
+          ? parsedMaxTicketQuantity
+          : 0,
     };
   };
 
   const generateEventOccurrences = (event) => {
-    const normalizedDays = Array.isArray(event.days)
-      ? event.days
-      : typeof event.days === 'string'
-        ? event.days
-            .split(',')
-            .map((day) => day.trim())
-            .filter(Boolean)
-        : [];
+    const normalizedEvent =
+      normalizeEventRecord(event);
 
-    const eventStartDate = moment(event.startDate);
-    const eventEndDate = moment(
-      event.endDate || event.startDate
+    if (!normalizedEvent?.startDate) {
+      return [];
+    }
+
+    const normalizedDays =
+      normalizeDays(normalizedEvent.days);
+
+    const eventStartDate = moment(
+      normalizedEvent.startDate,
+      'YYYY-MM-DD',
+      true
     );
 
+    const eventEndDate = moment(
+      normalizedEvent.endDate ||
+        normalizedEvent.startDate,
+      'YYYY-MM-DD',
+      true
+    );
+
+    if (!eventStartDate.isValid()) {
+      return [];
+    }
+
+    const safeEndDate =
+      eventEndDate.isValid()
+        ? eventEndDate
+        : eventStartDate.clone();
+
+    const createOccurrence = (dateKey) => ({
+      id: normalizedEvent.id,
+      title: normalizedEvent.name,
+      description:
+        normalizedEvent.description,
+      startTime:
+        normalizedEvent.startTime,
+      endTime: normalizedEvent.endTime,
+      isPurchase:
+        normalizedEvent.isPurchase,
+      price: normalizedEvent.price,
+      maxTicketQuantity:
+        normalizeIntegerValue(
+          normalizedEvent.maxTicketQuantity,
+          0
+        ),
+      ticketsSold:
+        getTicketsSoldForDate(
+          normalizedEvent,
+          dateKey
+        ),
+      date: dateKey,
+    });
+
     if (
-      event.frequency === 'single' ||
-      eventStartDate.isSame(eventEndDate, 'day')
+      normalizedEvent.frequency ===
+        'single' ||
+      eventStartDate.isSame(
+        safeEndDate,
+        'day'
+      )
     ) {
+      const dateKey =
+        eventStartDate.format(
+          'YYYY-MM-DD'
+        );
+
       return [
-        {
-          id: event.id,
-          title: event.name,
-          description: event.description,
-          startTime: event.startTime,
-          endTime: event.endTime,
-          isPurchase: event.isPurchase,
-          price: event.price,
-          date: eventStartDate.format('YYYY-MM-DD'),
-        },
+        createOccurrence(dateKey),
       ];
     }
 
     const occurrences = [];
-    const cursor = eventStartDate.clone();
+    const cursor =
+      eventStartDate.clone();
 
-    while (cursor.isSameOrBefore(eventEndDate, 'day')) {
-      const dayName = cursor.format('dddd');
+    while (
+      cursor.isSameOrBefore(
+        safeEndDate,
+        'day'
+      )
+    ) {
+      const fullDayName =
+        cursor.format('dddd');
 
-      if (normalizedDays.includes(dayName)) {
-        occurrences.push({
-          id: event.id,
-          title: event.name,
-          description: event.description,
-          startTime: event.startTime,
-          endTime: event.endTime,
-          isPurchase: event.isPurchase,
-          price: event.price,
-          date: cursor.format('YYYY-MM-DD'),
+      const shortDayName =
+        cursor.format('ddd');
+
+      const hasMatchingDay =
+        normalizedDays.some((day) => {
+          const normalizedDay = String(day)
+            .trim()
+            .toLowerCase();
+
+          return (
+            normalizedDay ===
+              fullDayName.toLowerCase() ||
+            normalizedDay ===
+              shortDayName.toLowerCase() ||
+            fullDayName
+              .toLowerCase()
+              .startsWith(normalizedDay) ||
+            normalizedDay.startsWith(
+              shortDayName.toLowerCase()
+            )
+          );
         });
+
+      if (hasMatchingDay) {
+        const dateKey =
+          cursor.format('YYYY-MM-DD');
+
+        occurrences.push(
+          createOccurrence(dateKey)
+        );
       }
 
       cursor.add(1, 'day');
@@ -487,23 +1071,44 @@ const Events = () => {
       setLoading(true);
       setError(null);
 
-      const response = await adminApi.get(
-        '/admin-event/events'
-      );
+      const response =
+        await adminApi.get(
+          '/admin-event/events'
+        );
 
-      const rawEvents = Array.isArray(response.data)
+      const rawEvents = Array.isArray(
+        response.data
+      )
         ? response.data
-        : [];
+        : Array.isArray(
+              response.data?.events
+            )
+          ? response.data.events
+          : Array.isArray(
+                response.data?.data
+              )
+            ? response.data.data
+            : [];
 
-      setEvents(rawEvents);
+      const normalizedEvents =
+        rawEvents
+          .map(normalizeEventRecord)
+          .filter(Boolean);
 
-      const occurrences = rawEvents.flatMap(
-        generateEventOccurrences
-      );
+      setEvents(normalizedEvents);
+
+      const occurrences =
+        normalizedEvents.flatMap(
+          generateEventOccurrences
+        );
 
       setCalendarEvents(occurrences);
     } catch (fetchError) {
-      console.error('Fetch error:', fetchError);
+      console.error(
+        'Fetch error:',
+        fetchError
+      );
+
       setError('Unable to load events.');
     } finally {
       setLoading(false);
@@ -519,7 +1124,8 @@ const Events = () => {
       return;
     }
 
-    const formattedEvent = buildEventPayload();
+    const formattedEvent =
+      buildEventPayload();
 
     try {
       if (editEventId) {
@@ -537,16 +1143,21 @@ const Events = () => {
       closeEventForm();
       await fetchEvents();
     } catch (saveError) {
-      console.error('Error saving event:', saveError);
+      console.error(
+        'Error saving event:',
+        saveError
+      );
 
       setValidationError(
         saveError.response?.data?.message ||
-        'Unable to save the event.'
+          'Unable to save the event.'
       );
     }
   };
 
-  const handleDeleteEvent = async (eventId) => {
+  const handleDeleteEvent = async (
+    eventId
+  ) => {
     try {
       await adminApi.delete(
         `/admin-event/events/${eventId}`
@@ -565,110 +1176,261 @@ const Events = () => {
 
       setValidationError(
         deleteError.response?.data?.message ||
-        'Unable to delete the event.'
+          'Unable to delete the event.'
       );
     }
   };
 
+  const eventsByDate = useMemo(() => {
+    return calendarEvents.reduce(
+      (calendar, event) => {
+        if (!calendar[event.date]) {
+          calendar[event.date] = [];
+        }
+
+        calendar[event.date].push(event);
+
+        return calendar;
+      },
+      {}
+    );
+  }, [calendarEvents]);
+
+  const selectedEvents =
+    eventsByDate[selectedDate] || [];
+
+  const upcomingOccurrences = useMemo(() => {
+    const now = moment();
+
+    return calendarEvents
+      .filter((event) => {
+        const eventDateTime =
+          parseEventDateTime(
+            event.date,
+            event.startTime || '23:59'
+          );
+
+        return (
+          eventDateTime.isValid() &&
+          eventDateTime.isSameOrAfter(now)
+        );
+      })
+      .sort((firstEvent, secondEvent) => {
+        const firstDateTime =
+          parseEventDateTime(
+            firstEvent.date,
+            firstEvent.startTime || '23:59'
+          );
+
+        const secondDateTime =
+          parseEventDateTime(
+            secondEvent.date,
+            secondEvent.startTime || '23:59'
+          );
+
+        return (
+          firstDateTime.valueOf() -
+          secondDateTime.valueOf()
+        );
+      });
+  }, [calendarEvents]);
+
+  const featuredEvent =
+    upcomingOccurrences[0] || null;
+
+  useEffect(() => {
+    if (!featuredEvent?.date) {
+      return;
+    }
+
+    const featuredDate = moment(
+      featuredEvent.date,
+      'YYYY-MM-DD',
+      true
+    );
+
+    if (!featuredDate.isValid()) {
+      return;
+    }
+
+    setSelectedDate(
+      featuredDate.format('YYYY-MM-DD')
+    );
+
+    setCurrentDate(
+      featuredDate
+        .clone()
+        .startOf('month')
+    );
+  }, [
+    featuredEvent?.id,
+    featuredEvent?.date,
+  ]);
+
+  const calendarDays = useMemo(() => {
+    const startOfCalendar =
+      currentDate
+        .clone()
+        .startOf('month')
+        .startOf('week');
+
+    const endOfCalendar =
+      currentDate
+        .clone()
+        .endOf('month')
+        .endOf('week');
+
+    const days = [];
+    const cursor =
+      startOfCalendar.clone();
+
+    while (
+      cursor.isSameOrBefore(
+        endOfCalendar,
+        'day'
+      )
+    ) {
+      days.push(cursor.clone());
+      cursor.add(1, 'day');
+    }
+
+    return days;
+  }, [currentDate]);
+
   const handlePrevMonth = () => {
     setCurrentDate((previousDate) =>
-      previousDate.clone().subtract(1, 'month')
+      previousDate
+        .clone()
+        .subtract(1, 'month')
     );
   };
 
   const handleNextMonth = () => {
     setCurrentDate((previousDate) =>
-      previousDate.clone().add(1, 'month')
+      previousDate
+        .clone()
+        .add(1, 'month')
     );
   };
 
   const handleCurrentMonth = () => {
-    setCurrentDate(moment());
+    const today = moment();
+
+    setCurrentDate(
+      today.clone().startOf('month')
+    );
+
+    setSelectedDate(
+      today.format('YYYY-MM-DD')
+    );
   };
 
-  const renderCalendarDays = () => {
-    const startOfCalendar = currentDate
-      .clone()
-      .startOf('month')
-      .startOf('week');
+  const handleSelectDate = (date) => {
+    setSelectedDate(
+      date.format('YYYY-MM-DD')
+    );
 
-    const endOfCalendar = currentDate
-      .clone()
-      .endOf('month')
-      .endOf('week');
+    setValidationError('');
+  };
 
-    const days = [];
-    const cursor = startOfCalendar.clone();
+  const findSourceEvent = (eventId) =>
+    events.find(
+      (event) => event.id === eventId
+    );
 
-    while (cursor.isSameOrBefore(endOfCalendar, 'day')) {
-      const currentDay = cursor.clone();
-      const dateKey = currentDay.format('YYYY-MM-DD');
+  const renderSelectedEvent = (
+    event,
+    index
+  ) => {
+    const sourceEvent =
+      findSourceEvent(event.id);
 
-      const isToday = currentDay.isSame(moment(), 'day');
-      const isCurrentMonth = currentDay.isSame(
-        currentDate,
-        'month'
+    const eventIsPurchase =
+      normalizePurchaseValue(
+        event.isPurchase
       );
 
-      const eventsForDay = calendarEvents.filter(
-        (event) => event.date === dateKey
+    const maxTicketQuantity =
+      normalizeIntegerValue(
+        event.maxTicketQuantity ??
+          event.max_ticket_quantity,
+        0
       );
 
-      days.push(
-        <button
-          type="button"
-          key={dateKey}
-          className={[
-            'calendar-day',
-            isCurrentMonth
-              ? 'calendar-day--current'
-              : 'calendar-day--outside',
-            isToday ? 'calendar-day--today' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-          onClick={() =>
-            openEventFormForDate(currentDay)
-          }
-          aria-label={`Add event on ${currentDay.format(
-            'MMMM D, YYYY'
-          )}`}
-        >
-          <span className="calendar-day__number">
-            {currentDay.date()}
+    const ticketsSold =
+      normalizeIntegerValue(
+        event.ticketsSold ??
+          event.tickets_sold,
+        0
+      );
+
+    return (
+      <article
+        key={`${event.id}-${event.date}-${index}`}
+        className="admin-selected-event"
+      >
+        <div className="admin-selected-event__heading">
+          <div>
+            <span>
+              {formatTime(event.startTime)}
+            </span>
+
+            <h3>{event.title}</h3>
+          </div>
+
+          <strong>
+            {eventIsPurchase
+              ? `$${Number(
+                  event.price || 0
+                ).toFixed(2)}`
+              : 'Free'}
+          </strong>
+        </div>
+
+        {event.description && (
+          <p>{event.description}</p>
+        )}
+
+        <div className="admin-selected-event__meta">
+          <span>
+            {formatTime(event.startTime)} –{' '}
+            {formatTime(event.endTime)}
           </span>
 
-          <div className="calendar-day__events">
-            {eventsForDay.slice(0, 3).map(
-              (event, index) => (
-                <div
-                  key={`${event.id}-${event.date}-${index}`}
-                  className="calendar-event"
-                >
-                  <span className="calendar-event__title">
-                    {event.title}
-                  </span>
+          {eventIsPurchase && (
+            <span>
+              {maxTicketQuantity > 0
+                ? `${ticketsSold} / ${maxTicketQuantity} tickets sold`
+                : `${ticketsSold} tickets sold — unlimited`}
+            </span>
+          )}
+        </div>
 
-                  <span className="calendar-event__time">
-                    {event.startTime}
-                  </span>
-                </div>
-              )
-            )}
+        <div className="admin-selected-event__actions">
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={() =>
+              sourceEvent &&
+              handleEditEvent(sourceEvent)
+            }
+            disabled={!sourceEvent}
+          >
+            Edit
+          </button>
 
-            {eventsForDay.length > 3 && (
-              <span className="calendar-event__more">
-                +{eventsForDay.length - 3} more
-              </span>
-            )}
-          </div>
-        </button>
-      );
-
-      cursor.add(1, 'day');
-    }
-
-    return days;
+          <button
+            type="button"
+            className="button button--danger"
+            onClick={() =>
+              handleDeleteEvent(event.id)
+            }
+          >
+            Delete
+          </button>
+        </div>
+      </article>
+    );
   };
 
   const renderPurchaseFields = () => (
@@ -704,26 +1466,49 @@ const Events = () => {
       </label>
 
       {newEvent.isPurchase && (
-        <div className="form-field form-field--price">
-          <label htmlFor="eventPrice">
-            Event price
-          </label>
+        <div className="event-ticket-settings">
+          <div className="form-field">
+            <label htmlFor="eventPrice">
+              Event price
+            </label>
 
-          <div className="price-input">
-            <span className="price-input__symbol">
-              $
-            </span>
+            <div className="price-input">
+              <span className="price-input__symbol">
+                $
+              </span>
+
+              <input
+                id="eventPrice"
+                name="price"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={newEvent.price}
+                onChange={handleEventChange}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          <div className="form-field">
+            <label htmlFor="maxTicketQuantity">
+              Max tickets per event date
+            </label>
 
             <input
-              id="eventPrice"
-              name="price"
+              id="maxTicketQuantity"
+              name="maxTicketQuantity"
               type="number"
-              min="0.01"
-              step="0.01"
-              value={newEvent.price}
+              min="0"
+              step="1"
+              value={newEvent.maxTicketQuantity}
               onChange={handleEventChange}
-              placeholder="0.00"
+              placeholder="0"
             />
+
+            <span className="form-field__hint">
+              For recurring events, this limit applies to each individual calendar date. Use 0 or leave blank for unlimited.
+            </span>
           </div>
         </div>
       )}
@@ -739,6 +1524,7 @@ const Events = () => {
       <section className="event-form__panel">
         <div className="event-form__panel-heading">
           <h3>Days of the week</h3>
+
           <p>
             Choose the days on which this event occurs.
           </p>
@@ -768,7 +1554,9 @@ const Events = () => {
                   }
                 />
 
-                <span>{day.slice(0, 3)}</span>
+                <span>
+                  {day.slice(0, 3)}
+                </span>
               </label>
             );
           })}
@@ -920,7 +1708,9 @@ const Events = () => {
                       <span className="form-field__hint">
                         {moment(
                           newEvent.startDate
-                        ).format('dddd, MMMM D, YYYY')}
+                        ).format(
+                          'dddd, MMMM D, YYYY'
+                        )}
                       </span>
                     )}
                   </div>
@@ -1017,16 +1807,39 @@ const Events = () => {
 
   const renderEventPreview = (event) => {
     const eventIsPurchase =
-      normalizePurchaseValue(event.isPurchase);
+      normalizePurchaseValue(
+        event.isPurchase
+      );
 
-    const startDate = moment(event.startDate);
+    const startDate = moment(
+      event.startDate,
+      'YYYY-MM-DD',
+      true
+    );
+
     const endDate = moment(
-      event.endDate || event.startDate
+      event.endDate || event.startDate,
+      'YYYY-MM-DD',
+      true
     );
 
     const singleEvent =
       event.frequency === 'single' ||
-      startDate.isSame(endDate, 'day');
+      (
+        startDate.isValid() &&
+        endDate.isValid() &&
+        startDate.isSame(
+          endDate,
+          'day'
+        )
+      );
+
+    const maxTicketQuantity =
+      normalizeIntegerValue(
+        event.maxTicketQuantity ??
+          event.max_ticket_quantity,
+        0
+      );
 
     return (
       <article className="event-card">
@@ -1036,7 +1849,8 @@ const Events = () => {
               <span className="event-card__type">
                 {singleEvent
                   ? 'Single event'
-                  : event.frequency || 'Recurring'}
+                  : event.frequency ||
+                    'Recurring'}
               </span>
 
               <h3>{event.name}</h3>
@@ -1067,7 +1881,9 @@ const Events = () => {
 
               <strong>
                 {singleEvent
-                  ? startDate.format('MMMM D, YYYY')
+                  ? startDate.format(
+                      'MMMM D, YYYY'
+                    )
                   : `${startDate.format(
                       'MMM D, YYYY'
                     )} – ${endDate.format(
@@ -1080,9 +1896,22 @@ const Events = () => {
               <span>Time</span>
 
               <strong>
-                {event.startTime} – {event.endTime}
+                {formatTime(event.startTime)} –{' '}
+                {formatTime(event.endTime)}
               </strong>
             </div>
+
+            {eventIsPurchase && (
+              <div className="event-card__detail">
+                <span>Ticket limit</span>
+
+                <strong>
+                  {maxTicketQuantity > 0
+                    ? `${maxTicketQuantity} per event date`
+                    : 'Unlimited'}
+                </strong>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1090,7 +1919,9 @@ const Events = () => {
           <button
             type="button"
             className="button button--secondary"
-            onClick={() => handleEditEvent(event)}
+            onClick={() =>
+              handleEditEvent(event)
+            }
           >
             Edit
           </button>
@@ -1110,19 +1941,19 @@ const Events = () => {
   };
 
   return (
-    <main className="events-page">
+    <main className="events-body events-page admin-events-page">
       <section className="events-page__shell">
-        <header className="events-page__header">
+        <header className="events-page__header admin-events-heading">
           <div>
             <span className="events-page__eyebrow">
-              Administration
+              Event administration
             </span>
 
-            <h1>Events</h1>
+            <h1>Manage Events</h1>
 
             <p>
-              Create, schedule, and manage upcoming
-              events.
+              Select a calendar date to review scheduled events,
+              edit details, delete entries, or create a new event.
             </p>
           </div>
 
@@ -1137,11 +1968,12 @@ const Events = () => {
           </motion.button>
         </header>
 
-        {validationError && !showAddEventForm && (
-          <div className="event-alert event-alert--error">
-            {validationError}
-          </div>
-        )}
+        {validationError &&
+          !showAddEventForm && (
+            <div className="event-alert event-alert--error">
+              {validationError}
+            </div>
+          )}
 
         {error && (
           <div className="event-alert event-alert--error">
@@ -1149,103 +1981,341 @@ const Events = () => {
           </div>
         )}
 
-        <section className="calendar-card">
-          <div className="calendar-toolbar">
-            <div>
-              <span className="calendar-toolbar__label">
-                Calendar
+        {loading && (
+          <div className="admin-events-loading">
+            Loading events...
+          </div>
+        )}
+
+        {!loading && featuredEvent && (
+          <section className="admin-featured-event">
+            <div className="admin-featured-event__date">
+              <span>
+                {moment(
+                  featuredEvent.date
+                ).format('MMM')}
+              </span>
+
+              <strong>
+                {moment(
+                  featuredEvent.date
+                ).format('D')}
+              </strong>
+
+              <span>
+                {moment(
+                  featuredEvent.date
+                ).format('YYYY')}
+              </span>
+            </div>
+
+            <div className="admin-featured-event__content">
+              <span className="events-page__eyebrow">
+                Next event
+              </span>
+
+              <h2>{featuredEvent.title}</h2>
+
+              {featuredEvent.description && (
+                <p>
+                  {featuredEvent.description}
+                </p>
+              )}
+
+              <div className="admin-featured-event__meta">
+                <span>
+                  {moment(
+                    featuredEvent.date
+                  ).format(
+                    'dddd, MMMM D, YYYY'
+                  )}
+                </span>
+
+                <span>
+                  {formatTime(
+                    featuredEvent.startTime
+                  )}{' '}
+                  –{' '}
+                  {formatTime(
+                    featuredEvent.endTime
+                  )}
+                </span>
+
+                {normalizePurchaseValue(
+                  featuredEvent.isPurchase
+                ) && (
+                  <span>
+                    {normalizeIntegerValue(
+                      featuredEvent.maxTicketQuantity,
+                      0
+                    ) > 0
+                      ? `${normalizeIntegerValue(
+                          featuredEvent.ticketsSold,
+                          0
+                        )} / ${normalizeIntegerValue(
+                          featuredEvent.maxTicketQuantity,
+                          0
+                        )} tickets sold`
+                      : `${normalizeIntegerValue(
+                          featuredEvent.ticketsSold,
+                          0
+                        )} tickets sold — unlimited`}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="admin-featured-event__actions">
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={() => {
+                  const sourceEvent =
+                    findSourceEvent(
+                      featuredEvent.id
+                    );
+
+                  if (sourceEvent) {
+                    handleEditEvent(
+                      sourceEvent
+                    );
+                  }
+                }}
+              >
+                Edit event
+              </button>
+            </div>
+          </section>
+        )}
+
+        <div className="admin-events-layout">
+          <section className="calendar-card admin-calendar-card">
+            <div className="calendar-toolbar">
+              <div>
+                <span className="calendar-toolbar__label">
+                  Event calendar
+                </span>
+
+                <h2>
+                  {currentDate.format(
+                    'MMMM YYYY'
+                  )}
+                </h2>
+              </div>
+
+              <div className="calendar-toolbar__actions">
+                <button
+                  type="button"
+                  className="calendar-toolbar__today"
+                  onClick={handleCurrentMonth}
+                >
+                  Today
+                </button>
+
+                <button
+                  type="button"
+                  className="calendar-toolbar__arrow"
+                  onClick={handlePrevMonth}
+                  aria-label="Previous month"
+                >
+                  ‹
+                </button>
+
+                <button
+                  type="button"
+                  className="calendar-toolbar__arrow"
+                  onClick={handleNextMonth}
+                  aria-label="Next month"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+
+            <div className="calendar-grid admin-calendar-grid">
+              {[
+                'Sun',
+                'Mon',
+                'Tue',
+                'Wed',
+                'Thu',
+                'Fri',
+                'Sat',
+              ].map((day) => (
+                <div
+                  key={day}
+                  className="calendar-day-header"
+                >
+                  {day}
+                </div>
+              ))}
+
+              {calendarDays.map((date) => {
+                const dateKey =
+                  date.format('YYYY-MM-DD');
+
+                const eventsForDay =
+                  eventsByDate[dateKey] ||
+                  [];
+
+                const isToday =
+                  date.isSame(moment(), 'day');
+
+                const isCurrentMonth =
+                  date.isSame(
+                    currentDate,
+                    'month'
+                  );
+
+                const isSelected =
+                  dateKey === selectedDate;
+
+                return (
+                  <button
+                    type="button"
+                    key={dateKey}
+                    className={[
+                      'calendar-day',
+                      isCurrentMonth
+                        ? 'calendar-day--current'
+                        : 'calendar-day--outside',
+                      isToday
+                        ? 'calendar-day--today'
+                        : '',
+                      isSelected
+                        ? 'calendar-day--selected'
+                        : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    onClick={() =>
+                      handleSelectDate(date)
+                    }
+                    onDoubleClick={() =>
+                      openEventFormForDate(date)
+                    }
+                    aria-label={`View events on ${date.format(
+                      'MMMM D, YYYY'
+                    )}`}
+                  >
+                    <span className="calendar-day__number">
+                      {date.date()}
+                    </span>
+
+                    {eventsForDay.length > 0 && (
+                      <span className="admin-calendar-event-count">
+                        {eventsForDay.length}
+                      </span>
+                    )}
+
+                    <div
+                      className="admin-calendar-event-dots"
+                      aria-hidden="true"
+                    >
+                      {eventsForDay
+                        .slice(0, 5)
+                        .map(
+                          (
+                            event,
+                            index
+                          ) => (
+                            <span
+                              key={`${event.id}-${dateKey}-${index}`}
+                            />
+                          )
+                        )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <aside className="admin-selected-events-panel">
+            <div className="admin-selected-events-header">
+              <span className="events-page__eyebrow">
+                Selected date
               </span>
 
               <h2>
-                {currentDate.format('MMMM YYYY')}
+                {moment(selectedDate).format(
+                  'MMMM D, YYYY'
+                )}
               </h2>
-            </div>
-
-            <div className="calendar-toolbar__actions">
-              <button
-                type="button"
-                className="calendar-toolbar__today"
-                onClick={handleCurrentMonth}
-              >
-                Today
-              </button>
 
               <button
                 type="button"
-                className="calendar-toolbar__arrow"
-                onClick={handlePrevMonth}
-                aria-label="Previous month"
+                className="button button--primary"
+                onClick={() =>
+                  openEventFormForDate(
+                    selectedDate
+                  )
+                }
               >
-                ‹
-              </button>
-
-              <button
-                type="button"
-                className="calendar-toolbar__arrow"
-                onClick={handleNextMonth}
-                aria-label="Next month"
-              >
-                ›
+                Add event on this date
               </button>
             </div>
-          </div>
 
-          <div className="calendar-grid">
-            {[
-              'Sun',
-              'Mon',
-              'Tue',
-              'Wed',
-              'Thu',
-              'Fri',
-              'Sat',
-            ].map((day) => (
-              <div
-                key={day}
-                className="calendar-day-header"
-              >
-                {day}
-              </div>
-            ))}
+            <div className="admin-selected-events-list">
+              {selectedEvents.length === 0 ? (
+                <div className="admin-selected-events-empty">
+                  <h3>
+                    No events scheduled
+                  </h3>
 
-            {renderCalendarDays()}
-          </div>
-        </section>
+                  <p>
+                    Create an event for this date using the button above.
+                  </p>
+                </div>
+              ) : (
+                selectedEvents.map(
+                  renderSelectedEvent
+                )
+              )}
+            </div>
+          </aside>
+        </div>
 
-        <section className="event-list-section">
+        <section className="event-list-section admin-event-directory">
           <div className="event-list-section__header">
             <div>
               <span className="events-page__eyebrow">
                 Event directory
               </span>
 
-              <h2>Scheduled events</h2>
+              <h2>
+                All scheduled events
+              </h2>
             </div>
 
             <span className="event-list-section__count">
               {events.length}{' '}
-              {events.length === 1 ? 'event' : 'events'}
+              {events.length === 1
+                ? 'event'
+                : 'events'}
             </span>
           </div>
 
-          {loading ? (
+          {!loading &&
+          events.length === 0 ? (
             <div className="event-empty-state">
-              Loading events...
-            </div>
-          ) : events.length === 0 ? (
-            <div className="event-empty-state">
-              <h3>No events scheduled</h3>
+              <h3>
+                No events scheduled
+              </h3>
 
               <p>
-                Click a calendar date or use the Add
-                event button to create one.
+                Select a date or use the Add event button to create one.
               </p>
             </div>
           ) : (
             <div className="event-list">
               {events.map((event) => (
-                <React.Fragment key={event.id}>
-                  {renderEventPreview(event)}
+                <React.Fragment
+                  key={event.id}
+                >
+                  {renderEventPreview(
+                    event
+                  )}
                 </React.Fragment>
               ))}
             </div>
@@ -1259,4 +2329,3 @@ const Events = () => {
 };
 
 export default Events;
-

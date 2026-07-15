@@ -1,4 +1,4 @@
-/* Light Mode (Default) */
+/* Register Light Mode (Default) */
 :root,
 [data-theme="light"] {
    --mono: white;

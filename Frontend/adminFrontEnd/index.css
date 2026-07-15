@@ -1,242 +1,364 @@
-/* Light Mode (Default) */
+
+/* ==================================================
+   ADMIN GLOBAL THEME
+================================================== */
 
 :root,
-[data-theme="light"] {
-   /* NAVBAR */
-   --navbar-bg: #e7cfb4;
-   --wood-bg-dark: #e9e1c2;
-   --navbar-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-   --navbar-text: #000;
-   --navbar-hover: rgba(0, 0, 0, 0.1);
-   --hamburger-bar: #000;
-   --nav-list-bg: #e7cfb4;
-   --nav-list-item-border: #000;
-   --nav-list-item-bg-hover: #ddd;
-   --button-bg: white;
-   --button-text: black;
-   --button-hover: #f0f0f0;
-   --inverted-button-bg: #84240c;
-   --inverted-button-text: rgb(249, 249, 249);
+[data-theme='light'] {
+  color-scheme: light;
 
-   /* HOME */
-   --bg-color: #e7cfb4;
-   --bg-overlay: #ffffff8b;
-   --bg-section: #ffebdea0;
-   --text-color: #000000;
-   --hero-bg-overlay: #e7cfb4;
-   --hero-title-color: black;
-   --hero-desc-color: #ffffff89;
-   --btn-bg: #84240c;
-   --btn-hover: #da6d42;
-   --btn-hover-text: black;
-   --about-bg: #e7cfb4;
-   --about-text: #333;
-   --event-bg: #000;
-   --event-title: #ffeb3b;
-   --event-text: #e0e0e0;
-   --product-card-bg: #fff;
-   --product-shadow: rgba(0, 0, 0, 0.1);
-   --contact-bg: #e7cfb4;
+  --font: 'Montserrat', Arial, Helvetica, sans-serif;
 
-   /* STORE */
-   --text-color: #000000;
-   --header-color: #000;
-   --tile-bg: rgba(0, 0, 0, 0.618);
-   --tile-border: rgba(221, 221, 221, 0.35);
-   --tile-shadow: 0 10px 50px rgba(0, 0, 0, 0.9);
-   --info-title-color: #000;
-   --info-title-bg: #fff;
-   --price-color: #84240c;
-   --price-original-color: #ccc;
-   --sale-end-color: #ff4d4d;
-   --discount-tag-bg: #ff4d4d;
-   --discount-tag-color: #fff;
-   --solid-bg: rgb(210, 210, 210);
+  /* Core page colors */
+  --wood-bg-dark: #e9e1c2;
+  --bg-color: #e7cfb4;
+  --bg-overlay: rgba(255, 255, 255, 0.55);
+  --bg-section: rgba(255, 235, 222, 0.63);
 
-   /* THEME */
-   --text-color: #000000;
-   --toggle-bg: #ccc;
-   --toggle-slider: #fff;
-   --toggle-bg-active: #4a4a4a;
-   --toggle-slider-active: #f9f9f9;
+  --text-color: #1d1d1d;
+  --header-color: #292929;
+  --about-text: #4b4b4b;
+  --body-text: #333333;
 
-   /* SIGNUP FORM */
-   --body-bg: #f4f4f9;
-   --body-text: #333;
-   --container-bg: #fff;
-   --container-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-   --header-color: #333;
-   --form-input-border: #ccc;
-   --user-email-bg: rgb(52, 52, 52);
-   --user-email-text: #fff;
-   --success-bg: #dedede;
-   --success-text: #e74c3c;
-   --signup-button-bg: #28a745;
-   --signup-button-text: #fff;
-   --blue-button-bg: #007bff;
-   --blue-button-hover-bg: #e53e3e;
-   --signup-form-section-border: #333;
-   --signup-form-section-bg: linear-gradient(145deg, #ffffff, #d3d3d3);
-   --signup-form-section-shadow: 0px 10px 20px rgba(0, 0, 0, 0.2),
-                         inset 0px -5px 15px rgba(255, 255, 255, 0.4);
-   --bullet-color: black;
-   --phone-input-border: #ccc;
+  /* Navigation */
+  --navbar-bg: #e7cfb4;
+  --navbar-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --navbar-text: #111111;
+  --navbar-hover: rgba(0, 0, 0, 0.08);
+  --hamburger-bar: #111111;
+  --nav-list-bg: #e7cfb4;
+  --nav-list-item-border: rgba(0, 0, 0, 0.25);
+  --nav-list-item-bg-hover: #ddd2c4;
 
-   
+  /* Surfaces */
+  --container-bg: rgba(255, 255, 255, 0.88);
+  --container-shadow:
+    0 12px 32px rgba(42, 28, 18, 0.12);
+
+  --product-card-bg: #ffffff;
+  --product-shadow: rgba(0, 0, 0, 0.1);
+  --solid-bg: #d2d2d2;
+
+  /* Buttons */
+  --button-bg: #ffffff;
+  --button-text: #1a1a1a;
+  --button-hover: #f2ece7;
+
+  --btn-bg: #84240c;
+  --btn-hover: #da6d42;
+  --btn-hover-text: #1a1a1a;
+
+  --inverted-button-bg: #84240c;
+  --inverted-button-text: #ffffff;
+
+  --signup-button-bg: #84240c;
+  --signup-button-text: #ffffff;
+
+  --blue-button-bg: #007bff;
+  --blue-button-hover-bg: #005fc7;
+
+  /* Forms */
+  --body-bg: #f4f4f9;
+  --form-input-border: #c9bcae;
+  --phone-input-border: #c9bcae;
+
+  --user-email-bg: #343434;
+  --user-email-text: #ffffff;
+
+  --signup-form-section-border: #bcae9f;
+  --signup-form-section-bg:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.94),
+      rgba(224, 214, 204, 0.94)
+    );
+
+  --signup-form-section-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.15),
+    inset 0 -5px 15px rgba(255, 255, 255, 0.4);
+
+  /* Status colors */
+  --success-bg: #e5f4e9;
+  --success-text: #25753d;
+  --bullet-color: #111111;
+
+  /* Miscellaneous */
+  --hero-bg-overlay: #874130;
+  --hero-title-color: #111111;
+  --hero-desc-color: rgba(255, 255, 255, 0.75);
+
+  --about-bg: #e7cfb4;
+  --event-bg: #111111;
+  --event-title: #ffeb3b;
+  --event-text: #e0e0e0;
+  --contact-bg: #e7cfb4;
+
+  --tile-bg: rgba(0, 0, 0, 0.62);
+  --tile-border: rgba(221, 221, 221, 0.35);
+  --tile-shadow: 0 10px 50px rgba(0, 0, 0, 0.45);
+
+  --info-title-color: #111111;
+  --info-title-bg: #ffffff;
+
+  --price-color: #84240c;
+  --price-original-color: #777777;
+  --sale-end-color: #d93636;
+  --discount-tag-bg: #d93636;
+  --discount-tag-color: #ffffff;
+
+  /* Theme toggle */
+  --toggle-bg: #cccccc;
+  --toggle-slider: #ffffff;
+  --toggle-bg-active: #4a4a4a;
+  --toggle-slider-active: #f9f9f9;
 }
 
-/* Dark Mode */
-[data-theme="dark"] {
-   --font: Arial, Helvetica, sans-serif;
+/* ==================================================
+   ADMIN DARK THEME
+================================================== */
 
-   /* NAVBAR */
-   --wood-bg-dark: #19270d;
-   --navbar-bg: #19270d;
-   --navbar-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
-   --navbar-text: #ffffff;
-   --navbar-hover: rgba(255, 255, 255, 0.2);
-   --hamburger-bar: #ffffff;
-   --nav-list-bg: #19270d;
-   --nav-list-item-border: #fff;
-   --nav-list-item-bg-hover: #333;
-   --button-bg: black;
-   --button-text: rgb(255, 255, 255);
-   --button-hover: #444;
-   --inverted-button-bg: #ffffff;
-   --inverted-button-text: rgb(255, 255, 255);
+[data-theme='dark'] {
+  color-scheme: dark;
 
-   /* HOME */
-   --bg-overlay: #79804d;
-   --text-color: #ffffff;
-   --bg-section: #72601b;
-   --hero-bg-overlay: #818c3c;
-   --hero-title-color: white;
-   --hero-desc-color: #e0e0e0;
-   --btn-bg: #25591f;
-   --btn-hover: #818c3c;
-   --btn-hover-text: black;
-   --about-bg: #1e1e1e;
-   --about-text: #ddd;
-   --event-bg: #222;
-   --event-title: #ffeb3b;
-   --event-text: #ccc;
-   --product-card-bg: #2e2e2e;
-   --product-shadow: rgba(255, 255, 255, 0.1);
-   --contact-bg: #1e1e1e;
+  --font: 'Montserrat', Arial, Helvetica, sans-serif;
 
-   /* STORE */
-   --bg-color: #19270d;
-   --text-color: #ffffff;
-   --header-color: #fff;
-   --tile-bg: rgba(0, 0, 0, 0.85);
-   --tile-border: rgba(221, 221, 221, 0.2);
-   --tile-shadow: 0 10px 50px rgba(0, 0, 0, 0.9);
-   --info-title-color: #fff;
-   --info-title-bg: #333;
-   --price-color: #25591f;
-   --price-original-color: #aaa;
-   --sale-end-color: #ff4d4d;
-   --discount-tag-bg: #ff4d4d;
-   --discount-tag-color: #fff;
+  /* Core page colors */
+  --wood-bg-dark: #19270d;
+  --bg-color: #19270d;
+  --bg-overlay: rgba(121, 128, 77, 0.48);
+  --bg-section: #2a351f;
 
-   /* THEME */
-   --text-color: #ffffff;
-   --toggle-bg: #555;
-   --toggle-slider: #222;
-   --toggle-bg-active: #888;
-   --toggle-slider-active: #f1f1f1;
+  --text-color: #f3f3ef;
+  --header-color: #ffffff;
+  --about-text: #d2d7ca;
+  --body-text: #ffffff;
 
-   /* SIGNUP FORM */
-   --body-text: #fff;
-   --container-bg: #1e1e1e;
-   --container-shadow: 0 4px 6px rgba(255, 255, 255, 0.2);
-   --header-color: #fff;
-   --form-input-border: #555;
-   --user-email-bg: #333;
-   --user-email-text: #fff;
-   --success-bg: #2e2e2e;
-   --success-text: #ff4444;
-   --signup-button-bg: #4caf50;
-   --signup-button-text: #fff;
-   --blue-button-bg: #5599ff;
-   --blue-button-hover-bg: #3377ff;
-   --signup-form-section-border: #aaa;
-   --signup-form-section-bg: linear-gradient(145deg, #555555f7, #20202093);
-   --signup-form-section-shadow: 0px 10px 20px rgba(255, 255, 255, 0.2),
-                         inset 0px -5px 15px rgba(0, 0, 0, 0.4);
-   --bullet-color: #fff;
-   --phone-input-border: #555;
+  /* Navigation */
+  --navbar-bg: #19270d;
+  --navbar-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.45);
+
+  --navbar-text: #ffffff;
+  --navbar-hover: rgba(255, 255, 255, 0.12);
+  --hamburger-bar: #ffffff;
+  --nav-list-bg: #19270d;
+  --nav-list-item-border: rgba(255, 255, 255, 0.35);
+  --nav-list-item-bg-hover: #2c3b22;
+
+  /* Surfaces */
+  --container-bg: #20251d;
+  --container-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.45);
+
+  --product-card-bg: #2e2e2e;
+  --product-shadow: rgba(0, 0, 0, 0.45);
+  --solid-bg: #30342e;
+
+  /* Buttons */
+  --button-bg: #141713;
+  --button-text: #ffffff;
+  --button-hover: #343a30;
+
+  --btn-bg: #3f7135;
+  --btn-hover: #818c3c;
+  --btn-hover-text: #10150e;
+
+  --inverted-button-bg: #f2eee8;
+  --inverted-button-text: #19270d;
+
+  --signup-button-bg: #4caf50;
+  --signup-button-text: #ffffff;
+
+  --blue-button-bg: #5599ff;
+  --blue-button-hover-bg: #3377ff;
+
+  /* Forms */
+  --body-bg: #151813;
+  --form-input-border: #596052;
+  --phone-input-border: #596052;
+
+  --user-email-bg: #333333;
+  --user-email-text: #ffffff;
+
+  --signup-form-section-border: #777f70;
+  --signup-form-section-bg:
+    linear-gradient(
+      145deg,
+      rgba(75, 81, 70, 0.97),
+      rgba(27, 31, 25, 0.96)
+    );
+
+  --signup-form-section-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.45),
+    inset 0 -5px 15px rgba(0, 0, 0, 0.3);
+
+  /* Status colors */
+  --success-bg: #173c25;
+  --success-text: #9ae6b4;
+  --bullet-color: #ffffff;
+
+  /* Miscellaneous */
+  --hero-bg-overlay: rgba(129, 140, 60, 0.94);
+  --hero-title-color: #ffffff;
+  --hero-desc-color: #e0e0e0;
+
+  --about-bg: #1e1e1e;
+  --event-bg: #222222;
+  --event-title: #ffeb3b;
+  --event-text: #cccccc;
+  --contact-bg: #1e1e1e;
+
+  --tile-bg: rgba(0, 0, 0, 0.85);
+  --tile-border: rgba(221, 221, 221, 0.2);
+  --tile-shadow: 0 10px 50px rgba(0, 0, 0, 0.9);
+
+  --info-title-color: #ffffff;
+  --info-title-bg: #333333;
+
+  --price-color: #8ebd7d;
+  --price-original-color: #aaaaaa;
+  --sale-end-color: #ff6969;
+  --discount-tag-bg: #d94242;
+  --discount-tag-color: #ffffff;
+
+  /* Theme toggle */
+  --toggle-bg: #555555;
+  --toggle-slider: #222222;
+  --toggle-bg-active: #888888;
+  --toggle-slider-active: #f1f1f1;
 }
 
+/* ==================================================
+   DOCUMENT RESET
+================================================== */
 
-/* Apply Theme to Body */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: var(--wood-bg-dark);
+}
 
 body {
-  font-family: 'Montserrat', sans-serif;
-  background-color: var(--wood-bg-dark);
+  min-width: 320px;
+  min-height: 100vh;
+
+  margin: 0;
+
+  background: var(--wood-bg-dark);
   color: var(--text-color);
-  z-index: 1000;
+
   font-family: var(--font);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
 }
 
 p {
-  color: var(--text-color);
-  font-family: 'Montserrat', sans-serif;
+  color: inherit;
+  font-family: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  overflow-wrap: break-word;
+}
+
+h1 {
+  line-height: 1.1;
+}
+
+h3 {
+  color: var(--body-text);
 }
 
 a {
+  color: inherit;
   font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-  font-family: 'Montserrat', sans-serif;
+  text-decoration: none;
 }
 
 a:hover {
-  color: #535bf2;
+  color: var(--btn-hover);
 }
 
-
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-h3 {
-  color: var(--body-text)
-}
-
+/*
+ * Keep global button styling minimal.
+ * Individual page classes, such as .button and
+ * .calendar-toolbar__arrow, control their own design.
+ */
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+  border: 0;
+  padding: 0;
+
+  background: none;
+  color: inherit;
+
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+button:disabled {
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid
+    color-mix(
+      in srgb,
+      var(--btn-bg) 45%,
+      transparent
+    );
+
+  outline-offset: 3px;
+}
+
+/*
+ * Respect reduced-motion preferences without changing
+ * the application's normal animations.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
 }
-
-
-
 

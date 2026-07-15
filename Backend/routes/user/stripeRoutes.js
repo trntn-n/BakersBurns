@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const stripeController = require('../../controllers/hybrid/stripeController');
-const stripeWebhookController = require('../../controllers/hybrid/stripeWebhookController')
+const stripeCartWebhookController = require('../../controllers/hybrid/stripeCartWebhookController')
 const userAuthMiddleware = require('../../middleware/userAuthMiddleware');
 
 // Route to create a checkout session

@@ -1,4 +1,4 @@
-
+/* admin/events.css */
 @font-face {
   font-family: 'Carnivalee Freakshow';
   src: url('../assets/CarnivaleeFreakshow-DLrm.ttf') format('truetype');
@@ -541,7 +541,81 @@
   font-size: 0.7rem;
   font-weight: 700;
 }
+/* Force admin calendar cells to flow together like a real calendar */
+.admin-calendar-card,
+.calendar-card {
+  overflow: hidden;
+  border: 1px solid var(--events-border);
+  border-radius: 18px;
+  background: var(--events-surface);
+}
 
+.admin-calendar-grid,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0;
+  row-gap: 0;
+  column-gap: 0;
+  align-items: stretch;
+  justify-items: stretch;
+
+  width: 100%;
+  margin: 0;
+  padding: 0;
+
+  background: var(--events-border);
+}
+
+.admin-calendar-grid > *,
+.calendar-grid > * {
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+}
+
+.calendar-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 0;
+  border-right: 1px solid var(--events-border);
+  border-bottom: 1px solid var(--events-border);
+  border-radius: 0;
+
+  margin: 0;
+
+  background: var(--events-surface-secondary);
+}
+
+.calendar-day-header:nth-child(7) {
+  border-right: 0;
+}
+
+.calendar-day {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 116px;
+
+  margin: 0;
+
+  border: 0;
+  border-right: 1px solid var(--events-border);
+  border-bottom: 1px solid var(--events-border);
+  border-radius: 0;
+
+  background: var(--events-surface);
+  color: var(--events-text);
+
+  text-align: left;
+  appearance: none;
+}
+
+.calendar-day:nth-child(7n) {
+  border-right: 0;
+}
 /* --------------------------------------------------
    Event list
 -------------------------------------------------- */
@@ -1389,3 +1463,348 @@ textarea.form-input {
   }
 }
 
+
+/* ==================================================
+   Register-calendar layout adapted for administration
+================================================== */
+
+.admin-events-page {
+  padding-bottom: 64px;
+}
+
+.admin-events-heading h1 {
+  font-size: clamp(3rem, 7vw, 5.4rem);
+  font-weight: normal;
+  line-height: 0.95;
+}
+
+.admin-events-loading {
+  margin-bottom: 24px;
+  border: 1px solid var(--events-border);
+  border-radius: 14px;
+  padding: 28px;
+  background: var(--events-surface);
+  color: var(--events-text-muted);
+  text-align: center;
+  box-shadow: var(--events-shadow);
+}
+
+.admin-featured-event {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 26px;
+  margin-bottom: 28px;
+  border: 1px solid var(--events-border);
+  border-radius: 20px;
+  padding: 26px;
+  background: var(--events-surface);
+  box-shadow: var(--events-shadow);
+}
+
+.admin-featured-event__date {
+  display: flex;
+  width: 102px;
+  min-height: 118px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: var(--events-primary);
+  color: var(--events-primary-text);
+  text-transform: uppercase;
+}
+
+.admin-featured-event__date strong {
+  font-size: 2.7rem;
+  line-height: 1;
+}
+
+.admin-featured-event__date span {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.admin-featured-event__content {
+  min-width: 0;
+}
+
+.admin-featured-event__content h2,
+.admin-selected-events-header h2,
+.admin-selected-event h3 {
+  font-family: 'Carnivalee Freakshow', Georgia, serif;
+  font-weight: normal;
+}
+
+.admin-featured-event__content h2 {
+  margin: 5px 0 10px;
+  color: var(--events-text-strong);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+}
+
+.admin-featured-event__content > p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--events-text-muted);
+  line-height: 1.65;
+}
+
+.admin-featured-event__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  margin-top: 16px;
+  color: var(--events-text-strong);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.admin-featured-event__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.admin-events-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.75fr);
+  align-items: start;
+  gap: 24px;
+}
+
+.admin-calendar-card {
+  min-width: 0;
+}
+
+.admin-calendar-grid .calendar-day {
+  min-height: 116px;
+}
+
+.calendar-day--selected {
+  background: var(--events-surface-secondary);
+  box-shadow: inset 0 0 0 3px var(--events-primary);
+}
+
+.admin-calendar-event-count {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  min-width: 23px;
+  height: 23px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--events-primary);
+  color: var(--events-primary-text);
+  font-size: 0.67rem;
+  font-weight: 800;
+}
+
+.admin-calendar-event-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 16px;
+}
+
+.admin-calendar-event-dots span {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--events-primary);
+}
+
+.admin-selected-events-panel {
+  position: sticky;
+  top: 118px;
+  overflow: hidden;
+  border: 1px solid var(--events-border);
+  border-radius: 18px;
+  background: var(--events-surface);
+  box-shadow: var(--events-shadow);
+}
+
+.admin-selected-events-header {
+  border-bottom: 1px solid var(--events-border);
+  padding: 20px 22px;
+  background: var(--events-surface-secondary);
+}
+
+.admin-selected-events-header h2 {
+  margin: 5px 0 16px;
+  color: var(--events-text-strong);
+  font-size: 2rem;
+}
+
+.admin-selected-events-header .button {
+  width: 100%;
+}
+
+.admin-selected-events-list {
+  display: grid;
+}
+
+.admin-selected-event {
+  padding: 22px;
+  border-bottom: 1px solid var(--events-border);
+}
+
+.admin-selected-event:last-child {
+  border-bottom: 0;
+}
+
+.admin-selected-event__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.admin-selected-event__heading span {
+  color: var(--events-primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-selected-event__heading h3 {
+  margin: 5px 0 0;
+  color: var(--events-text-strong);
+  font-size: 1.9rem;
+  line-height: 1.05;
+}
+
+.admin-selected-event__heading strong {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: var(--events-surface-secondary);
+  color: var(--events-text-strong);
+  font-size: 0.78rem;
+}
+
+.admin-selected-event > p {
+  margin: 12px 0;
+  color: var(--events-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.admin-selected-event__meta {
+  color: var(--events-text-strong);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.admin-selected-event__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.admin-selected-events-empty {
+  padding: 44px 24px;
+  color: var(--events-text-muted);
+  text-align: center;
+}
+
+.admin-selected-events-empty h3 {
+  margin: 0 0 8px;
+  color: var(--events-text-strong);
+}
+
+.admin-selected-events-empty p {
+  margin: 0;
+}
+
+.admin-event-directory {
+  margin-top: 34px;
+}
+
+@media (max-width: 980px) {
+  .admin-events-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-selected-events-panel {
+    position: static;
+  }
+
+  .admin-featured-event {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .admin-featured-event__actions {
+    grid-column: 1 / -1;
+  }
+
+  .admin-featured-event__actions .button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 680px) {
+  .admin-featured-event {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 18px;
+  }
+
+  .admin-featured-event__date {
+    width: 84px;
+    min-height: 96px;
+  }
+
+  .admin-featured-event__date strong {
+    font-size: 2.1rem;
+  }
+
+  .admin-calendar-grid .calendar-day {
+    min-height: 65px;
+    padding: 5px;
+  }
+
+  .admin-calendar-event-count {
+    top: 5px;
+    right: 5px;
+    min-width: 17px;
+    height: 17px;
+    font-size: 0.56rem;
+  }
+
+  .admin-calendar-event-dots {
+    gap: 3px;
+    margin-top: 8px;
+  }
+
+  .admin-calendar-event-dots span {
+    width: 6px;
+    height: 6px;
+  }
+
+  .admin-selected-events-header,
+  .admin-selected-event {
+    padding: 18px;
+  }
+
+  .admin-selected-event__heading {
+    flex-direction: column;
+  }
+}
+
+.event-ticket-settings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+
+  margin-top: 18px;
+}
+
+@media (max-width: 680px) {
+  .event-ticket-settings {
+    grid-template-columns: 1fr;
+  }
+}

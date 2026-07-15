@@ -1,0 +1,150 @@
+'use strict';
+
+const moment = require('moment');
+const EventOccurrence = require('../models/eventOccurrence');
+
+const normalizeDays = (days) => {
+  if (Array.isArray(days)) {
+    return days.map((day) => String(day).trim().toLowerCase()).filter(Boolean);
+  }
+
+  if (typeof days !== 'string' || !days.trim()) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(days);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((day) => String(day).trim().toLowerCase())
+        .filter(Boolean);
+    }
+  } catch (_) {
+    // Fall through to comma-separated parsing.
+  }
+
+  return days
+    .split(',')
+    .map((day) => day.trim().toLowerCase())
+    .filter(Boolean);
+};
+
+const buildOccurrenceDates = (eventRecord) => {
+  const start = moment(eventRecord.startDate, 'YYYY-MM-DD', true);
+  const end = moment(
+    eventRecord.endDate || eventRecord.startDate,
+    'YYYY-MM-DD',
+    true
+  );
+
+  if (!start.isValid()) {
+    return [];
+  }
+
+  const safeEnd = end.isValid() && end.isSameOrAfter(start, 'day')
+    ? end
+    : start.clone();
+
+  const frequency = String(eventRecord.frequency || 'single').toLowerCase();
+
+  if (
+    frequency === 'single' ||
+    frequency === 'once' ||
+    start.isSame(safeEnd, 'day')
+  ) {
+    return [start.format('YYYY-MM-DD')];
+  }
+
+  const selectedDays = normalizeDays(eventRecord.days);
+
+  if (selectedDays.length === 0) {
+    return [start.format('YYYY-MM-DD')];
+  }
+
+  const dates = [];
+  const cursor = start.clone();
+
+  while (cursor.isSameOrBefore(safeEnd, 'day')) {
+    const full = cursor.format('dddd').toLowerCase();
+    const short = cursor.format('ddd').toLowerCase();
+
+    const matches = selectedDays.some(
+      (day) =>
+        day === full ||
+        day === short ||
+        full.startsWith(day) ||
+        day.startsWith(short)
+    );
+
+    if (matches) {
+      dates.push(cursor.format('YYYY-MM-DD'));
+    }
+
+    cursor.add(1, 'day');
+  }
+
+  return dates;
+};
+
+/**
+ * Call this after creating or updating an Event.
+ *
+ * Existing sold/reserved occurrence rows are never deleted.
+ * Dates removed from the event schedule are marked inactive.
+ */
+const syncEventOccurrences = async (
+  eventRecord,
+  { transaction } = {}
+) => {
+  const occurrenceDates = buildOccurrenceDates(eventRecord);
+  const defaultCapacity = Math.max(0, Number(eventRecord.capacity) || 0);
+
+  const existing = await EventOccurrence.findAll({
+    where: { eventId: eventRecord.id },
+    transaction,
+  });
+
+  const requestedDates = new Set(occurrenceDates);
+
+  for (const occurrenceDate of occurrenceDates) {
+    const current = existing.find(
+      (row) => row.occurrenceDate === occurrenceDate
+    );
+
+    if (current) {
+      current.capacity = defaultCapacity;
+      current.isActive = true;
+      await current.save({ transaction });
+    } else {
+      await EventOccurrence.create(
+        {
+          eventId: eventRecord.id,
+          occurrenceDate,
+          capacity: defaultCapacity,
+          reservedCount: 0,
+          soldCount: 0,
+          isActive: true,
+        },
+        { transaction }
+      );
+    }
+  }
+
+  for (const current of existing) {
+    if (!requestedDates.has(current.occurrenceDate)) {
+      current.isActive = false;
+      await current.save({ transaction });
+    }
+  }
+
+  return EventOccurrence.findAll({
+    where: { eventId: eventRecord.id },
+    order: [['occurrenceDate', 'ASC']],
+    transaction,
+  });
+};
+
+module.exports = {
+  buildOccurrenceDates,
+  syncEventOccurrences,
+};

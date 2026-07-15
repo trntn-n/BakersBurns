@@ -1,4 +1,4 @@
-/* Events.jsx */
+/* register/Events.jsx */
 import React, {
   useEffect,
   useMemo,
@@ -14,6 +14,7 @@ import moment from "moment";
 
 import { registerApi } from "../../config/axios";
 import "./Event.css";
+import TicketQuantityModal from "../../Components/events/TicketQuantityModal";
 
 const EVENTS_ENDPOINT =
   "/register-events/all";
@@ -476,6 +477,11 @@ const EventCalendar = () => {
     setCheckoutError,
   ] = useState("");
 
+  const [
+    checkoutModalEvent,
+    setCheckoutModalEvent,
+  ] = useState(null);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -797,7 +803,7 @@ const EventCalendar = () => {
   const startTicketCheckout =
     async ({
       eventId,
-      occurrenceDate,
+      selections,
     }) => {
       try {
         setCheckoutError("");
@@ -810,7 +816,7 @@ const EventCalendar = () => {
             CHECKOUT_ENDPOINT,
             {
               eventId,
-              occurrenceDate,
+              selections,
 
               metadata: {
                 hasAcceptedPrivacy:
@@ -835,11 +841,6 @@ const EventCalendar = () => {
           );
         }
 
-        /*
-         * Remove temporary checkout routing data.
-         * Do not remove the long-term acceptance
-         * cookies.
-         */
         Cookies.remove(
           "checkoutType",
           {
@@ -876,20 +877,11 @@ const EventCalendar = () => {
       }
     };
 
-  const beginCheckout =
-    async (event) => {
-      if (!event?.id) {
-        setCheckoutError(
-          "This event cannot currently be purchased."
-        );
-
-        return;
-      }
-
-      const occurrenceDate =
-        event.occurrenceDate ||
-        event.startDate;
-
+  const continueTicketCheckout =
+    async ({
+      eventId,
+      selections,
+    }) => {
       const hasAcceptedPrivacy =
         Cookies.get(
           "hasAcceptedPrivacy"
@@ -900,28 +892,18 @@ const EventCalendar = () => {
           "hasAcceptedTerms"
         ) === "true";
 
-      /*
-       * The visitor has already accepted both.
-       * Skip the privacy page and go directly to
-       * ticket checkout.
-       */
       if (
         hasAcceptedPrivacy &&
         hasAcceptedTerms
       ) {
         await startTicketCheckout({
-          eventId: event.id,
-          occurrenceDate,
+          eventId,
+          selections,
         });
 
         return;
       }
 
-      /*
-       * Save the checkout type and selected ticket
-       * information before opening the existing
-       * privacy/terms workflow.
-       */
       Cookies.set(
         "checkoutType",
         "ticket",
@@ -931,16 +913,12 @@ const EventCalendar = () => {
       Cookies.set(
         "pendingTicketCheckout",
         JSON.stringify({
-          eventId: event.id,
-          occurrenceDate,
+          eventId,
+          selections,
         }),
         cookieOptions
       );
 
-      /*
-       * Remove cart-specific shipping information so
-       * stale cart data does not affect ticket checkout.
-       */
       Cookies.remove(
         "shippingDetails",
         {
@@ -951,6 +929,20 @@ const EventCalendar = () => {
       navigate(
         "/accept-privacy-terms"
       );
+    };
+
+  const beginCheckout =
+    (event) => {
+      if (!event?.id) {
+        setCheckoutError(
+          "This event cannot currently be purchased."
+        );
+
+        return;
+      }
+
+      setCheckoutError("");
+      setCheckoutModalEvent(event);
     };
 
   const renderPurchaseButton = (
@@ -1412,6 +1404,32 @@ const EventCalendar = () => {
             </div>
           )}
       </div>
+
+        <TicketQuantityModal
+          isOpen={Boolean(
+            checkoutModalEvent
+          )}
+          event={checkoutModalEvent}
+          occurrences={occurrences}
+          isSubmitting={
+            checkoutModalEvent
+              ? checkoutEventId ===
+                checkoutModalEvent.id
+              : false
+          }
+          error={checkoutError}
+          onClose={() => {
+            if (!checkoutEventId) {
+              setCheckoutModalEvent(
+                null
+              );
+              setCheckoutError("");
+            }
+          }}
+          onConfirm={
+            continueTicketCheckout
+          }
+        />
     </main>
   );
 };

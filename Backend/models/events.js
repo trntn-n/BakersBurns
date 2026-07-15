@@ -12,9 +12,62 @@ const sanitizeString = (value, fallback = '') => {
   return xss(String(value).trim());
 };
 
+const normalizeBoolean = (value) => {
+  if (
+    value === true ||
+    value === 1 ||
+    value === '1'
+  ) {
+    return true;
+  }
+
+  if (
+    value === false ||
+    value === 0 ||
+    value === '0' ||
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+    return false;
+  }
+
+  if (typeof value === 'string') {
+    const normalizedValue = value.trim().toLowerCase();
+
+    return [
+      'true',
+      'yes',
+      'y',
+      'on',
+    ].includes(normalizedValue);
+  }
+
+  return false;
+};
+
+const normalizeInteger = (value, fallback = 0) => {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+    return fallback;
+  }
+
+  const parsedValue = Number(value);
+
+  if (!Number.isInteger(parsedValue)) {
+    return fallback;
+  }
+
+  return parsedValue;
+};
+
 const Event = sequelize.define(
   'Event',
   {
+    
     name: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -24,7 +77,10 @@ const Event = sequelize.define(
         },
       },
       set(value) {
-        this.setDataValue('name', sanitizeString(value));
+        this.setDataValue(
+          'name',
+          sanitizeString(value)
+        );
       },
     },
 
@@ -32,7 +88,10 @@ const Event = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: false,
       set(value) {
-        this.setDataValue('description', sanitizeString(value));
+        this.setDataValue(
+          'description',
+          sanitizeString(value)
+        );
       },
     },
 
@@ -45,10 +104,12 @@ const Event = sequelize.define(
         },
       },
       set(value) {
-        this.setDataValue('frequency', sanitizeString(value));
+        this.setDataValue(
+          'frequency',
+          sanitizeString(value)
+        );
       },
     },
-    
 
     days: {
       type: DataTypes.STRING,
@@ -73,7 +134,11 @@ const Event = sequelize.define(
             .map((day) => sanitizeString(day))
             .filter(Boolean);
 
-          this.setDataValue('days', sanitizedDays.join(','));
+          this.setDataValue(
+            'days',
+            sanitizedDays.join(',')
+          );
+
           return;
         }
 
@@ -83,13 +148,15 @@ const Event = sequelize.define(
             .map((day) => sanitizeString(day))
             .filter(Boolean);
 
-          this.setDataValue('days', sanitizedDays.join(','));
+          this.setDataValue(
+            'days',
+            sanitizedDays.join(',')
+          );
+
           return;
         }
 
-        throw new Error(
-          'Days must be an array or comma-separated string.'
-        );
+        this.setDataValue('days', '');
       },
     },
 
@@ -117,6 +184,12 @@ const Event = sequelize.define(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
+      set(value) {
+        this.setDataValue(
+          'isPurchase',
+          normalizeBoolean(value)
+        );
+      },
     },
 
     price: {
@@ -130,24 +203,70 @@ const Event = sequelize.define(
         },
       },
     },
+
+    /*
+     * 0 means unlimited.
+     * For recurring/multi-day events, this limit is per occurrence date.
+     */
+    maxTicketQuantity: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      validate: {
+        min: {
+          args: [0],
+          msg: 'Max ticket quantity cannot be negative.',
+        },
+      },
+      set(value) {
+        this.setDataValue(
+          'maxTicketQuantity',
+          normalizeInteger(value, 0)
+        );
+      },
+    },
   },
   {
     hooks: {
       beforeValidate: (event) => {
-        if (!event.isPurchase) {
-          event.price = 0;
-          return;
-        }
+        event.isPurchase = normalizeBoolean(
+          event.isPurchase
+        );
 
         const parsedPrice = Number(event.price);
 
-        if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+        const parsedMaxTicketQuantity =
+          normalizeInteger(
+            event.maxTicketQuantity,
+            0
+          );
+
+        if (!event.isPurchase) {
+          event.price = 0;
+          event.maxTicketQuantity = 0;
+          return;
+        }
+
+        if (
+          !Number.isFinite(parsedPrice) ||
+          parsedPrice <= 0
+        ) {
           throw new Error(
             'A purchasable event must have a price greater than zero.'
           );
         }
 
-        event.price = Math.round(parsedPrice * 100) / 100;
+        if (parsedMaxTicketQuantity < 0) {
+          throw new Error(
+            'Max ticket quantity cannot be negative.'
+          );
+        }
+
+        event.price =
+          Math.round(parsedPrice * 100) / 100;
+
+        event.maxTicketQuantity =
+          parsedMaxTicketQuantity;
       },
     },
 

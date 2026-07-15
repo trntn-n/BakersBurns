@@ -1,11 +1,14 @@
-// controllers/register/checkoutEventsController.js
 'use strict';
 
-/*
- * Select the correct Stripe secret key based on STRIPE_MODE.
- */
-const stripeModeIsTest =
-  process.env.STRIPE_MODE === 'test';
+const sequelize = require('../../config/database');
+const Event = require('../../models/events');
+const EventOccurrence = require('../../models/eventOccurrence');
+const EventCheckoutHold = require('../../models/eventCheckoutHold');
+const {
+  releaseEventCheckoutHold,
+} = require('../../services/eventCheckoutInventoryService.js');
+
+const stripeModeIsTest = process.env.STRIPE_MODE === 'test';
 
 const stripeSecretKey = stripeModeIsTest
   ? process.env.STRIPE_TEST_SECRET_KEY
@@ -19,66 +22,107 @@ if (!stripeSecretKey) {
   );
 }
 
-const stripe = require('stripe')(
-  stripeSecretKey
-);
+const stripe = require('stripe')(stripeSecretKey);
 
-const Event = require('../../models/events');
+const MAX_TICKETS_PER_DAY = 20;
+const MAX_SELECTED_DAYS = 50;
+const HOLD_MINUTES = 30;
 
-/**
- * Create a Stripe Checkout Session for a paid event preorder.
- *
- * Expected request body:
- *
- * {
- *   "eventId": 12,
- *   "quantity": 2,
- *   "metadata": {
- *     "hasAcceptedPrivacy": true,
- *     "hasAcceptedTermsOfService": true
- *   }
- * }
- *
- * This checkout:
- * - Does not use the guest cart
- * - Does not calculate shipping
- * - Does not collect a shipping address
- * - Does not modify product inventory
- * - Creates a direct charge on the Bakers Burns account
- */
-const createEventCheckoutSession = async (
-  req,
-  res
-) => {
-  try {
-    const {
-        eventId,
-        occurrenceDate,
-        metadata,
-      } = req.body;
-      
-      const quantity = Number(
-        req.body.quantity ?? 1
-      );
-    /*
-     * Validate request information.
-     */
-    if (!eventId) {
-      return res.status(400).json({
-        message:
-          'Event ID is required.',
-      });
+const normalizeSelections = (rawSelections) => {
+  if (!Array.isArray(rawSelections)) {
+    return [];
+  }
+
+  const combined = new Map();
+
+  for (const selection of rawSelections) {
+    const occurrenceDate = String(
+      selection?.occurrenceDate || ''
+    ).trim();
+
+    const quantity = Number(selection?.quantity);
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(occurrenceDate)) {
+      throw new Error(`Invalid occurrence date: ${occurrenceDate || 'empty'}.`);
     }
 
     if (
       !Number.isInteger(quantity) ||
-      quantity < 1 ||
-      quantity > 20
+      quantity < 0 ||
+      quantity > MAX_TICKETS_PER_DAY
     ) {
-      return res.status(400).json({
-        message:
-          'Quantity must be an integer between 1 and 20.',
-      });
+      throw new Error(
+        `Each quantity must be an integer between 0 and ${MAX_TICKETS_PER_DAY}.`
+      );
+    }
+
+    combined.set(
+      occurrenceDate,
+      (combined.get(occurrenceDate) || 0) + quantity
+    );
+  }
+
+  const normalized = [...combined.entries()]
+    .filter(([, quantity]) => quantity > 0)
+    .map(([occurrenceDate, quantity]) => ({
+      occurrenceDate,
+      quantity,
+    }));
+
+  if (normalized.length === 0) {
+    throw new Error('Select at least one ticket.');
+  }
+
+  if (normalized.length > MAX_SELECTED_DAYS) {
+    throw new Error(
+      `No more than ${MAX_SELECTED_DAYS} event dates may be purchased at once.`
+    );
+  }
+
+  for (const selection of normalized) {
+    if (selection.quantity > MAX_TICKETS_PER_DAY) {
+      throw new Error(
+        `No more than ${MAX_TICKETS_PER_DAY} tickets may be purchased for one day.`
+      );
+    }
+  }
+
+  return normalized.sort((a, b) =>
+    a.occurrenceDate.localeCompare(b.occurrenceDate)
+  );
+};
+
+const buildEventImageUrl = (eventRecord) => {
+  const storedImage =
+    eventRecord.thumbnail ||
+    eventRecord.image ||
+    eventRecord.imageUrl;
+
+  if (!storedImage) {
+    return null;
+  }
+
+  if (
+    storedImage.startsWith('http://') ||
+    storedImage.startsWith('https://')
+  ) {
+    return storedImage;
+  }
+
+  return process.env.BASE_URL
+    ? `${process.env.BASE_URL}/uploads/${storedImage}`
+    : null;
+};
+
+const createEventCheckoutSession = async (req, res) => {
+  let holdToken = null;
+
+  try {
+    const { eventId, metadata } = req.body;
+    const selections = normalizeSelections(req.body.selections);
+
+    if (!eventId) {
+      return res.status(400).json({ message: 'Event ID is required.' });
     }
 
     if (
@@ -88,378 +132,309 @@ const createEventCheckoutSession = async (
       return res.status(400).json({
         message:
           'You must accept the Terms of Service and Privacy Policy to continue.',
-        redirect:
-          '/accept-privacy-terms',
+        redirect: '/accept-privacy-terms',
       });
     }
 
     if (!process.env.REGISTER_FRONTEND) {
-      throw new Error(
-        'Missing REGISTER_FRONTEND environment variable.'
-      );
+      throw new Error('Missing REGISTER_FRONTEND environment variable.');
     }
 
-    /*
-     * Bakers Burns is a Standard connected account.
-     * The Checkout Session is created directly on that account.
-     */
-    const connectedAccountId =
-      process.env.BAKERS_BURNS_ACCOUNT_ID;
+    const connectedAccountId = process.env.BAKERS_BURNS_ACCOUNT_ID;
 
-    if (
-      !connectedAccountId?.startsWith(
-        'acct_'
-      )
-    ) {
+    if (!connectedAccountId?.startsWith('acct_')) {
       throw new Error(
         'BAKERS_BURNS_ACCOUNT_ID is missing or invalid.'
       );
     }
 
-    /*
-     * Always load the event and price from the database.
-     * Never accept the event price from the frontend.
-     */
-    const eventRecord =
-    await Event.findByPk(eventId);
+    const holdExpiresAt = new Date(
+      Date.now() + HOLD_MINUTES * 60 * 1000
+    );
 
-    if (!eventRecord) {
-    return res.status(404).json({
-        message: 'Event not found.',
-    });
-    }
+    const reservedCheckout = await sequelize.transaction(
+      async (transaction) => {
+        const eventRecord = await Event.findByPk(eventId, {
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (!eventRecord) {
+          const error = new Error('Event not found.');
+          error.status = 404;
+          throw error;
+        }
+
+        const eventName = eventRecord.name;
+        const eventPrice = Number(eventRecord.price);
+        const isPurchase =
+          eventRecord.isPurchase ?? eventRecord.is_purchase;
+
+        if (isPurchase !== true) {
+          const error = new Error(
+            'This event is not configured as a paid event.'
+          );
+          error.status = 400;
+          throw error;
+        }
+
+        if (!eventName) {
+          throw new Error(`Event ${eventRecord.id} does not have a name.`);
+        }
+
+        if (!Number.isFinite(eventPrice) || eventPrice <= 0) {
+          const error = new Error(
+            'This event does not have a valid ticket price.'
+          );
+          error.status = 400;
+          throw error;
+        }
+
+        if (
+          eventRecord.isActive !== undefined &&
+          eventRecord.isActive !== null &&
+          eventRecord.isActive !== true
+        ) {
+          const error = new Error('This event is not currently available.');
+          error.status = 400;
+          throw error;
+        }
+
+        const now = new Date();
+
+        if (
+          eventRecord.preorderStart &&
+          now < new Date(eventRecord.preorderStart)
+        ) {
+          const error = new Error(
+            'Ticket sales for this event have not started yet.'
+          );
+          error.status = 400;
+          throw error;
+        }
+
+        if (
+          eventRecord.preorderEnd &&
+          now > new Date(eventRecord.preorderEnd)
+        ) {
+          const error = new Error(
+            'Ticket sales for this event have ended.'
+          );
+          error.status = 400;
+          throw error;
+        }
+
+        const requestedDates = selections.map(
+          (selection) => selection.occurrenceDate
+        );
+
+        const occurrences = await EventOccurrence.findAll({
+          where: {
+            eventId: eventRecord.id,
+            occurrenceDate: requestedDates,
+            isActive: true,
+          },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (occurrences.length !== requestedDates.length) {
+          const foundDates = new Set(
+            occurrences.map((occurrence) => occurrence.occurrenceDate)
+          );
+
+          const missingDate = requestedDates.find(
+            (date) => !foundDates.has(date)
+          );
+
+          const error = new Error(
+            `${missingDate} is not an available date for this event.`
+          );
+          error.status = 400;
+          throw error;
+        }
+
+        const unitAmount = Math.round(eventPrice * 100);
+        const holdSelections = [];
+
+        for (const selection of selections) {
+          const occurrence = occurrences.find(
+            (row) => row.occurrenceDate === selection.occurrenceDate
+          );
+
+          const capacity = Number(occurrence.capacity);
+          const reservedCount = Number(occurrence.reservedCount || 0);
+          const soldCount = Number(occurrence.soldCount || 0);
+
+          if (capacity > 0) {
+            const remaining = capacity - reservedCount - soldCount;
+
+            if (remaining <= 0) {
+              const error = new Error(
+                `${selection.occurrenceDate} is sold out.`
+              );
+              error.status = 400;
+              throw error;
+            }
+
+            if (selection.quantity > remaining) {
+              const error = new Error(
+                `Only ${remaining} ticket${remaining === 1 ? '' : 's'} remain for ${selection.occurrenceDate}.`
+              );
+              error.status = 400;
+              throw error;
+            }
+          }
+
+          occurrence.reservedCount =
+            reservedCount + selection.quantity;
+
+          await occurrence.save({ transaction });
+
+          holdSelections.push({
+            occurrenceId: occurrence.id,
+            occurrenceDate: occurrence.occurrenceDate,
+            quantity: selection.quantity,
+            unitAmount,
+          });
+        }
+
+        const hold = await EventCheckoutHold.create(
+          {
+            eventId: eventRecord.id,
+            userId: req.user?.id || null,
+            connectedAccountId,
+            status: 'reserving',
+            selections: holdSelections,
+            expiresAt: holdExpiresAt,
+          },
+          { transaction }
+        );
+
+        return {
+          eventRecord,
+          hold,
+          holdSelections,
+          connectedAccountId,
+        };
+      }
+    );
+
+    holdToken = reservedCheckout.hold.holdToken;
+
+    const {
+      eventRecord,
+      holdSelections,
+    } = reservedCheckout;
 
     const eventName = eventRecord.name;
-    const eventPrice = Number(eventRecord.price);
+    const eventDescription = eventRecord.description
+      ? String(eventRecord.description).slice(0, 500)
+      : `Tickets for ${eventName}`;
+    const eventImageUrl = buildEventImageUrl(eventRecord);
 
-    const isPurchase = eventRecord.isPurchase;
-
-    if (isPurchase !== true) {
-    return res.status(400).json({
-        message: 'This event is not configured as a paid event.',
-    });
-    }
-
-    if (!eventName) {
-      throw new Error(
-        `Event ${eventRecord.id} does not have a title or name.`
-      );
-    }
-
-    if (
-      !Number.isFinite(eventPrice) ||
-      eventPrice <= 0
-    ) {
-      return res.status(400).json({
-        message:
-          'This event does not have a valid paid preorder price.',
-      });
-    }
-
-
-
-    if (
-      eventRecord.isActive !== undefined &&
-      eventRecord.isActive !== null &&
-      eventRecord.isActive !== true
-    ) {
-      return res.status(400).json({
-        message:
-          'This event is not currently available.',
-      });
-    }
-
-    const currentTime =
-      new Date();
-
-    if (
-      eventRecord.preorderStart &&
-      currentTime <
-        new Date(
-          eventRecord.preorderStart
-        )
-    ) {
-      return res.status(400).json({
-        message:
-          'Preorders for this event have not started yet.',
-      });
-    }
-
-    if (
-      eventRecord.preorderEnd &&
-      currentTime >
-        new Date(
-          eventRecord.preorderEnd
-        )
-    ) {
-      return res.status(400).json({
-        message:
-          'Preorders for this event have ended.',
-      });
-    }
-
-    /*
-     * Optional capacity check.
-     *
-     * This assumes your Event model has:
-     * - capacity
-     * - preorderCount
-     *
-     * Remove or modify this section if capacity is stored
-     * in a separate EventPreorder model.
-     */
-    const capacity =
-      Number(eventRecord.capacity);
-
-    const preorderCount =
-      Number(
-        eventRecord.preorderCount || 0
-      );
-
-    if (
-      Number.isFinite(capacity) &&
-      capacity > 0
-    ) {
-      const remainingCapacity =
-        capacity - preorderCount;
-
-      if (remainingCapacity <= 0) {
-        return res.status(400).json({
-          message:
-            'This event is sold out.',
-        });
-      }
-
-      if (
-        quantity >
-        remainingCapacity
-      ) {
-        return res.status(400).json({
-          message:
-            `Only ${remainingCapacity} preorder spot` +
-            `${remainingCapacity === 1 ? '' : 's'} remain.`,
-        });
-      }
-    }
-
-    /*
-     * Optional event image.
-     *
-     * This supports common field names such as:
-     * - thumbnail
-     * - image
-     * - imageUrl
-     */
-    const storedImage =
-      eventRecord.thumbnail ||
-      eventRecord.image ||
-      eventRecord.imageUrl;
-
-    let eventImageUrl = null;
-
-    if (storedImage) {
-      if (
-        storedImage.startsWith(
-          'http://'
-        ) ||
-        storedImage.startsWith(
-          'https://'
-        )
-      ) {
-        eventImageUrl =
-          storedImage;
-      } else if (
-        process.env.BASE_URL
-      ) {
-        eventImageUrl =
-          `${process.env.BASE_URL}/uploads/${storedImage}`;
-      }
-    }
-
-    const eventDescription =
-      eventRecord.description
-        ? String(
-            eventRecord.description
-          ).slice(0, 500)
-        : `Preorder for ${eventName}`;
-
-    /*
-     * Store enough information for the Stripe webhook
-     * to distinguish event purchases from product orders.
-     */
     const stripeMetadata = {
-      checkoutType:
-        'event_preorder',
-
-      eventId:
-        String(eventRecord.id),
-        
-      occurrenceDate: occurrenceDate
-        ? String(occurrenceDate)
-        : '',
-
-      quantity:
-        String(quantity),
-
+      checkoutType: 'event_preorder',
+      holdToken,
+      eventId: String(eventRecord.id),
       connectedAccountId,
-
-      hasAcceptedPrivacy:
-        'true',
-
-      hasAcceptedTermsOfService:
-        'true',
-
-      /*
-       * req.user may exist when an authenticated user
-       * creates the checkout.
-       */
-      userId:
-        req.user?.id
-          ? String(req.user.id)
-          : '',
-
-      eventName:
-        String(eventName).slice(
-          0,
-          500
-        ),
+      userId: req.user?.id ? String(req.user.id) : '',
+      hasAcceptedPrivacy: 'true',
+      hasAcceptedTermsOfService: 'true',
     };
 
-    const checkoutSession =
-      await stripe.checkout.sessions.create(
-        {
-          mode:
-            'payment',
-
-          payment_method_types: [
-            'card',
-          ],
-
-          line_items: [
-            {
-              price_data: {
-                currency:
-                  'usd',
-
-                product_data: {
-                  name:
-                    eventName,
-
-                  description:
-                    eventDescription,
-
-                  ...(eventImageUrl
-                    ? {
-                        images: [
-                          eventImageUrl,
-                        ],
-                      }
-                    : {}),
-                },
-
-                unit_amount:
-                  Math.round(
-                    eventPrice * 100
-                  ),
-              },
-
-              quantity,
-            },
-          ],
-
-          metadata:
-            stripeMetadata,
-
-          payment_intent_data: {
-            metadata:
-              stripeMetadata,
-
-            /*
-             * Add this only when DCFLUX should collect
-             * an application fee:
-             *
-             * application_fee_amount: 100,
-             */
+    const lineItems = holdSelections.map((selection) => ({
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: `${eventName} — ${selection.occurrenceDate}`,
+          description: eventDescription,
+          ...(eventImageUrl ? { images: [eventImageUrl] } : {}),
+          metadata: {
+            eventId: String(eventRecord.id),
+            occurrenceId: String(selection.occurrenceId),
+            occurrenceDate: selection.occurrenceDate,
           },
-
-          expires_at:
-            Math.floor(
-              Date.now() / 1000
-            ) +
-            60 * 30,
-
-          success_url:
-            `${process.env.REGISTER_FRONTEND}` +
-            `/events/${eventRecord.id}` +
-            '?checkout=success' +
-            '&session_id={CHECKOUT_SESSION_ID}',
-
-          cancel_url:
-            `${process.env.REGISTER_FRONTEND}` +
-            `/events/${eventRecord.id}` +
-            '?checkout=cancelled' +
-            '&session_id={CHECKOUT_SESSION_ID}',
-
-          /*
-           * We can still collect a billing address for
-           * payment verification, but there is no
-           * shipping_address_collection.
-           */
-          billing_address_collection:
-            'required',
         },
-        {
-          stripeAccount:
-            connectedAccountId,
-        }
-      );
+        unit_amount: selection.unitAmount,
+      },
+      quantity: selection.quantity,
+    }));
 
-    console.log(
-      'Event Checkout Session created:',
+    const checkoutSession = await stripe.checkout.sessions.create(
       {
-        stripeSessionId:
-          checkoutSession.id,
-
-        eventId:
-          eventRecord.id,
-
-        quantity,
-
-        connectedAccountId,
+        mode: 'payment',
+        payment_method_types: ['card'],
+        line_items: lineItems,
+        metadata: stripeMetadata,
+        payment_intent_data: {
+          metadata: stripeMetadata,
+        },
+        expires_at: Math.floor(holdExpiresAt.getTime() / 1000),
+        success_url:
+          `${process.env.REGISTER_FRONTEND}/events/${eventRecord.id}` +
+          '?checkout=success&session_id={CHECKOUT_SESSION_ID}',
+        cancel_url:
+          `${process.env.REGISTER_FRONTEND}/events/${eventRecord.id}` +
+          '?checkout=cancelled&session_id={CHECKOUT_SESSION_ID}',
+        billing_address_collection: 'required',
+      },
+      {
+        stripeAccount: connectedAccountId,
+        idempotencyKey: `event-hold-${holdToken}`,
       }
     );
+
+    await EventCheckoutHold.update(
+      {
+        stripeSessionId: checkoutSession.id,
+        status: 'open',
+      },
+      {
+        where: { holdToken },
+      }
+    );
+
+    console.log('Multi-date Event Checkout Session created:', {
+      stripeSessionId: checkoutSession.id,
+      eventId: eventRecord.id,
+      holdToken,
+      selections: holdSelections,
+      connectedAccountId,
+    });
 
     return res.status(200).json({
-      url:
-        checkoutSession.url,
-
-      sessionId:
-        checkoutSession.id,
+      url: checkoutSession.url,
+      sessionId: checkoutSession.id,
+      holdToken,
     });
   } catch (error) {
-    console.error(
-      'Error creating event Checkout Session:',
-      {
-        type:
-          error.type,
-
-        code:
-          error.code,
-
-        message:
-          error.message,
-
-        requestId:
-          error.requestId,
+    if (holdToken) {
+      try {
+        await releaseEventCheckoutHold(holdToken, 'failed');
+      } catch (releaseError) {
+        console.error(
+          'Failed to release event inventory after Checkout creation error:',
+          releaseError
+        );
       }
-    );
+    }
 
-    return res.status(500).json({
+    console.error('Error creating event Checkout Session:', {
+      type: error.type,
+      code: error.code,
+      message: error.message,
+      requestId: error.requestId,
+    });
+
+    return res.status(error.status || 500).json({
       message:
-        'Failed to create event Checkout Session.',
-
-      error:
-        error.message,
+        error.status
+          ? error.message
+          : 'Failed to create event Checkout Session.',
+      ...(process.env.NODE_ENV !== 'production'
+        ? { error: error.message }
+        : {}),
     });
   }
 };
