@@ -19,13 +19,13 @@ const EventReservation = sequelize.define(
     },
 
     occurrenceId: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: false,
       field: 'occurrence_id',
     },
 
     userId: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: true,
       field: 'user_id',
     },
