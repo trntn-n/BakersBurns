@@ -75,8 +75,8 @@
   .ticket-modal__quantity button,
   .ticket-modal__quantity input {
     height: 38px;
-    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.18));
-    background: var(--surface-color, #242424);
+    border: 1px solid var( rgba(255, 255, 255, 0.18));
+    background: var(#242424);
     color: inherit;
     text-align: center;
   }

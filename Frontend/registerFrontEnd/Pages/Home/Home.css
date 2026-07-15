@@ -2,312 +2,590 @@
    Home Component Styles
    ======================= */
 
-/* General Reset */
-@font-face {
-  font-family: 'Dancing Script';
-  src: url('../assets/CarnivaleeFreakshow-DLrm.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
+/* =======================
+   Font
+   ======================= */
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Dancing Script', cursive;
-  background-color: var(--bg-color);
-  color: var(--text-color);
-}
-
-/* Home Container */
-.home-container {
-  font-family: 'Arial', sans-serif;
-  background-color: var(--bg-overlay);
-  z-index: 101;
-  height: 100vh;
-  
-
-}
-
-/* Hero Section */
-.hero-section {
-  height: 100vh;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  position: relative;
-  z-index: 4;
-  
-}
-.logo {
-  transition: filter 0.3s ease;
-  border-radius: 30%;
-}
-
-/* Invert the image when dark mode is active */
-.dark-mode .logo {
-  filter: invert(1) hue-rotate(180deg);
-}
-
-
-.hero-content {
-  background: var(--bg-overlay);
-  padding: 50px;
-  border-radius: 10px;
-  
-  
-}
-
-.hero-title {
-  font-family: 'Dancing Script', cursive;
-  font-size: 3rem;
-  color: var(--hero-title-color);
-  letter-spacing: .1rem;
-}
-
-.hero-description {
-  font-size: clamp(1rem, 2.5vw, 1.5rem);
-  margin-bottom: 30px;
-  color: var(--text-color);
-}
-
-/* Buttons */
-.hero-btn, .about-btn, .upcoming-event-btn, .contact-btn {
-  padding: 15px 40px;
-  background-color: var(--btn-bg);
-  color: var(--inverted-button-text);
-  text-decoration: none;
-  font-size: clamp(.7rem, 2vw, 1rem);
-  border-radius: 5px;
-  transition: background-color 0.3s;
-  margin-top: 20px;
-}
-
-.hero-btn:hover, .about-btn:hover, .upcoming-event-btn:hover, .contact-btn:hover {
-  background-color: var(--btn-hover);
-  color: var(--btn-hover-text);
-}
-
-/* About Section */
-.about-section {
-  padding:  5px;
-  text-align: center;
-  background-color: var(--bg-section);
-  color: var(--about-text);
-}
-
-.about-title {
-  font-family: 'Dancing Script', cursive;
-  font-size: 3rem;
-  letter-spacing: .1rem;
-  color: var(--hero-title-color);
-}
-
-.about-content {
-  max-width: 800px;
-  margin: 0 auto;
-  padding-bottom: 20px;
-  
-}
-
-
-
-
-.about-content p {
-  font-size: 1.2rem;
-  line-height: 1.8;
-  margin-bottom: 20px;
-  color: var(--text-color);
-}
-
-/* Upcoming Event Section */
-.upcoming-event-section {
-  max-width: 800px;
-  margin: 4rem auto;
-  padding: 2rem;
-  text-align: center;
-  background-color:var(--bg-overlay); /* Optional: subtle bg */
-  border-radius: 1rem;
-  /*backdrop-filter: blur(10px); /* Optional: glassy effect */
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-}
-
-.upcoming-event-title {
-  font-family: 'Dancing Script', cursive;
-  letter-spacing: .1rem;
-  font-size: 3rem;
-  color: var(--hero-title-color);
-  
-}
-
-.upcoming-event-name {
-  font-size: 1.75rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-}
-
-.upcoming-event-date {
-  font-size: 1.2rem;
-  color: var(--text-color);
-  margin-bottom: 1rem;
-}
-
-.upcoming-event-description {
-  font-size: 1rem;
-  margin-bottom: 2rem;
-  line-height: 1.6;
-  color: #eee;
-}
-
-.upcoming-event-btn {
-  display: inline-block;
-  padding: 0.75rem 1.5rem;
-  background-color: #ff6b6b;
-  color: white;
-  text-decoration: none;
-  border-radius: 0.5rem;
-  transition: background-color 0.3s ease;
-}
-
-.upcoming-event-btn:hover {
-  background-color: #e25555;
-}
-
-/* Responsive tweaks */
-@media (max-width: 768px) {
-  .upcoming-event-section {
-    padding: 1.5rem 1rem;
+   @font-face {
+    font-family: 'Carnivalee Freakshow';
+    src: url('../../assets/CarnivaleeFreakshow-DLrm.ttf')
+      format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
   }
-
-  .upcoming-event-title {
-    font-size: 2rem;
+  
+  /* =======================
+     Home Container
+     ======================= */
+  
+  .home-container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: var(--bg-overlay);
+    color: var(--text-color);
   }
-
-  .upcoming-event-name {
-    font-size: 1.5rem;
+  
+  /* =======================
+     Hero Section
+     ======================= */
+  
+  .hero-section {
+    position: relative;
+    z-index: 1;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    width: 100%;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  
+    text-align: center;
+  
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
   }
-}
-
-
-/* Featured Products Section */
-.featured-products-section {
-  background-color: var(--bg-section);
-  padding: 100px 20px;
-  text-align: center;
-  color: var(--text-color);
-}
-
-.featured-products-title {
-  font-family: 'Dancing Script', cursive;
-  font-size: 4rem;
-  color: var(--text-color);
-
-}
-
-.products-gallery {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-around;
-  gap: 20px;
-}
-
-.product-card {
-  background-color: var(--product-card-bg);
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px var(--product-shadow);
-  transition: transform 0.3s, box-shadow 0.3s;
-  width: 30%;
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.product-card:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 10px 20px var(--product-shadow);
-}
-
-.product-image {
-  width: 100%;
-  border-radius: 10px;
-}
-
-.product-btn {
-  padding: 10px 25px;
-  background-color: var(--btn-bg);
-  color: #fff;
-  text-decoration: none;
-  border-radius: 5px;
-  transition: background-color 0.3s;
-  margin-top: 15px;
-}
-
-.product-btn:hover {
-  background-color: var(--btn-hover);
-}
-
-/* Contact Section */
-.home-section {
-  background-color: var(--bg-color);
-  padding: 100px 20px;
-  text-align: center;
-  color: var(--text-color);
-}
-
-.home-title {
-  font-family: 'Dancing Script', cursive;
-  font-size: 2.5rem;
-  letter-spacing: .1rem;
-  margin-top: 2%;
-  color: var(--hero-title-color);
-}
-
-.contact-description {
-  font-size: 1.5rem;
-  max-width: 700px;
-  margin: 0 auto;
-  line-height: 1.8;
-  margin-bottom: 20px;
-  color: var(--text-color);
-}
-
-.contact-btn {
-  margin-top: 30px;
-}
-
-
-/* Media Queries */
-@media (max-width: 768px) {
-  .products-gallery {
-      flex-direction: column;
-      align-items: center;
+  
+  .hero-content {
+    width: min(100%, 850px);
+    padding: clamp(1.5rem, 5vw, 3.125rem);
+  
+    background-color: var(--bg-overlay);
+    border-radius: 0.625rem;
   }
-
-  .product-card {
-      width: 80%;
+  
+  .hero-content > a:first-child {
+    display: inline-block;
+    max-width: 100%;
   }
-
+  
+  .logo {
+    display: block;
+    width: auto;
+    max-width: min(100%, 600px);
+    height: auto;
+    margin: 0 auto 1rem;
+  
+    border-radius: 30%;
+  
+    transition:
+      filter 0.3s ease,
+      transform 0.2s ease;
+  }
+  
+  /* Invert the image when dark mode is active. */
+  .dark-mode .logo {
+    filter: invert(1) hue-rotate(180deg);
+  }
+  
   .hero-title {
-      font-size: 1.5rem;
+    margin-bottom: 1rem;
+  
+    font-family:
+      'Carnivalee Freakshow',
+      Georgia,
+      serif;
+    font-size: clamp(2rem, 6vw, 3rem);
+    font-weight: 400;
+    line-height: 1.2;
+    letter-spacing: 0.1rem;
+  
+    color: var(--hero-title-color);
   }
-
+  
   .hero-description {
+    max-width: 700px;
+    margin: 0 auto 1.875rem;
+  
     font-size: clamp(1rem, 2.5vw, 1.5rem);
+    line-height: 1.6;
+  
+    color: var(--text-color);
   }
-
+  
+  /* =======================
+     Shared Buttons and Links
+     ======================= */
+  
+  .hero-btn,
+  .about-btn,
+  .upcoming-event-btn,
+  .contact-btn,
+  .product-btn {
+    position: relative;
+    z-index: 2;
+  
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  
+    min-height: 48px;
+    padding: 0.9375rem 2.5rem;
+  
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: clamp(0.875rem, 2vw, 1rem);
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+  
+    color: var(--inverted-button-text);
+    background-color: var(--btn-bg);
+    border: none;
+    border-radius: 0.3125rem;
+  
+    cursor: pointer;
+    pointer-events: auto;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+  
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease,
+      transform 0.2s ease,
+      box-shadow 0.3s ease;
+  }
+  
+  .hero-btn,
+  .about-btn,
+  .upcoming-event-btn,
   .contact-btn {
-      margin-top: 20px;
+    margin-top: 1.25rem;
   }
-
-}
-
-
+  
+  /*
+   * Only apply hover effects to devices with a mouse,
+   * trackpad, or another true hover-capable pointer.
+   *
+   * This prevents the first mobile tap from becoming
+   * a persistent hover state.
+   */
+  @media (hover: hover) and (pointer: fine) {
+    .hero-btn:hover,
+    .about-btn:hover,
+    .upcoming-event-btn:hover,
+    .contact-btn:hover,
+    .product-btn:hover {
+      color: var(--btn-hover-text);
+      background-color: var(--btn-hover);
+      transform: translateY(-2px);
+    }
+  
+    .logo:hover {
+      transform: scale(1.02);
+    }
+  }
+  
+  /* Touch/click feedback without requiring a second tap. */
+  .hero-btn:active,
+  .about-btn:active,
+  .upcoming-event-btn:active,
+  .contact-btn:active,
+  .product-btn:active {
+    transform: scale(0.98);
+  }
+  
+  /* Keyboard accessibility. */
+  .hero-btn:focus-visible,
+  .about-btn:focus-visible,
+  .upcoming-event-btn:focus-visible,
+  .contact-btn:focus-visible,
+  .product-btn:focus-visible,
+  .hero-content > a:first-child:focus-visible {
+    outline: 3px solid var(--hero-title-color);
+    outline-offset: 4px;
+  }
+  
+  /* =======================
+     General Home Sections
+     ======================= */
+  
+  .home-section {
+    position: relative;
+  
+    width: 100%;
+    padding: clamp(4rem, 10vw, 6.25rem) 1.25rem;
+  
+    text-align: center;
+  
+    color: var(--text-color);
+    background-color: var(--bg-color);
+  }
+  
+  .home-title {
+    margin: 0 0 1.25rem;
+  
+    font-family:
+      'Carnivalee Freakshow',
+      Georgia,
+      serif;
+    font-size: clamp(2rem, 5vw, 2.5rem);
+    font-weight: 400;
+    line-height: 1.2;
+    letter-spacing: 0.1rem;
+  
+    color: var(--hero-title-color);
+  }
+  
+  /* =======================
+     About Section
+     ======================= */
+  
+  .about-section {
+    width: 100%;
+    padding: 3rem 1.25rem;
+  
+    text-align: center;
+  
+    color: var(--about-text);
+    background-color: var(--bg-section);
+  }
+  
+  .about-content {
+    width: min(100%, 800px);
+    margin: 0 auto;
+    padding-bottom: 1.25rem;
+  }
+  
+  .about-title {
+    margin-bottom: 1.25rem;
+  
+    font-family:
+      'Carnivalee Freakshow',
+      Georgia,
+      serif;
+    font-size: clamp(2rem, 6vw, 3rem);
+    font-weight: 400;
+    line-height: 1.2;
+    letter-spacing: 0.1rem;
+  
+    color: var(--hero-title-color);
+  }
+  
+  .about-content p {
+    margin-bottom: 1.25rem;
+  
+    font-size: clamp(1rem, 2.5vw, 1.2rem);
+    line-height: 1.8;
+  
+    color: var(--text-color);
+  }
+  
+  /* =======================
+     Upcoming Event Section
+     ======================= */
+  
+  .upcoming-event-section {
+    position: relative;
+    isolation: isolate;
+  
+    width: min(calc(100% - 2rem), 800px);
+    margin: 4rem auto;
+    padding: clamp(1.5rem, 5vw, 2.5rem);
+  
+    text-align: center;
+  
+    background-color: var(--bg-overlay);
+    border-radius: 1rem;
+    box-shadow: 0 0 20px rgb(0 0 0 / 10%);
+  }
+  
+  /*
+   * Prevent decorative pseudo-elements from intercepting
+   * taps if they are added elsewhere in the stylesheet.
+   */
+  .upcoming-event-section::before,
+  .upcoming-event-section::after {
+    pointer-events: none;
+  }
+  
+  .upcoming-event-label {
+    display: inline-block;
+    margin-bottom: 0.75rem;
+  
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.12rem;
+    text-transform: uppercase;
+  
+    color: var(--hero-title-color);
+  }
+  
+  .upcoming-event-title {
+    margin-bottom: 1rem;
+  
+    font-family:
+      'Carnivalee Freakshow',
+      Georgia,
+      serif;
+    font-size: clamp(2rem, 6vw, 3rem);
+    font-weight: 400;
+    line-height: 1.2;
+    letter-spacing: 0.1rem;
+  
+    color: var(--hero-title-color);
+  }
+  
+  .upcoming-event-name {
+    margin-bottom: 1rem;
+  
+    font-size: clamp(1.35rem, 4vw, 1.75rem);
+    font-weight: 600;
+    line-height: 1.3;
+  
+    color: var(--text-color);
+  }
+  
+  .upcoming-event-date {
+    margin-bottom: 1rem;
+  
+    font-size: clamp(1rem, 3vw, 1.2rem);
+    line-height: 1.5;
+  
+    color: var(--text-color);
+  }
+  
+  .upcoming-event-description {
+    max-width: 650px;
+    margin: 0 auto 1.5rem;
+  
+    font-size: 1rem;
+    line-height: 1.6;
+  
+    color: var(--text-color);
+  }
+  
+  .upcoming-event-price {
+    margin-bottom: 0.5rem;
+  
+    font-size: 1.2rem;
+    font-weight: 700;
+  
+    color: var(--hero-title-color);
+  }
+  
+  /*
+   * The event button inherits shared button styling.
+   * These rules ensure it stays above any section decorations.
+   */
+  .upcoming-event-btn {
+    z-index: 10;
+    margin-top: 1rem;
+  }
+  
+  /* =======================
+     Featured Products
+     ======================= */
+  
+  .featured-products-section {
+    width: 100%;
+    padding: clamp(4rem, 10vw, 6.25rem) 1.25rem;
+  
+    text-align: center;
+  
+    color: var(--text-color);
+    background-color: var(--bg-section);
+  }
+  
+  .featured-products-title {
+    margin-bottom: 2rem;
+  
+    font-family:
+      'Carnivalee Freakshow',
+      Georgia,
+      serif;
+    font-size: clamp(2.25rem, 7vw, 4rem);
+    font-weight: 400;
+    line-height: 1.2;
+  
+    color: var(--text-color);
+  }
+  
+  .products-gallery {
+    display: grid;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(min(100%, 250px), 1fr)
+    );
+    gap: 1.25rem;
+  
+    width: min(100%, 1200px);
+    margin: 0 auto;
+  }
+  
+  .product-card {
+    width: 100%;
+    padding: 1.25rem;
+  
+    text-align: center;
+  
+    background-color: var(--product-card-bg);
+    border-radius: 0.625rem;
+    box-shadow: 0 5px 15px var(--product-shadow);
+  
+    transition:
+      transform 0.3s ease,
+      box-shadow 0.3s ease;
+  }
+  
+  @media (hover: hover) and (pointer: fine) {
+    .product-card:hover {
+      transform: translateY(-0.625rem);
+      box-shadow: 0 10px 20px var(--product-shadow);
+    }
+  }
+  
+  .product-image {
+    display: block;
+  
+    width: 100%;
+    height: auto;
+  
+    border-radius: 0.625rem;
+  }
+  
+  .product-btn {
+    margin-top: 0.9375rem;
+    padding: 0.625rem 1.5625rem;
+  }
+  
+  /* =======================
+     Contact Section
+     ======================= */
+  
+  .contact-description {
+    max-width: 700px;
+    margin: 0 auto 1.25rem;
+  
+    font-size: clamp(1rem, 3vw, 1.5rem);
+    line-height: 1.8;
+  
+    color: var(--text-color);
+  }
+  
+  .contact-btn {
+    margin-top: 1.875rem;
+  }
+  
+  /* =======================
+     Tablet and Mobile
+     ======================= */
+  
+  @media (max-width: 768px) {
+    .hero-section {
+      min-height: 100svh;
+      padding: 1rem;
+    }
+  
+    .hero-content {
+      padding: 1.5rem 1rem;
+    }
+  
+    .logo {
+      max-width: min(100%, 350px);
+    }
+  
+    .hero-title {
+      font-size: clamp(1.75rem, 8vw, 2.5rem);
+    }
+  
+    .hero-description {
+      margin-bottom: 1.5rem;
+    }
+  
+    .hero-btn,
+    .about-btn,
+    .upcoming-event-btn,
+    .contact-btn {
+      width: min(100%, 320px);
+      padding: 0.875rem 1.25rem;
+    }
+  
+    .home-section {
+      padding: 4rem 1rem;
+    }
+  
+    .upcoming-event-section {
+      width: calc(100% - 2rem);
+      margin: 2.5rem auto;
+      padding: 1.5rem 1rem;
+    }
+  
+    .upcoming-event-title {
+      font-size: clamp(2rem, 9vw, 2.5rem);
+    }
+  
+    .upcoming-event-name {
+      font-size: 1.5rem;
+    }
+  
+    .products-gallery {
+      grid-template-columns: 1fr;
+    }
+  
+    .product-card {
+      width: min(100%, 500px);
+      margin: 0 auto;
+    }
+  
+    .contact-btn {
+      margin-top: 1.25rem;
+    }
+  }
+  
+  /* =======================
+     Small Mobile Screens
+     ======================= */
+  
+  @media (max-width: 480px) {
+    .hero-content {
+      padding: 1.25rem 0.75rem;
+    }
+  
+    .logo {
+      max-width: 280px;
+    }
+  
+    .upcoming-event-section {
+      width: calc(100% - 1rem);
+      margin: 2rem auto;
+      padding: 1.25rem 0.875rem;
+      border-radius: 0.75rem;
+    }
+  
+    .hero-btn,
+    .about-btn,
+    .upcoming-event-btn,
+    .contact-btn {
+      width: 100%;
+      min-height: 48px;
+    }
+  }
+  
+  /* =======================
+     Reduced Motion
+     ======================= */
+  
+  @media (prefers-reduced-motion: reduce) {
+    .logo,
+    .hero-btn,
+    .about-btn,
+    .upcoming-event-btn,
+    .contact-btn,
+    .product-btn,
+    .product-card {
+      scroll-behavior: auto;
+      transition-duration: 0.01ms;
+      animation-duration: 0.01ms;
+      animation-iteration-count: 1;
+    }
+  }
