@@ -126,6 +126,52 @@ const Events = () => {
       : fallback;
   };
 
+  const normalizeDateOnly = (value) => {
+    if (!value) {
+      return '';
+    }
+
+    if (moment.isMoment(value)) {
+      return value.format('YYYY-MM-DD');
+    }
+
+    if (value instanceof Date) {
+      if (Number.isNaN(value.getTime())) {
+        return '';
+      }
+
+      const year = value.getFullYear();
+      const month = String(
+        value.getMonth() + 1
+      ).padStart(2, '0');
+      const day = String(
+        value.getDate()
+      ).padStart(2, '0');
+
+      return `${year}-${month}-${day}`;
+    }
+
+    const stringValue = String(value).trim();
+    const dateMatch = stringValue.match(
+      /^(\d{4}-\d{2}-\d{2})/
+    );
+
+    return dateMatch ? dateMatch[1] : '';
+  };
+
+  const parseDateOnly = (value) => {
+    const normalizedDate =
+      normalizeDateOnly(value);
+
+    return normalizedDate
+      ? moment(
+          normalizedDate,
+          'YYYY-MM-DD',
+          true
+        )
+      : moment.invalid();
+  };
+
   const normalizeDays = (days) => {
     if (Array.isArray(days)) {
       return days
@@ -171,7 +217,11 @@ const Events = () => {
       return '';
     }
 
-    return moment(date).format('dddd');
+    return moment(
+      date,
+      'YYYY-MM-DD',
+      true
+    ).format('dddd');
   };
 
   const formatTime = (time) => {
@@ -203,14 +253,8 @@ const Events = () => {
       return moment.invalid();
     }
 
-    const dateOnly = moment(
-      date,
-      [
-        'YYYY-MM-DD',
-        moment.ISO_8601,
-      ],
-      true
-    );
+    const dateOnly =
+      parseDateOnly(date);
 
     if (!dateOnly.isValid()) {
       return moment.invalid();
@@ -317,15 +361,12 @@ const Events = () => {
           .trim()
           .toLowerCase(),
 
-      startDate: rawStartDate
-        ? moment(rawStartDate).format('YYYY-MM-DD')
-        : '',
+      startDate:
+        normalizeDateOnly(rawStartDate),
 
-      endDate: rawEndDate
-        ? moment(rawEndDate).format('YYYY-MM-DD')
-        : rawStartDate
-          ? moment(rawStartDate).format('YYYY-MM-DD')
-          : '',
+      endDate:
+        normalizeDateOnly(rawEndDate) ||
+        normalizeDateOnly(rawStartDate),
 
       startTime:
         event.startTime ??
@@ -399,7 +440,7 @@ const Events = () => {
     const dateSpecificValue =
       salesByDate?.[dateKey] ??
       salesByDate?.[
-        moment(dateKey).format('YYYY-MM-DD')
+        normalizeDateOnly(dateKey)
       ];
 
     if (
@@ -454,9 +495,8 @@ const Events = () => {
   };
 
   const openEventFormForDate = (selectedDateValue) => {
-    const formattedDate = moment(
-      selectedDateValue
-    ).format('YYYY-MM-DD');
+    const formattedDate =
+      normalizeDateOnly(selectedDateValue);
 
     const selectedDay =
       getDayNameFromDate(formattedDate);
@@ -624,18 +664,14 @@ const Events = () => {
       normalizeDays(normalizedEvent.days);
 
     const startDate =
-      normalizedEvent.startDate
-        ? moment(
-            normalizedEvent.startDate
-          ).format('YYYY-MM-DD')
-        : '';
+      normalizeDateOnly(
+        normalizedEvent.startDate
+      );
 
     const endDate =
-      normalizedEvent.endDate
-        ? moment(
-            normalizedEvent.endDate
-          ).format('YYYY-MM-DD')
-        : startDate;
+      normalizeDateOnly(
+        normalizedEvent.endDate
+      ) || startDate;
 
     const inferredSingleEvent =
       normalizedEvent.frequency ===
@@ -643,8 +679,8 @@ const Events = () => {
       (
         startDate &&
         endDate &&
-        moment(startDate).isSame(
-          endDate,
+        parseDateOnly(startDate).isSame(
+          parseDateOnly(endDate),
           'day'
         ) &&
         parsedDays.length <= 1
@@ -791,8 +827,8 @@ const Events = () => {
 
     if (
       !isSingleEvent &&
-      moment(endDate).isBefore(
-        moment(startDate),
+      parseDateOnly(endDate).isBefore(
+        parseDateOnly(startDate),
         'day'
       )
     ) {
@@ -879,15 +915,16 @@ const Events = () => {
     const singleEvent =
       newEvent.frequency === 'single';
 
-    const payloadStartDate = moment(
-      newEvent.startDate
-    ).format('YYYY-MM-DD');
+    const payloadStartDate =
+      normalizeDateOnly(
+        newEvent.startDate
+      );
 
     const payloadEndDate = singleEvent
       ? payloadStartDate
-      : moment(
+      : normalizeDateOnly(
           newEvent.endDate
-        ).format('YYYY-MM-DD');
+        );
 
     const payloadDays = singleEvent
       ? [
@@ -1706,7 +1743,7 @@ const Events = () => {
 
                     {newEvent.startDate && (
                       <span className="form-field__hint">
-                        {moment(
+                        {parseDateOnly(
                           newEvent.startDate
                         ).format(
                           'dddd, MMMM D, YYYY'
@@ -1991,19 +2028,19 @@ const Events = () => {
           <section className="admin-featured-event">
             <div className="admin-featured-event__date">
               <span>
-                {moment(
+                {parseDateOnly(
                   featuredEvent.date
                 ).format('MMM')}
               </span>
 
               <strong>
-                {moment(
+                {parseDateOnly(
                   featuredEvent.date
                 ).format('D')}
               </strong>
 
               <span>
-                {moment(
+                {parseDateOnly(
                   featuredEvent.date
                 ).format('YYYY')}
               </span>
@@ -2024,7 +2061,7 @@ const Events = () => {
 
               <div className="admin-featured-event__meta">
                 <span>
-                  {moment(
+                  {parseDateOnly(
                     featuredEvent.date
                   ).format(
                     'dddd, MMMM D, YYYY'
@@ -2238,7 +2275,9 @@ const Events = () => {
               </span>
 
               <h2>
-                {moment(selectedDate).format(
+                {parseDateOnly(
+                  selectedDate
+                ).format(
                   'MMMM D, YYYY'
                 )}
               </h2>

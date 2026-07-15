@@ -121,6 +121,50 @@ const normalizeDays = (days) => {
 };
 
 /*
+ * Calendar dates are not timestamps. Preserve the
+ * YYYY-MM-DD portion without converting through UTC
+ * or the browser's local timezone.
+ */
+const normalizeDateOnly = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  const stringValue = String(value).trim();
+  const match = stringValue.match(
+    /^(\d{4}-\d{2}-\d{2})/
+  );
+
+  return match ? match[1] : "";
+};
+
+const parseDateOnly = (value) => {
+  const dateOnly = normalizeDateOnly(value);
+
+  if (!dateOnly) {
+    return moment.invalid();
+  }
+
+  return moment(
+    dateOnly,
+    "YYYY-MM-DD",
+    true
+  );
+};
+
+const formatDateOnly = (
+  value,
+  format
+) => {
+  const parsedDate =
+    parseDateOnly(value);
+
+  return parsedDate.isValid()
+    ? parsedDate.format(format)
+    : "";
+};
+
+/*
  * Normalizes backend/database field names so the
  * component works with either snake_case or camelCase.
  */
@@ -162,19 +206,22 @@ const normalizeEvent = (event) => {
       event.eventDescription ??
       "",
 
-    startDate:
+    startDate: normalizeDateOnly(
       event.startDate ??
       event.start_date ??
-      event.date ??
-      null,
+      event.date
+    ),
 
     endDate:
-      event.endDate ??
-      event.end_date ??
-      event.startDate ??
-      event.start_date ??
-      event.date ??
-      null,
+      normalizeDateOnly(
+        event.endDate ??
+        event.end_date
+      ) ||
+      normalizeDateOnly(
+        event.startDate ??
+        event.start_date ??
+        event.date
+      ),
 
     startTime:
       event.startTime ??
@@ -210,6 +257,48 @@ const normalizeEvent = (event) => {
       event.purchase_required
     ),
 
+    occurrences: Array.isArray(
+      event.occurrences
+    )
+      ? event.occurrences
+          .map((occurrence) => {
+            const occurrenceDate =
+              normalizeDateOnly(
+                occurrence.occurrenceDate ??
+                occurrence.occurrence_date ??
+                occurrence.date
+              );
+
+            if (!occurrenceDate) {
+              return null;
+            }
+
+            return {
+              ...occurrence,
+              occurrenceDate,
+              isActive: normalizeBoolean(
+                occurrence.isActive ??
+                occurrence.is_active ??
+                true
+              ),
+              capacity: Number(
+                occurrence.capacity ?? 0
+              ),
+              reservedCount: Number(
+                occurrence.reservedCount ??
+                occurrence.reserved_count ??
+                0
+              ),
+              soldCount: Number(
+                occurrence.soldCount ??
+                occurrence.sold_count ??
+                0
+              ),
+            };
+          })
+          .filter(Boolean)
+      : [],
+
     price:
       Number.isFinite(parsedPrice)
         ? parsedPrice
@@ -225,14 +314,8 @@ const parseEventDateTime = (
     return moment.invalid();
   }
 
-  const dateOnly = moment(
-    date,
-    [
-      "YYYY-MM-DD",
-      moment.ISO_8601,
-    ],
-    true
-  );
+  const dateOnly =
+    parseDateOnly(date);
 
   if (!dateOnly.isValid()) {
     return moment.invalid();
@@ -303,24 +386,59 @@ const buildOccurrences = (event) => {
     return [];
   }
 
-  const startDate = moment(
-    event.startDate,
-    [
-      "YYYY-MM-DD",
-      moment.ISO_8601,
-    ],
-    true
-  );
+  /*
+   * Prefer the authoritative occurrence rows returned
+   * by the backend. Stripe checkout validates against
+   * EventOccurrences, so the calendar and checkout
+   * must use those exact date strings.
+   */
+  if (
+    Array.isArray(event.occurrences) &&
+    event.occurrences.length > 0
+  ) {
+    return event.occurrences
+      .filter(
+        (occurrence) =>
+          occurrence.isActive !== false
+      )
+      .map((occurrence) => ({
+        ...event,
+        occurrenceId:
+          occurrence.id ??
+          occurrence.occurrenceId ??
+          occurrence.occurrence_id,
+        occurrenceDate:
+          normalizeDateOnly(
+            occurrence.occurrenceDate
+          ),
+        capacity: Number(
+          occurrence.capacity ?? 0
+        ),
+        reservedCount: Number(
+          occurrence.reservedCount ?? 0
+        ),
+        soldCount: Number(
+          occurrence.soldCount ?? 0
+        ),
+      }))
+      .filter(
+        (occurrence) =>
+          occurrence.occurrenceDate
+      );
+  }
 
-  const endDate = moment(
-    event.endDate ||
-      event.startDate,
-    [
-      "YYYY-MM-DD",
-      moment.ISO_8601,
-    ],
-    true
-  );
+  /*
+   * Legacy fallback for API responses that do not yet
+   * include nested EventOccurrences.
+   */
+  const startDate =
+    parseDateOnly(event.startDate);
+
+  const endDate =
+    parseDateOnly(
+      event.endDate ||
+      event.startDate
+    );
 
   if (!startDate.isValid()) {
     return [];
@@ -640,9 +758,8 @@ const EventCalendar = () => {
            * upcoming through the end of the day.
            */
           if (!event.startTime) {
-            return moment(
-              event.occurrenceDate,
-              "YYYY-MM-DD"
+            return parseDateOnly(
+              event.occurrenceDate
             )
               .endOf("day")
               .isSameOrAfter(now);
@@ -811,12 +928,37 @@ const EventCalendar = () => {
           eventId
         );
 
+        const normalizedSelections =
+          Array.isArray(selections)
+            ? selections
+                .map((selection) => ({
+                  ...selection,
+                  occurrenceDate:
+                    normalizeDateOnly(
+                      selection.occurrenceDate
+                    ),
+                }))
+                .filter(
+                  (selection) =>
+                    selection.occurrenceDate
+                )
+            : [];
+
+        if (
+          normalizedSelections.length === 0
+        ) {
+          throw new Error(
+            "Select at least one available event date."
+          );
+        }
+
         const response =
           await registerApi.post(
             CHECKOUT_ENDPOINT,
             {
               eventId,
-              selections,
+              selections:
+                normalizedSelections,
 
               metadata: {
                 hasAcceptedPrivacy:
@@ -1045,24 +1187,27 @@ const EventCalendar = () => {
             <section className="featured-event">
               <div className="featured-event-date">
                 <span className="featured-event-month">
-                  {moment(
+                  {formatDateOnly(
                     featuredEvent
-                      .occurrenceDate
-                  ).format("MMM")}
+                      .occurrenceDate,
+                    "MMM"
+                  )}
                 </span>
 
                 <strong>
-                  {moment(
+                  {formatDateOnly(
                     featuredEvent
-                      .occurrenceDate
-                  ).format("D")}
+                      .occurrenceDate,
+                    "D"
+                  )}
                 </strong>
 
                 <span>
-                  {moment(
+                  {formatDateOnly(
                     featuredEvent
-                      .occurrenceDate
-                  ).format("YYYY")}
+                      .occurrenceDate,
+                    "YYYY"
+                  )}
                 </span>
               </div>
 
@@ -1087,10 +1232,9 @@ const EventCalendar = () => {
 
                 <div className="featured-event-meta">
                   <span>
-                    {moment(
+                    {formatDateOnly(
                       featuredEvent
-                        .occurrenceDate
-                    ).format(
+                        .occurrenceDate,
                       "dddd, MMMM D, YYYY"
                     )}
                   </span>
@@ -1296,9 +1440,8 @@ const EventCalendar = () => {
               </span>
 
               <h2>
-                {moment(
-                  selectedDate
-                ).format(
+                {formatDateOnly(
+                  selectedDate,
                   "MMMM D, YYYY"
                 )}
               </h2>
