@@ -94,7 +94,7 @@ body {
  * Hover styles only run on devices with a real hover-capable
  * pointer, such as a mouse or trackpad.
  */
-@media (hover: hover) and (pointer: fine) {
+ @media (min-width: 769px) and (hover: hover) and (pointer: fine) {
   .hero-btn:hover,
   .about-btn:hover,
   .upcoming-event-btn:hover,
@@ -180,7 +180,7 @@ body {
   transition: background-color 0.3s ease;
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
   .upcoming-event-btn:hover {
     background-color: #e25555;
   }
@@ -233,7 +233,7 @@ body {
   margin-bottom: 30px;
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
   .product-card:hover {
     transform: translateY(-10px);
     box-shadow: 0 10px 20px var(--product-shadow);
@@ -255,7 +255,7 @@ body {
   margin-top: 15px;
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
   .product-btn:hover {
     background-color: var(--btn-hover);
   }
@@ -314,3 +314,36 @@ body {
   }
 }
 
+/* =========================================
+   Force-disable hover behavior on mobile
+   ========================================= */
+
+   @media (max-width: 768px), (hover: none), (pointer: coarse) {
+    .hero-btn,
+    .about-btn,
+    .upcoming-event-btn,
+    .contact-btn,
+    .product-btn {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: none;
+    }
+  
+    .hero-btn:hover,
+    .about-btn:hover,
+    .contact-btn:hover,
+    .product-btn:hover {
+      background-color: var(--btn-bg) !important;
+      color: var(--inverted-button-text) !important;
+    }
+  
+    .upcoming-event-btn:hover {
+      background-color: #ff6b6b !important;
+      color: white !important;
+    }
+  
+    .product-card:hover {
+      transform: none !important;
+      box-shadow: 0 5px 15px var(--product-shadow) !important;
+    }
+  }
