@@ -292,26 +292,27 @@ const Events = () => {
     ) {
       return null;
     }
-
+  
     const rawStartDate =
       event.startDate ??
       event.start_date ??
       event.date ??
       '';
-
+  
     const rawEndDate =
       event.endDate ??
       event.end_date ??
       rawStartDate;
-
-    const parsedPrice = normalizeNumberValue(
-      event.price ??
-        event.event_price ??
-        event.ticketPrice ??
-        event.ticket_price,
-      0
-    );
-
+  
+    const parsedPrice =
+      normalizeNumberValue(
+        event.price ??
+          event.event_price ??
+          event.ticketPrice ??
+          event.ticket_price,
+        0
+      );
+  
     const maxTicketQuantity =
       normalizeIntegerValue(
         event.maxTicketQuantity ??
@@ -320,8 +321,98 @@ const Events = () => {
           event.ticket_limit,
         0
       );
-
-    const ticketsSold =
+  
+    /*
+     * Normalize the authoritative occurrence rows
+     * returned by the backend.
+     *
+     * Ticket sales are stored on EventOccurrences,
+     * not directly on the Events table.
+     */
+    const normalizedOccurrences =
+      Array.isArray(event.occurrences)
+        ? event.occurrences
+            .map((occurrence) => {
+              if (
+                !occurrence ||
+                typeof occurrence !==
+                  'object'
+              ) {
+                return null;
+              }
+  
+              const occurrenceDate =
+                normalizeDateOnly(
+                  occurrence.occurrenceDate ??
+                    occurrence.occurrence_date ??
+                    occurrence.date
+                );
+  
+              if (!occurrenceDate) {
+                return null;
+              }
+  
+              const rawIsActive =
+                occurrence.isActive ??
+                occurrence.is_active;
+  
+              const isActive =
+                rawIsActive === undefined ||
+                rawIsActive === null
+                  ? true
+                  : normalizePurchaseValue(
+                      rawIsActive
+                    );
+  
+              return {
+                ...occurrence,
+  
+                id:
+                  occurrence.id ??
+                  occurrence.occurrenceId ??
+                  occurrence.occurrence_id,
+  
+                eventId:
+                  occurrence.eventId ??
+                  occurrence.event_id ??
+                  event.id ??
+                  event.eventId ??
+                  event.event_id,
+  
+                occurrenceDate,
+  
+                capacity:
+                  normalizeIntegerValue(
+                    occurrence.capacity,
+                    maxTicketQuantity
+                  ),
+  
+                reservedCount:
+                  normalizeIntegerValue(
+                    occurrence.reservedCount ??
+                      occurrence.reserved_count,
+                    0
+                  ),
+  
+                soldCount:
+                  normalizeIntegerValue(
+                    occurrence.soldCount ??
+                      occurrence.sold_count,
+                    0
+                  ),
+  
+                isActive,
+              };
+            })
+            .filter(Boolean)
+        : [];
+  
+    /*
+     * Event-level ticket totals are retained only as
+     * legacy fallbacks. The occurrence rows above are
+     * the primary source of truth.
+     */
+    const fallbackTicketsSold =
       normalizeIntegerValue(
         event.ticketsSold ??
           event.tickets_sold ??
@@ -329,28 +420,45 @@ const Events = () => {
           event.quantity_sold,
         0
       );
-
+  
+    /*
+     * This total is useful for summaries, but individual
+     * calendar dates must still use occurrence.soldCount.
+     */
+    const ticketsSold =
+      normalizedOccurrences.length > 0
+        ? normalizedOccurrences.reduce(
+            (total, occurrence) =>
+              total +
+              normalizeIntegerValue(
+                occurrence.soldCount,
+                0
+              ),
+            0
+          )
+        : fallbackTicketsSold;
+  
     return {
       ...event,
-
+  
       id:
         event.id ??
         event.eventId ??
         event.event_id,
-
+  
       name:
         event.name ??
         event.eventName ??
         event.event_name ??
         event.title ??
         'Untitled event',
-
+  
       description:
         event.description ??
         event.eventDescription ??
         event.event_description ??
         '',
-
+  
       frequency:
         (
           event.frequency ??
@@ -360,43 +468,61 @@ const Events = () => {
           .toString()
           .trim()
           .toLowerCase(),
-
+  
       startDate:
-        normalizeDateOnly(rawStartDate),
-
+        normalizeDateOnly(
+          rawStartDate
+        ),
+  
       endDate:
-        normalizeDateOnly(rawEndDate) ||
-        normalizeDateOnly(rawStartDate),
-
+        normalizeDateOnly(
+          rawEndDate
+        ) ||
+        normalizeDateOnly(
+          rawStartDate
+        ),
+  
       startTime:
         event.startTime ??
         event.start_time ??
         '',
-
+  
       endTime:
         event.endTime ??
         event.end_time ??
         '',
-
-      days: normalizeDays(
-        event.days ??
-          event.event_days ??
-          event.selectedDays ??
-          event.selected_days
-      ),
-
-      isPurchase: normalizePurchaseValue(
-        event.isPurchase ??
-          event.is_purchase ??
-          event.purchaseRequired ??
-          event.purchase_required
-      ),
-
-      price: parsedPrice,
-
+  
+      days:
+        normalizeDays(
+          event.days ??
+            event.event_days ??
+            event.selectedDays ??
+            event.selected_days
+        ),
+  
+      isPurchase:
+        normalizePurchaseValue(
+          event.isPurchase ??
+            event.is_purchase ??
+            event.purchaseRequired ??
+            event.purchase_required
+        ),
+  
+      price:
+        parsedPrice,
+  
       maxTicketQuantity,
-
+  
+      /*
+       * Total sold across all occurrences.
+       *
+       * The generated calendar occurrence below will
+       * override this with the correct per-date count.
+       */
       ticketsSold,
+  
+      occurrences:
+        normalizedOccurrences,
     };
   };
 
@@ -977,85 +1103,297 @@ const Events = () => {
     };
   };
 
-  const generateEventOccurrences = (event) => {
+  const generateEventOccurrences = (
+    event
+  ) => {
     const normalizedEvent =
       normalizeEventRecord(event);
-
-    if (!normalizedEvent?.startDate) {
+  
+    if (
+      !normalizedEvent?.id ||
+      !normalizedEvent?.startDate
+    ) {
       return [];
     }
-
+  
+    /*
+     * Prefer the authoritative EventOccurrences rows
+     * returned by the backend.
+     *
+     * These rows contain the actual:
+     * - occurrence date
+     * - capacity
+     * - reserved count
+     * - sold count
+     *
+     * This is the data updated by the Stripe webhook.
+     */
+    if (
+      Array.isArray(
+        normalizedEvent.occurrences
+      ) &&
+      normalizedEvent.occurrences.length >
+        0
+    ) {
+      return normalizedEvent.occurrences
+        .filter(
+          (occurrence) =>
+            occurrence.isActive !==
+            false
+        )
+        .map((occurrence) => {
+          const occurrenceDate =
+            normalizeDateOnly(
+              occurrence.occurrenceDate
+            );
+  
+          if (!occurrenceDate) {
+            return null;
+          }
+  
+          const occurrenceCapacity =
+            normalizeIntegerValue(
+              occurrence.capacity,
+              normalizedEvent
+                .maxTicketQuantity
+            );
+  
+          const occurrenceSoldCount =
+            normalizeIntegerValue(
+              occurrence.soldCount ??
+                occurrence.sold_count,
+              0
+            );
+  
+          const occurrenceReservedCount =
+            normalizeIntegerValue(
+              occurrence.reservedCount ??
+                occurrence.reserved_count,
+              0
+            );
+  
+          return {
+            id:
+              normalizedEvent.id,
+  
+            occurrenceId:
+              occurrence.id ??
+              occurrence.occurrenceId ??
+              occurrence.occurrence_id,
+  
+            title:
+              normalizedEvent.name,
+  
+            description:
+              normalizedEvent.description,
+  
+            startTime:
+              normalizedEvent.startTime,
+  
+            endTime:
+              normalizedEvent.endTime,
+  
+            isPurchase:
+              normalizedEvent.isPurchase,
+  
+            price:
+              normalizedEvent.price,
+  
+            /*
+             * Capacity is stored per occurrence.
+             * Fall back to the event-level limit only
+             * for older records.
+             */
+            maxTicketQuantity:
+              occurrenceCapacity,
+  
+            /*
+             * These are the authoritative counts
+             * updated by the event Stripe webhook.
+             */
+            ticketsSold:
+              occurrenceSoldCount,
+  
+            reservedCount:
+              occurrenceReservedCount,
+  
+            remainingTickets:
+              occurrenceCapacity > 0
+                ? Math.max(
+                    0,
+                    occurrenceCapacity -
+                      occurrenceSoldCount -
+                      occurrenceReservedCount
+                  )
+                : null,
+  
+            date:
+              occurrenceDate,
+          };
+        })
+        .filter(Boolean);
+    }
+  
+    /*
+     * Legacy fallback:
+     *
+     * Use calculated dates only when the API response
+     * does not contain EventOccurrences. This supports
+     * older data while keeping current occurrence rows
+     * authoritative.
+     */
     const normalizedDays =
-      normalizeDays(normalizedEvent.days);
-
-    const eventStartDate = moment(
-      normalizedEvent.startDate,
-      'YYYY-MM-DD',
-      true
-    );
-
-    const eventEndDate = moment(
-      normalizedEvent.endDate ||
+      normalizeDays(
+        normalizedEvent.days
+      );
+  
+    const eventStartDate =
+      moment(
         normalizedEvent.startDate,
-      'YYYY-MM-DD',
-      true
-    );
-
+        'YYYY-MM-DD',
+        true
+      );
+  
+    const eventEndDate =
+      moment(
+        normalizedEvent.endDate ||
+          normalizedEvent.startDate,
+        'YYYY-MM-DD',
+        true
+      );
+  
     if (!eventStartDate.isValid()) {
       return [];
     }
-
+  
     const safeEndDate =
       eventEndDate.isValid()
         ? eventEndDate
         : eventStartDate.clone();
-
-    const createOccurrence = (dateKey) => ({
-      id: normalizedEvent.id,
-      title: normalizedEvent.name,
-      description:
-        normalizedEvent.description,
-      startTime:
-        normalizedEvent.startTime,
-      endTime: normalizedEvent.endTime,
-      isPurchase:
-        normalizedEvent.isPurchase,
-      price: normalizedEvent.price,
-      maxTicketQuantity:
-        normalizeIntegerValue(
-          normalizedEvent.maxTicketQuantity,
-          0
-        ),
-      ticketsSold:
-        getTicketsSoldForDate(
-          normalizedEvent,
-          dateKey
-        ),
-      date: dateKey,
-    });
-
+  
+    /*
+     * Protect against malformed event records where
+     * the end date precedes the start date.
+     */
     if (
-      normalizedEvent.frequency ===
-        'single' ||
-      eventStartDate.isSame(
-        safeEndDate,
+      safeEndDate.isBefore(
+        eventStartDate,
         'day'
       )
     ) {
-      const dateKey =
-        eventStartDate.format(
-          'YYYY-MM-DD'
+      safeEndDate.set({
+        year:
+          eventStartDate.year(),
+        month:
+          eventStartDate.month(),
+        date:
+          eventStartDate.date(),
+      });
+    }
+  
+    const createLegacyOccurrence = (
+      dateKey
+    ) => {
+      const ticketsSold =
+        getTicketsSoldForDate(
+          normalizedEvent,
+          dateKey
         );
-
+  
+      const maxTicketQuantity =
+        normalizeIntegerValue(
+          normalizedEvent
+            .maxTicketQuantity,
+          0
+        );
+  
+      return {
+        id:
+          normalizedEvent.id,
+  
+        occurrenceId:
+          null,
+  
+        title:
+          normalizedEvent.name,
+  
+        description:
+          normalizedEvent.description,
+  
+        startTime:
+          normalizedEvent.startTime,
+  
+        endTime:
+          normalizedEvent.endTime,
+  
+        isPurchase:
+          normalizedEvent.isPurchase,
+  
+        price:
+          normalizedEvent.price,
+  
+        maxTicketQuantity,
+  
+        ticketsSold,
+  
+        reservedCount:
+          0,
+  
+        remainingTickets:
+          maxTicketQuantity > 0
+            ? Math.max(
+                0,
+                maxTicketQuantity -
+                  ticketsSold
+              )
+            : null,
+  
+        date:
+          dateKey,
+      };
+    };
+  
+    const isSingleOccurrence =
+      normalizedEvent.frequency ===
+        'single' ||
+      normalizedEvent.frequency ===
+        'once' ||
+      eventStartDate.isSame(
+        safeEndDate,
+        'day'
+      );
+  
+    if (isSingleOccurrence) {
       return [
-        createOccurrence(dateKey),
+        createLegacyOccurrence(
+          eventStartDate.format(
+            'YYYY-MM-DD'
+          )
+        ),
       ];
     }
-
+  
+    /*
+     * If an older recurring event has no selected
+     * weekdays, preserve its start date rather than
+     * hiding it from the admin calendar.
+     */
+    if (
+      normalizedDays.length === 0
+    ) {
+      return [
+        createLegacyOccurrence(
+          eventStartDate.format(
+            'YYYY-MM-DD'
+          )
+        ),
+      ];
+    }
+  
     const occurrences = [];
     const cursor =
       eventStartDate.clone();
-
+  
     while (
       cursor.isSameOrBefore(
         safeEndDate,
@@ -1063,46 +1401,53 @@ const Events = () => {
       )
     ) {
       const fullDayName =
-        cursor.format('dddd');
-
+        cursor
+          .format('dddd')
+          .toLowerCase();
+  
       const shortDayName =
-        cursor.format('ddd');
-
+        cursor
+          .format('ddd')
+          .toLowerCase();
+  
       const hasMatchingDay =
-        normalizedDays.some((day) => {
-          const normalizedDay = String(day)
-            .trim()
-            .toLowerCase();
-
-          return (
-            normalizedDay ===
-              fullDayName.toLowerCase() ||
-            normalizedDay ===
-              shortDayName.toLowerCase() ||
-            fullDayName
-              .toLowerCase()
-              .startsWith(normalizedDay) ||
-            normalizedDay.startsWith(
-              shortDayName.toLowerCase()
-            )
-          );
-        });
-
+        normalizedDays.some(
+          (day) => {
+            const normalizedDay =
+              String(day)
+                .trim()
+                .toLowerCase();
+  
+            return (
+              normalizedDay ===
+                fullDayName ||
+              normalizedDay ===
+                shortDayName ||
+              fullDayName.startsWith(
+                normalizedDay
+              ) ||
+              normalizedDay.startsWith(
+                shortDayName
+              )
+            );
+          }
+        );
+  
       if (hasMatchingDay) {
-        const dateKey =
-          cursor.format('YYYY-MM-DD');
-
         occurrences.push(
-          createOccurrence(dateKey)
+          createLegacyOccurrence(
+            cursor.format(
+              'YYYY-MM-DD'
+            )
+          )
         );
       }
-
+  
       cursor.add(1, 'day');
     }
-
+  
     return occurrences;
   };
-
   const fetchEvents = async () => {
     try {
       setLoading(true);
