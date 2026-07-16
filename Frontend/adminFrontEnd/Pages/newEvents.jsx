@@ -1776,6 +1776,7 @@ const Events = () => {
         <div className="admin-selected-event__meta">
           <span>
             {formatTime(event.startTime)} –{' '}
+            <br></br>
             {formatTime(event.endTime)}
           </span>
 
