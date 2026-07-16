@@ -17,21 +17,31 @@ const acceptanceCookieOptions = {
   expires: 1,
   path: "/",
   sameSite: "Lax",
-  secure: window.location.protocol === "https:",
+  secure:
+    window.location.protocol === "https:",
 };
 
 const temporaryCookieOptions = {
   expires: 1,
   path: "/",
   sameSite: "Lax",
-  secure: window.location.protocol === "https:",
+  secure:
+    window.location.protocol === "https:",
 };
 
+/*
+ * Safely parses JSON stored in a cookie.
+ *
+ * Examples:
+ * - pendingTicketCheckout
+ * - shippingDetails
+ */
 const parseCookieJSON = (
   cookieName,
   fallbackValue = {}
 ) => {
-  const cookieValue = Cookies.get(cookieName);
+  const cookieValue =
+    Cookies.get(cookieName);
 
   if (!cookieValue) {
     return fallbackValue;
@@ -49,6 +59,10 @@ const parseCookieJSON = (
   }
 };
 
+/*
+ * Supports the checkout URL response property names
+ * currently used by the cart and event controllers.
+ */
 const getCheckoutUrl = (response) => {
   return (
     response?.data?.url ||
@@ -56,6 +70,77 @@ const getCheckoutUrl = (response) => {
     response?.data?.checkout_url ||
     null
   );
+};
+
+/*
+ * Calendar dates are date-only values rather than
+ * timestamps. Preserve the YYYY-MM-DD portion without
+ * converting the date through UTC or the browser's
+ * timezone.
+ */
+const normalizeDateOnly = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  const stringValue =
+    String(value).trim();
+
+  const dateMatch =
+    stringValue.match(
+      /^(\d{4}-\d{2}-\d{2})/
+    );
+
+  return dateMatch
+    ? dateMatch[1]
+    : "";
+};
+
+/*
+ * Validates and normalizes the ticket selections
+ * created by TicketQuantityModal.
+ *
+ * Expected structure:
+ *
+ * [
+ *   {
+ *     occurrenceDate: "2026-07-20",
+ *     quantity: 2
+ *   }
+ * ]
+ */
+const normalizeTicketSelections = (
+  selections
+) => {
+  if (!Array.isArray(selections)) {
+    return [];
+  }
+
+  return selections
+    .map((selection) => {
+      const occurrenceDate =
+        normalizeDateOnly(
+          selection?.occurrenceDate
+        );
+
+      const quantity =
+        Number(selection?.quantity);
+
+      return {
+        occurrenceDate,
+        quantity,
+      };
+    })
+    .filter(
+      (selection) =>
+        Boolean(
+          selection.occurrenceDate
+        ) &&
+        Number.isInteger(
+          selection.quantity
+        ) &&
+        selection.quantity > 0
+    );
 };
 
 const PrivacyPolicyAndTerms = () => {
@@ -74,8 +159,9 @@ const PrivacyPolicyAndTerms = () => {
     setIsPolicyChecked,
   ] = useState(
     () =>
-      Cookies.get("hasAcceptedPrivacy") ===
-      "true"
+      Cookies.get(
+        "hasAcceptedPrivacy"
+      ) === "true"
   );
 
   const [
@@ -83,8 +169,9 @@ const PrivacyPolicyAndTerms = () => {
     setIsToSChecked,
   ] = useState(
     () =>
-      Cookies.get("hasAcceptedTerms") ===
-      "true"
+      Cookies.get(
+        "hasAcceptedTerms"
+      ) === "true"
   );
 
   const [
@@ -113,6 +200,11 @@ const PrivacyPolicyAndTerms = () => {
     setPendingToggle,
   ] = useState(null);
 
+  /*
+   * Preserve the existing cart checkout behavior by
+   * refreshing the shipping-details timestamp
+   * immediately before checkout.
+   */
   const updateShippingCookieBeforeCheckout =
     () => {
       const shippingDetails =
@@ -142,200 +234,279 @@ const PrivacyPolicyAndTerms = () => {
       return updatedShippingDetails;
     };
 
-  const startCartCheckout = async () => {
-    const sessionId =
-      localStorage.getItem("sessionId");
+  /*
+   * Starts the existing cart checkout workflow.
+   */
+  const startCartCheckout =
+    async () => {
+      const sessionId =
+        localStorage.getItem(
+          "sessionId"
+        );
 
-    if (!sessionId) {
-      throw new Error(
-        "Your cart session could not be found."
-      );
-    }
-
-    /*
-     * Preserve the original cart workflow:
-     * refresh the shipping cookie immediately before
-     * creating the Stripe checkout session.
-     */
-    const shippingDetails =
-      updateShippingCookieBeforeCheckout();
-
-    console.log(
-      "🚀 Starting cart checkout with metadata:",
-      shippingDetails
-    );
-
-    const response =
-      await registerApi.post(
-        CART_CHECKOUT_ENDPOINT,
-        {
-          sessionId,
-
-          metadata: {
-            hasAcceptedPrivacy:
-              isPolicyChecked,
-
-            hasAcceptedTermsOfService:
-              isToSChecked,
-
-            ...shippingDetails,
-          },
-        }
-      );
-
-    const checkoutUrl =
-      getCheckoutUrl(response);
-
-    if (!checkoutUrl) {
-      throw new Error(
-        "Cart checkout URL was not returned."
-      );
-    }
-
-    return checkoutUrl;
-  };
-
-  const startTicketCheckout = async () => {
-    const pendingTicketCheckout =
-      parseCookieJSON(
-        "pendingTicketCheckout",
-        null
-      );
-
-    if (!pendingTicketCheckout) {
-      throw new Error(
-        "The selected ticket checkout could not be found."
-      );
-    }
-
-    const {
-      eventId,
-      occurrenceDate,
-    } = pendingTicketCheckout;
-
-    if (!eventId) {
-      throw new Error(
-        "The selected event is missing an event ID."
-      );
-    }
-
-    console.log(
-      "🚀 Starting ticket checkout:",
-      pendingTicketCheckout
-    );
-
-    const response =
-      await registerApi.post(
-        TICKET_CHECKOUT_ENDPOINT,
-        {
-          eventId,
-          occurrenceDate,
-
-          metadata: {
-            hasAcceptedPrivacy:
-              isPolicyChecked,
-
-            hasAcceptedTermsOfService:
-              isToSChecked,
-          },
-        }
-      );
-
-    const checkoutUrl =
-      getCheckoutUrl(response);
-
-    if (!checkoutUrl) {
-      throw new Error(
-        "Ticket checkout URL was not returned."
-      );
-    }
-
-    return checkoutUrl;
-  };
-
-  const clearTemporaryCheckoutCookies = (
-    checkoutType
-  ) => {
-    Cookies.remove(
-      "checkoutType",
-      {
-        path: "/",
+      if (!sessionId) {
+        throw new Error(
+          "Your cart session could not be found."
+        );
       }
-    );
 
-    if (checkoutType === "ticket") {
+      const shippingDetails =
+        updateShippingCookieBeforeCheckout();
+
+      const checkoutPayload = {
+        sessionId,
+
+        metadata: {
+          hasAcceptedPrivacy:
+            isPolicyChecked,
+
+          hasAcceptedTermsOfService:
+            isToSChecked,
+
+          ...shippingDetails,
+        },
+      };
+
+      console.log(
+        "🚀 Starting cart checkout with metadata:",
+        checkoutPayload
+      );
+
+      const response =
+        await registerApi.post(
+          CART_CHECKOUT_ENDPOINT,
+          checkoutPayload
+        );
+
+      const checkoutUrl =
+        getCheckoutUrl(response);
+
+      if (!checkoutUrl) {
+        throw new Error(
+          "Cart checkout URL was not returned."
+        );
+      }
+
+      return checkoutUrl;
+    };
+
+  /*
+   * Starts ticket checkout using the complete
+   * event/date/quantity selections saved by
+   * Events.jsx.
+   *
+   * Expected cookie:
+   *
+   * {
+   *   eventId: 12,
+   *   selections: [
+   *     {
+   *       occurrenceDate: "2026-07-20",
+   *       quantity: 2
+   *     }
+   *   ]
+   * }
+   */
+  const startTicketCheckout =
+    async () => {
+      const pendingTicketCheckout =
+        parseCookieJSON(
+          "pendingTicketCheckout",
+          null
+        );
+
+      if (!pendingTicketCheckout) {
+        throw new Error(
+          "The selected ticket checkout could not be found."
+        );
+      }
+
+      const normalizedEventId =
+        Number(
+          pendingTicketCheckout.eventId
+        );
+
+      if (
+        !Number.isInteger(
+          normalizedEventId
+        ) ||
+        normalizedEventId <= 0
+      ) {
+        throw new Error(
+          "The selected event is missing a valid event ID."
+        );
+      }
+
+      const normalizedSelections =
+        normalizeTicketSelections(
+          pendingTicketCheckout.selections
+        );
+
+      if (
+        normalizedSelections.length === 0
+      ) {
+        throw new Error(
+          "No valid ticket selections were found. Please return to the events page and select your tickets again."
+        );
+      }
+
+      const checkoutPayload = {
+        eventId: normalizedEventId,
+        selections:
+          normalizedSelections,
+
+        metadata: {
+          hasAcceptedPrivacy:
+            isPolicyChecked,
+
+          hasAcceptedTermsOfService:
+            isToSChecked,
+        },
+      };
+
+      console.log(
+        "🚀 Starting ticket checkout:",
+        checkoutPayload
+      );
+
+      const response =
+        await registerApi.post(
+          TICKET_CHECKOUT_ENDPOINT,
+          checkoutPayload
+        );
+
+      const checkoutUrl =
+        getCheckoutUrl(response);
+
+      if (!checkoutUrl) {
+        throw new Error(
+          "Ticket checkout URL was not returned."
+        );
+      }
+
+      return checkoutUrl;
+    };
+
+  /*
+   * Removes only the temporary routing and pending
+   * checkout cookies after Stripe has successfully
+   * returned a Checkout URL.
+   *
+   * Acceptance cookies are intentionally preserved.
+   */
+  const clearTemporaryCheckoutCookies =
+    (checkoutType) => {
       Cookies.remove(
-        "pendingTicketCheckout",
+        "checkoutType",
         {
           path: "/",
         }
       );
-    }
-  };
 
-  const handleCheckout = async () => {
-    if (
-      !isPolicyChecked ||
-      !isToSChecked
-    ) {
-      setError(
-        "You must accept the privacy policy and terms of service to continue."
-      );
+      if (
+        checkoutType === "ticket"
+      ) {
+        Cookies.remove(
+          "pendingTicketCheckout",
+          {
+            path: "/",
+          }
+        );
+      }
+    };
 
-      return;
-    }
+  /*
+   * Routes checkout to either the cart or ticket
+   * controller after both agreements have been
+   * accepted.
+   */
+  const handleCheckout =
+    async () => {
+      if (
+        !isPolicyChecked ||
+        !isToSChecked
+      ) {
+        setError(
+          "You must accept the privacy policy and terms of service to continue."
+        );
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      /*
-       * Defaulting to cart preserves the previous
-       * checkout workflow if checkoutType is missing.
-       */
-      const checkoutType =
-        Cookies.get("checkoutType") ||
-        "cart";
-
-      let checkoutUrl;
-
-      if (checkoutType === "ticket") {
-        checkoutUrl =
-          await startTicketCheckout();
-      } else {
-        checkoutUrl =
-          await startCartCheckout();
+        return;
       }
 
-      clearTemporaryCheckoutCookies(
-        checkoutType
-      );
+      setLoading(true);
+      setError(null);
 
-      window.location.href =
-        checkoutUrl;
-    } catch (err) {
-      console.error(
-        "Failed to initiate checkout:",
-        err
-      );
+      try {
+        /*
+         * Defaulting to cart preserves the original
+         * cart workflow if checkoutType is absent.
+         */
+        const checkoutType =
+          Cookies.get(
+            "checkoutType"
+          ) || "cart";
 
-      setError(
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to initiate checkout."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+        let checkoutUrl;
 
+        if (
+          checkoutType === "ticket"
+        ) {
+          checkoutUrl =
+            await startTicketCheckout();
+        } else {
+          checkoutUrl =
+            await startCartCheckout();
+        }
+
+        /*
+         * Only clear the temporary checkout data after
+         * a valid Stripe Checkout URL has been returned.
+         *
+         * If checkout fails, the data remains available
+         * so the user can retry without reselecting it.
+         */
+        clearTemporaryCheckoutCookies(
+          checkoutType
+        );
+
+        window.location.assign(
+          checkoutUrl
+        );
+      } catch (checkoutError) {
+        console.error(
+          "Failed to initiate checkout:",
+          checkoutError
+        );
+
+        setError(
+          checkoutError.response
+            ?.data?.message ||
+            checkoutError.message ||
+            "Failed to initiate checkout."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+  /*
+   * Opens the selected agreement modal or asks the
+   * user to confirm that they intend to withdraw
+   * their previous acceptance.
+   */
   const handleToggle = (type) => {
     if (type === "privacy") {
       if (isPolicyChecked) {
-        setPendingToggle("privacy");
+        setPendingToggle(
+          "privacy"
+        );
+
         setConfirmDisagree(true);
       } else {
-        setIsPolicyModalOpen(true);
+        setIsPolicyModalOpen(
+          true
+        );
+
         setIsPolicyScrolledToBottom(
           false
         );
@@ -350,6 +521,7 @@ const PrivacyPolicyAndTerms = () => {
         setConfirmDisagree(true);
       } else {
         setIsToSModalOpen(true);
+
         setIsToSScrolledToBottom(
           false
         );
@@ -357,6 +529,10 @@ const PrivacyPolicyAndTerms = () => {
     }
   };
 
+  /*
+   * Records acceptance for 24 hours and closes the
+   * corresponding agreement modal.
+   */
   const handleAgree = (type) => {
     if (type === "privacy") {
       setIsPolicyChecked(true);
@@ -368,6 +544,8 @@ const PrivacyPolicyAndTerms = () => {
       );
 
       setIsPolicyModalOpen(false);
+      setError(null);
+
       return;
     }
 
@@ -381,41 +559,55 @@ const PrivacyPolicyAndTerms = () => {
       );
 
       setIsToSModalOpen(false);
+      setError(null);
     }
   };
 
-  const handleConfirmDisagree = () => {
-    if (pendingToggle === "privacy") {
-      setIsPolicyChecked(false);
+  /*
+   * Removes the selected acceptance cookie after the
+   * user confirms that they no longer agree.
+   */
+  const handleConfirmDisagree =
+    () => {
+      if (
+        pendingToggle ===
+        "privacy"
+      ) {
+        setIsPolicyChecked(false);
 
-      Cookies.remove(
-        "hasAcceptedPrivacy",
-        {
-          path: "/",
-        }
-      );
-    } else if (
-      pendingToggle === "tos"
-    ) {
-      setIsToSChecked(false);
+        Cookies.remove(
+          "hasAcceptedPrivacy",
+          {
+            path: "/",
+          }
+        );
+      } else if (
+        pendingToggle === "tos"
+      ) {
+        setIsToSChecked(false);
 
-      Cookies.remove(
-        "hasAcceptedTerms",
-        {
-          path: "/",
-        }
-      );
-    }
+        Cookies.remove(
+          "hasAcceptedTerms",
+          {
+            path: "/",
+          }
+        );
+      }
 
-    setPendingToggle(null);
-    setConfirmDisagree(false);
-  };
+      setPendingToggle(null);
+      setConfirmDisagree(false);
+    };
 
-  const handleCancelDisagree = () => {
-    setPendingToggle(null);
-    setConfirmDisagree(false);
-  };
+  const handleCancelDisagree =
+    () => {
+      setPendingToggle(null);
+      setConfirmDisagree(false);
+    };
 
+  /*
+   * Closes either agreement modal without recording
+   * acceptance.
+   */
   const handleDisagree = () => {
     setIsPolicyModalOpen(false);
     setIsToSModalOpen(false);
@@ -458,7 +650,10 @@ const PrivacyPolicyAndTerms = () => {
               event.key === " "
             ) {
               event.preventDefault();
-              handleToggle("privacy");
+
+              handleToggle(
+                "privacy"
+              );
             }
           }}
         >
@@ -481,7 +676,9 @@ const PrivacyPolicyAndTerms = () => {
             handleToggle("tos")
           }
           role="switch"
-          aria-checked={isToSChecked}
+          aria-checked={
+            isToSChecked
+          }
           tabIndex={0}
           onKeyDown={(event) => {
             if (
@@ -489,6 +686,7 @@ const PrivacyPolicyAndTerms = () => {
               event.key === " "
             ) {
               event.preventDefault();
+
               handleToggle("tos");
             }
           }}
@@ -500,7 +698,9 @@ const PrivacyPolicyAndTerms = () => {
       {error && (
         <p
           className="privacy-terms-error"
-          style={{ color: "red" }}
+          style={{
+            color: "red",
+          }}
           role="alert"
         >
           {error}
@@ -514,17 +714,15 @@ const PrivacyPolicyAndTerms = () => {
         style={{
           marginTop: "20px",
           padding: "10px 20px",
-          background:
-            canProceed
-              ? "green"
-              : "gray",
+          background: canProceed
+            ? "green"
+            : "gray",
           color: "white",
           border: "none",
           borderRadius: "5px",
-          cursor:
-            canProceed
-              ? "pointer"
-              : "not-allowed",
+          cursor: canProceed
+            ? "pointer"
+            : "not-allowed",
         }}
       >
         {loading
@@ -547,7 +745,9 @@ const PrivacyPolicyAndTerms = () => {
               <button
                 type="button"
                 onClick={() =>
-                  handleAgree("privacy")
+                  handleAgree(
+                    "privacy"
+                  )
                 }
                 disabled={
                   !isPolicyScrolledToBottom
@@ -568,7 +768,9 @@ const PrivacyPolicyAndTerms = () => {
 
               <button
                 type="button"
-                onClick={handleDisagree}
+                onClick={
+                  handleDisagree
+                }
               >
                 I Don&apos;t Agree
               </button>
@@ -613,7 +815,9 @@ const PrivacyPolicyAndTerms = () => {
 
               <button
                 type="button"
-                onClick={handleDisagree}
+                onClick={
+                  handleDisagree
+                }
               >
                 I Don&apos;t Agree
               </button>
@@ -625,12 +829,15 @@ const PrivacyPolicyAndTerms = () => {
       {confirmDisagree && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2>Are you sure?</h2>
+            <h2>
+              Are you sure?
+            </h2>
 
             <p>
-              Pressing &quot;Yes&quot;
-              means you do not want to
-              use our website.
+              Pressing
+              &quot;Yes&quot; means
+              you do not want to use
+              our website.
             </p>
 
             <div className="modal-buttons">
