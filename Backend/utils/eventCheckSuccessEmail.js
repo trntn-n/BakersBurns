@@ -8,7 +8,7 @@ const EventOccurrence = require(
   '../models/eventOccurrence'
 );
 const EventReservation = require(
-  '../models/eventReservations'
+  '../models/eventReservation'
 );
 
 const resend = new Resend(
