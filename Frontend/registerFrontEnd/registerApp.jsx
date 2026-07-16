@@ -22,6 +22,7 @@ import CheckoutOptions from './Pages/Cart/checkoutOptions';
 import GuestCheckout from './Pages/Cart/guestCheckout';
 import AcceptPrivacyTerms from './Pages/Cart/privacy&terms';
 
+
 /*
  * Secondary pages.
  *
@@ -75,7 +76,9 @@ const SuccessPage = React.lazy(() =>
 const PasswordSetupForm = React.lazy(() =>
   import('./Pages/Signup/password')
 );
-
+const EventCheckoutSuccess = React.lazy(() =>
+  import('./Pages/Events/EventsCheckoutSuccessful')
+);
 function App() {
   const appStyle = {
     backgroundImage: `url(${BackgroundImage})`,
@@ -195,6 +198,10 @@ function App() {
             <Route
               path="/success"
               element={<SuccessPage />}
+            />
+            <Route 
+              path="/event-checkout-success"
+              element={<EventCheckoutSuccess />}
             />
           </Routes>
         </Suspense>

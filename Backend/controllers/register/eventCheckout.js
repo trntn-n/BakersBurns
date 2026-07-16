@@ -372,8 +372,8 @@ const createEventCheckoutSession = async (req, res) => {
         },
         expires_at: Math.floor(holdExpiresAt.getTime() / 1000),
         success_url:
-          `${process.env.REGISTER_FRONTEND}/events/${eventRecord.id}` +
-          '?checkout=success&session_id={CHECKOUT_SESSION_ID}',
+            `${process.env.REGISTER_FRONTEND}/event-checkout-success` +
+            '?session_id={CHECKOUT_SESSION_ID}',
         cancel_url:
           `${process.env.REGISTER_FRONTEND}/events/${eventRecord.id}` +
           '?checkout=cancelled&session_id={CHECKOUT_SESSION_ID}',
