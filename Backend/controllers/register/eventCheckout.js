@@ -4,6 +4,9 @@ const sequelize = require('../../config/database');
 const Event = require('../../models/events');
 const EventOccurrence = require('../../models/eventOccurrence');
 const EventCheckoutHold = require('../../models/eventCheckoutHold');
+const EventReservation = require(
+    '../../models/eventReservation'
+  );
 const {
   releaseEventCheckoutHold,
 } = require('../../services/eventCheckoutInventoryService.js');
@@ -438,7 +441,368 @@ const createEventCheckoutSession = async (req, res) => {
     });
   }
 };
+const getEventCheckoutSuccess =
+  async (req, res) => {
+    try {
+      const sessionId =
+        String(
+          req.query.sessionId || ''
+        ).trim();
+
+      if (!sessionId) {
+        return res.status(400).json({
+          message:
+            'Stripe Checkout Session ID is required.',
+        });
+      }
+
+      if (
+        !sessionId.startsWith(
+          'cs_'
+        )
+      ) {
+        return res.status(400).json({
+          message:
+            'The Checkout Session ID is invalid.',
+        });
+      }
+
+      const connectedAccountId =
+        process.env
+          .BAKERS_BURNS_ACCOUNT_ID;
+
+      if (
+        !connectedAccountId ||
+        !connectedAccountId.startsWith(
+          'acct_'
+        )
+      ) {
+        throw new Error(
+          'BAKERS_BURNS_ACCOUNT_ID is missing or invalid.'
+        );
+      }
+
+      /*
+       * The Checkout Session was created directly on
+       * the connected BakersBurns account, so it must
+       * also be retrieved from that same account.
+       */
+      const checkoutSession =
+        await stripe.checkout.sessions.retrieve(
+          sessionId,
+          {
+            stripeAccount:
+              connectedAccountId,
+          }
+        );
+
+      const checkoutType =
+        checkoutSession.metadata
+          ?.checkoutType;
+
+      if (
+        checkoutType !==
+        'event_preorder'
+      ) {
+        return res.status(400).json({
+          message:
+            'This Checkout Session does not belong to an event purchase.',
+        });
+      }
+
+      /*
+       * Only expose purchase details after Stripe
+       * confirms that payment completed.
+       */
+      if (
+        checkoutSession.payment_status !==
+        'paid'
+      ) {
+        return res.status(409).json({
+          message:
+            'The event payment is still being confirmed.',
+        });
+      }
+
+      const eventId =
+        Number(
+          checkoutSession.metadata
+            ?.eventId
+        );
+
+      if (
+        !Number.isInteger(
+          eventId
+        ) ||
+        eventId <= 0
+      ) {
+        return res.status(400).json({
+          message:
+            'The event ID is missing from the Checkout Session.',
+        });
+      }
+
+      /*
+       * The webhook creates one EventReservation per
+       * purchased occurrence. The Stripe Session ID is
+       * the shared identifier for the purchase.
+       */
+      const reservations =
+        await EventReservation.findAll({
+          where: {
+            stripeSessionId:
+              checkoutSession.id,
+
+            status:
+              'paid',
+          },
+          order: [
+            [
+              'occurrenceId',
+              'ASC',
+            ],
+          ],
+        });
+
+      /*
+       * Stripe can redirect the customer at nearly the
+       * same moment that the webhook is committing its
+       * database transaction.
+       *
+       * Return 409 so the React page retries briefly.
+       */
+      if (
+        reservations.length === 0
+      ) {
+        return res.status(409).json({
+          message:
+            'Your payment succeeded and your ticket details are still being finalized.',
+        });
+      }
+
+      const eventRecord =
+        await Event.findByPk(
+          eventId
+        );
+
+      if (!eventRecord) {
+        return res.status(404).json({
+          message:
+            'The purchased event could not be found.',
+        });
+      }
+
+      const occurrenceIds = [
+        ...new Set(
+          reservations
+            .map(
+              (reservation) =>
+                Number(
+                  reservation
+                    .occurrenceId
+                )
+            )
+            .filter(
+              (occurrenceId) =>
+                Number.isInteger(
+                  occurrenceId
+                ) &&
+                occurrenceId > 0
+            )
+        ),
+      ];
+
+      const occurrences =
+        occurrenceIds.length > 0
+          ? await EventOccurrence.findAll(
+              {
+                where: {
+                  id:
+                    occurrenceIds,
+                },
+              }
+            )
+          : [];
+
+      const occurrenceById =
+        new Map(
+          occurrences.map(
+            (occurrence) => [
+              Number(
+                occurrence.id
+              ),
+              occurrence,
+            ]
+          )
+        );
+
+      const normalizedReservations =
+        reservations.map(
+          (reservation) => {
+            const occurrence =
+              occurrenceById.get(
+                Number(
+                  reservation
+                    .occurrenceId
+                )
+              );
+
+            return {
+              id:
+                reservation.id,
+
+              eventId:
+                reservation.eventId,
+
+              occurrenceId:
+                reservation
+                  .occurrenceId,
+
+              occurrenceDate:
+                occurrence
+                  ?.occurrenceDate ||
+                null,
+
+              quantity:
+                Number(
+                  reservation.quantity ||
+                    0
+                ),
+
+              unitAmount:
+                Number(
+                  reservation.unitAmount ||
+                    0
+                ),
+
+              status:
+                reservation.status,
+            };
+          }
+        );
+
+      const purchaserEmail =
+        checkoutSession
+          .customer_details
+          ?.email ||
+        checkoutSession
+          .customer_email ||
+        reservations[0]
+          ?.purchaserEmail ||
+        null;
+
+      return res.status(200).json({
+        success: true,
+
+        sessionId:
+          checkoutSession.id,
+
+        paymentStatus:
+          checkoutSession
+            .payment_status,
+
+        customerEmail:
+          purchaserEmail,
+
+        purchaserEmail,
+
+        amountTotal:
+          Number(
+            checkoutSession
+              .amount_total || 0
+          ),
+
+        currency:
+          checkoutSession.currency ||
+          'usd',
+
+        event: {
+          id:
+            eventRecord.id,
+
+          name:
+            eventRecord.name,
+
+          description:
+            eventRecord.description ||
+            '',
+
+          startTime:
+            eventRecord.startTime ||
+            null,
+
+          endTime:
+            eventRecord.endTime ||
+            null,
+
+          /*
+           * These properties are optional until they
+           * are added to the Event model.
+           */
+          location:
+            eventRecord.location ||
+            '',
+
+          timezone:
+            eventRecord.timezone ||
+            process.env
+              .EVENT_TIMEZONE ||
+            'America/Denver',
+        },
+
+        reservations:
+          normalizedReservations,
+      });
+    } catch (error) {
+      console.error(
+        'Error loading event checkout success details:',
+        {
+          type:
+            error.type,
+
+          code:
+            error.code,
+
+          message:
+            error.message,
+
+          requestId:
+            error.requestId,
+        }
+      );
+
+      /*
+       * Stripe returns resource_missing when the
+       * Session ID is invalid or belongs to a different
+       * Stripe account.
+       */
+      if (
+        error.code ===
+        'resource_missing'
+      ) {
+        return res.status(404).json({
+          message:
+            'The Checkout Session could not be found.',
+        });
+      }
+
+      return res.status(500).json({
+        message:
+          'Unable to load the event purchase details.',
+
+        ...(process.env
+          .NODE_ENV !==
+        'production'
+          ? {
+              error:
+                error.message,
+            }
+          : {}),
+      });
+    }
+  };
 
 module.exports = {
   createEventCheckoutSession,
+  getEventCheckoutSuccess
 };
