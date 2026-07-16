@@ -163,18 +163,13 @@
   }
   
   /*
-   * Desktop hover behavior only.
+   * Only apply hover effects to devices with a mouse,
+   * trackpad, or another true hover-capable pointer.
    *
-   * Hover effects require:
-   * 1. A viewport wider than the mobile breakpoint.
-   * 2. A device capable of true hovering.
-   * 3. A fine pointer such as a mouse or trackpad.
-   *
-   * Mobile and tablet-width layouts will not receive
-   * these hover styles, even when a browser creates
-   * a simulated or persistent :hover state.
+   * This prevents the first mobile tap from becoming
+   * a persistent hover state.
    */
-  @media (min-width: 769px) and (hover: hover) and (pointer: fine) {
+  @media (hover: hover) and (pointer: fine) {
     .hero-btn:hover,
     .about-btn:hover,
     .upcoming-event-btn:hover,
@@ -442,11 +437,7 @@
       box-shadow 0.3s ease;
   }
   
-  /*
-   * Product-card hover behavior is also limited
-   * exclusively to desktop hover-capable devices.
-   */
-  @media (min-width: 769px) and (hover: hover) and (pointer: fine) {
+  @media (hover: hover) and (pointer: fine) {
     .product-card:hover {
       transform: translateY(-0.625rem);
       box-shadow: 0 10px 20px var(--product-shadow);
@@ -548,52 +539,6 @@
   
     .contact-btn {
       margin-top: 1.25rem;
-    }
-  
-    /*
-     * Explicitly disable hover transitions in mobile layouts.
-     *
-     * This prevents mobile browsers from visually retaining
-     * button, logo, or product-card hover states after a tap.
-     */
-    .logo,
-    .hero-btn,
-    .about-btn,
-    .upcoming-event-btn,
-    .contact-btn,
-    .product-btn,
-    .product-card {
-      transition: none;
-    }
-  
-    .hero-btn:hover,
-    .about-btn:hover,
-    .upcoming-event-btn:hover,
-    .contact-btn:hover,
-    .product-btn:hover {
-      color: var(--inverted-button-text);
-      background-color: var(--btn-bg);
-      transform: none;
-    }
-  
-    .logo:hover {
-      transform: none;
-    }
-  
-    .product-card:hover {
-      transform: none;
-      box-shadow: 0 5px 15px var(--product-shadow);
-    }
-  
-    /*
-     * Keep brief physical tap feedback on touch devices.
-     */
-    .hero-btn:active,
-    .about-btn:active,
-    .upcoming-event-btn:active,
-    .contact-btn:active,
-    .product-btn:active {
-      transform: scale(0.98);
     }
   }
   
