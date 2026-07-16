@@ -3,6 +3,13 @@
 const { Resend } = require('resend');
 
 const User = require('../models/user');
+const Event = require('../models/events');
+const EventOccurrence = require(
+  '../models/eventOccurrence'
+);
+const EventReservation = require(
+  '../models/eventReservations'
+);
 
 const resend = new Resend(
   process.env.RESEND_API_KEY
@@ -12,8 +19,8 @@ const DEFAULT_TIMEZONE =
   'America/Denver';
 
 /*
- * Escape all database or Stripe values before
- * inserting them into email HTML.
+ * Escape database and Stripe values before inserting
+ * them into HTML.
  */
 const escapeHtml = (value) => {
   return String(value ?? '')
@@ -52,7 +59,7 @@ const normalizeTimeOnly = (value) => {
   return match ? match[1] : '';
 };
 
-const normalizePositiveInteger = (
+const normalizeNonNegativeInteger = (
   value,
   fallback = 0
 ) => {
@@ -74,6 +81,29 @@ const normalizePositiveInteger = (
   return parsedValue;
 };
 
+const normalizeRecipientList = (
+  recipients
+) => {
+  const rawRecipients =
+    Array.isArray(recipients)
+      ? recipients
+      : String(
+          recipients || ''
+        ).split(',');
+
+  return [
+    ...new Set(
+      rawRecipients
+        .map((recipient) =>
+          String(recipient)
+            .trim()
+            .toLowerCase()
+        )
+        .filter(Boolean)
+    ),
+  ];
+};
+
 const formatDate = (value) => {
   const dateOnly =
     normalizeDateOnly(value);
@@ -90,12 +120,11 @@ const formatDate = (value) => {
     .split('-')
     .map(Number);
 
-  const localDate =
-    new Date(
-      year,
-      month - 1,
-      day
-    );
+  const date = new Date(
+    year,
+    month - 1,
+    day
+  );
 
   return new Intl.DateTimeFormat(
     'en-US',
@@ -105,7 +134,7 @@ const formatDate = (value) => {
       day: 'numeric',
       year: 'numeric',
     }
-  ).format(localDate);
+  ).format(date);
 };
 
 const formatCalendarMonth = (
@@ -257,37 +286,15 @@ const formatMoney = (
   );
 };
 
-const normalizeRecipientList = (
-  recipients
-) => {
-  const values =
-    Array.isArray(recipients)
-      ? recipients
-      : String(recipients || '')
-          .split(',');
-
-  return [
-    ...new Set(
-      values
-        .map((recipient) =>
-          String(recipient)
-            .trim()
-            .toLowerCase()
-        )
-        .filter(Boolean)
-    ),
-  ];
-};
-
 const getSessionCustomerName = (
   session
 ) => {
   return (
-    session.customer_details
+    session?.customer_details
       ?.name ||
-    session.metadata
+    session?.metadata
       ?.purchaserName ||
-    session.metadata
+    session?.metadata
       ?.customerName ||
     ''
   );
@@ -297,9 +304,9 @@ const getSessionCustomerEmail = (
   session
 ) => {
   return (
-    session.customer_details
+    session?.customer_details
       ?.email ||
-    session.customer_email ||
+    session?.customer_email ||
     ''
   );
 };
@@ -308,22 +315,21 @@ const getPaymentIntentId = (
   session
 ) => {
   if (
-    typeof session.payment_intent ===
+    typeof session
+      ?.payment_intent ===
     'string'
   ) {
     return session.payment_intent;
   }
 
   return (
-    session.payment_intent
+    session?.payment_intent
       ?.id ||
     ''
   );
 };
 
-const getEventName = (
-  event
-) => {
+const getEventName = (event) => {
   return (
     event?.name ||
     event?.title ||
@@ -375,100 +381,347 @@ const getEventEndTime = (
   );
 };
 
+/*
+ * Convert either Sequelize camelCase properties or
+ * raw snake_case database fields into one predictable
+ * reservation shape.
+ */
 const normalizeReservation = (
   reservation,
   event
 ) => {
   const quantity =
-    normalizePositiveInteger(
-      reservation.quantity,
+    normalizeNonNegativeInteger(
+      reservation?.quantity,
       0
     );
 
   const capacity =
-    normalizePositiveInteger(
-      reservation.capacity ??
-        reservation.maxTicketQuantity ??
-        reservation.max_ticket_quantity,
+    normalizeNonNegativeInteger(
+      reservation?.capacity ??
+        reservation
+          ?.maxTicketQuantity ??
+        reservation
+          ?.max_ticket_quantity,
       0
     );
 
   const soldCount =
-    normalizePositiveInteger(
-      reservation.soldCount ??
-        reservation.sold_count ??
-        reservation.ticketsSold ??
-        reservation.tickets_sold,
+    normalizeNonNegativeInteger(
+      reservation?.soldCount ??
+        reservation
+          ?.sold_count ??
+        reservation
+          ?.ticketsSold ??
+        reservation
+          ?.tickets_sold,
+      0
+    );
+
+  const reservedCount =
+    normalizeNonNegativeInteger(
+      reservation?.reservedCount ??
+        reservation
+          ?.reserved_count,
       0
     );
 
   const explicitRemaining =
-    reservation.remainingTickets ??
-    reservation.remaining_tickets;
+    reservation
+      ?.remainingTickets ??
+    reservation
+      ?.remaining_tickets;
 
   const remainingTickets =
     explicitRemaining !==
       undefined &&
-    explicitRemaining !== null
-      ? normalizePositiveInteger(
+    explicitRemaining !==
+      null
+      ? normalizeNonNegativeInteger(
           explicitRemaining,
           0
         )
       : capacity > 0
         ? Math.max(
             capacity -
-              soldCount,
+              soldCount -
+              reservedCount,
             0
           )
         : null;
 
   return {
     id:
-      reservation.id ||
-      reservation.reservationId ||
+      reservation?.id ||
       reservation
-        .reservation_id ||
+        ?.reservationId ||
+      reservation
+        ?.reservation_id ||
+      '',
+
+    eventId:
+      reservation?.eventId ||
+      reservation
+        ?.event_id ||
+      event?.id ||
       '',
 
     occurrenceId:
-      reservation.occurrenceId ||
       reservation
-        .occurrence_id ||
-      reservation.eventOccurrenceId ||
+        ?.occurrenceId ||
       reservation
-        .event_occurrence_id ||
+        ?.occurrence_id ||
+      reservation
+        ?.eventOccurrenceId ||
+      reservation
+        ?.event_occurrence_id ||
       '',
 
     occurrenceDate:
       normalizeDateOnly(
-        reservation.occurrenceDate ||
         reservation
-          .occurrence_date ||
-        reservation.date
+          ?.occurrenceDate ||
+        reservation
+          ?.occurrence_date ||
+        reservation?.date
       ),
 
     quantity,
-
     capacity,
-
+    reservedCount,
     soldCount,
-
     remainingTickets,
 
     startTime:
-      reservation.startTime ||
-      reservation.start_time ||
+      reservation?.startTime ||
+      reservation?.start_time ||
       getEventStartTime(event),
 
     endTime:
-      reservation.endTime ||
-      reservation.end_time ||
+      reservation?.endTime ||
+      reservation?.end_time ||
       getEventEndTime(event),
   };
 };
 
 /*
- * Email clients support tables more reliably than
+ * Load the finalized reservation records directly from
+ * the database.
+ *
+ * completeEventCheckoutHold currently returns a result
+ * but does not return the event and reservations needed
+ * by the email templates.
+ */
+const loadCompletedEventCheckout =
+  async ({
+    stripeSessionId,
+  }) => {
+    if (!stripeSessionId) {
+      throw new Error(
+        'stripeSessionId is required to load completed event checkout details.'
+      );
+    }
+
+    const reservationRows =
+      await EventReservation.findAll({
+        where: {
+          stripeSessionId,
+          status: 'paid',
+        },
+
+        order: [
+          [
+            'occurrenceId',
+            'ASC',
+          ],
+        ],
+
+        raw: true,
+      });
+
+    if (
+      reservationRows.length ===
+      0
+    ) {
+      throw new Error(
+        `No paid event reservations were found for Checkout Session ${stripeSessionId}.`
+      );
+    }
+
+    const eventIds = [
+      ...new Set(
+        reservationRows
+          .map((reservation) =>
+            Number(
+              reservation.eventId ??
+                reservation.event_id
+            )
+          )
+          .filter(
+            Number.isInteger
+          )
+      ),
+    ];
+
+    if (
+      eventIds.length !== 1
+    ) {
+      throw new Error(
+        `Expected exactly one event for Checkout Session ${stripeSessionId}, but found ${eventIds.length}.`
+      );
+    }
+
+    const event =
+      await Event.findByPk(
+        eventIds[0],
+        {
+          raw: true,
+        }
+      );
+
+    if (!event) {
+      throw new Error(
+        `Event ${eventIds[0]} was not found for Checkout Session ${stripeSessionId}.`
+      );
+    }
+
+    const occurrenceIds = [
+      ...new Set(
+        reservationRows
+          .map((reservation) =>
+            Number(
+              reservation
+                .occurrenceId ??
+                reservation
+                  .occurrence_id
+            )
+          )
+          .filter(
+            Number.isInteger
+          )
+      ),
+    ];
+
+    const occurrenceRows =
+      occurrenceIds.length > 0
+        ? await EventOccurrence
+            .findAll({
+              where: {
+                id: occurrenceIds,
+              },
+
+              raw: true,
+            })
+        : [];
+
+    const occurrenceMap =
+      new Map(
+        occurrenceRows.map(
+          (occurrence) => [
+            Number(
+              occurrence.id
+            ),
+            occurrence,
+          ]
+        )
+      );
+
+    const reservations =
+      reservationRows.map(
+        (reservation) => {
+          const occurrenceId =
+            Number(
+              reservation
+                .occurrenceId ??
+                reservation
+                  .occurrence_id
+            );
+
+          const occurrence =
+            occurrenceMap.get(
+              occurrenceId
+            );
+
+          if (!occurrence) {
+            throw new Error(
+              `Event occurrence ${occurrenceId} was not found for Checkout Session ${stripeSessionId}.`
+            );
+          }
+
+          const capacity =
+            normalizeNonNegativeInteger(
+              occurrence.capacity,
+              0
+            );
+
+          const soldCount =
+            normalizeNonNegativeInteger(
+              occurrence.soldCount ??
+                occurrence
+                  .sold_count,
+              0
+            );
+
+          const reservedCount =
+            normalizeNonNegativeInteger(
+              occurrence
+                .reservedCount ??
+                occurrence
+                  .reserved_count,
+              0
+            );
+
+          /*
+           * soldCount already contains this completed
+           * order. Subtract any still-active temporary
+           * holds when reporting true remaining stock.
+           */
+          const remainingTickets =
+            capacity > 0
+              ? Math.max(
+                  capacity -
+                    soldCount -
+                    reservedCount,
+                  0
+                )
+              : null;
+
+          return {
+            ...reservation,
+
+            occurrenceDate:
+              occurrence
+                .occurrenceDate ??
+              occurrence
+                .occurrence_date ??
+              null,
+
+            capacity,
+            soldCount,
+            reservedCount,
+            remainingTickets,
+
+            startTime:
+              event.startTime ??
+              event.start_time ??
+              null,
+
+            endTime:
+              event.endTime ??
+              event.end_time ??
+              null,
+          };
+        }
+      );
+
+    return {
+      event,
+      reservations,
+    };
+  };
+
+/*
+ * Email clients support tables more consistently than
  * flexbox or CSS grid.
  */
 const createEmailLayout = ({
@@ -555,12 +808,7 @@ const createEmailLayout = ({
             .event-email-details-cell {
               display: block !important;
               width: 100% !important;
-            }
-
-            .event-email-button {
-              display: block !important;
-              width: auto !important;
-              text-align: center !important;
+              padding-left: 20px !important;
             }
 
             .event-email-summary-label,
@@ -629,7 +877,9 @@ const createEmailLayout = ({
                   border-collapse: separate;
                   overflow: hidden;
                   background-color: #f0eee3;
-                  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.24);
+                  box-shadow:
+                    0 20px 50px
+                    rgba(0, 0, 0, 0.24);
                 "
               >
                 <tr>
@@ -650,7 +900,9 @@ const createEmailLayout = ({
                       style="
                         width: 100%;
                         margin-top: 30px;
-                        border-top: 1px solid #aaa38d;
+                        border-top:
+                          1px solid
+                          #aaa38d;
                       "
                     >
                       <tr>
@@ -669,8 +921,9 @@ const createEmailLayout = ({
 
                           <br />
 
-                          This email was sent because an event
-                          ticket purchase was completed.
+                          This email was sent because
+                          an event ticket purchase was
+                          completed.
                         </td>
                       </tr>
                     </table>
@@ -785,7 +1038,9 @@ const createReservationCard = ({
           style="
             width: 100%;
             margin-top: 14px;
-            border-top: 1px solid #aaa38d;
+            border-top:
+              1px solid
+              #aaa38d;
           "
         >
           <tr>
@@ -810,6 +1065,33 @@ const createReservationCard = ({
             >
               ${escapeHtml(
                 reservation.soldCount
+              )}
+            </td>
+          </tr>
+
+          <tr>
+            <td
+              style="
+                padding-top: 7px;
+                color: #6c695c;
+                font-size: 13px;
+              "
+            >
+              Active temporary holds
+            </td>
+
+            <td
+              align="right"
+              style="
+                padding-top: 7px;
+                color: #27271f;
+                font-size: 13px;
+                font-weight: 800;
+              "
+            >
+              ${escapeHtml(
+                reservation
+                  .reservedCount
               )}
             </td>
           </tr>
@@ -853,7 +1135,7 @@ const createReservationCard = ({
                 font-size: 13px;
               "
             >
-              Remaining tickets
+              Currently available
             </td>
 
             <td
@@ -891,7 +1173,9 @@ const createReservationCard = ({
       style="
         width: 100%;
         margin-top: 16px;
-        border: 1px solid #aaa38d;
+        border:
+          1px solid
+          #aaa38d;
         border-radius: 16px;
         border-collapse: separate;
         background-color: #dfdccd;
@@ -904,7 +1188,11 @@ const createReservationCard = ({
           valign="top"
           style="
             width: 130px;
-            padding: 20px 10px 20px 20px;
+            padding:
+              20px
+              10px
+              20px
+              20px;
           "
         >
           ${createCalendarDateBlock(
@@ -916,7 +1204,11 @@ const createReservationCard = ({
           class="event-email-details-cell"
           valign="top"
           style="
-            padding: 20px 20px 20px 10px;
+            padding:
+              20px
+              20px
+              20px
+              10px;
           "
         >
           <div
@@ -972,6 +1264,7 @@ const createReservationCard = ({
             "
           >
             Tickets:
+
             <strong
               style="
                 color: #27271f;
@@ -994,6 +1287,7 @@ const createReservationCard = ({
                   "
                 >
                   Location:
+
                   <strong
                     style="
                       color: #27271f;
@@ -1081,9 +1375,12 @@ const createCustomerEmail = ({
       (
         total,
         reservation
-      ) =>
-        total +
-        reservation.quantity,
+      ) => {
+        return (
+          total +
+          reservation.quantity
+        );
+      },
       0
     );
 
@@ -1150,6 +1447,7 @@ const createCustomerEmail = ({
       }
 
       Your tickets for
+
       <strong
         style="
           color: #27271f;
@@ -1159,6 +1457,7 @@ const createCustomerEmail = ({
           eventName
         )}
       </strong>
+
       have been reserved successfully.
     </p>
 
@@ -1207,7 +1506,9 @@ const createCustomerEmail = ({
       style="
         width: 100%;
         margin-top: 24px;
-        border-top: 1px solid #aaa38d;
+        border-top:
+          1px solid
+          #aaa38d;
       "
     >
       ${createSummaryRow(
@@ -1242,8 +1543,9 @@ const createCustomerEmail = ({
       "
     >
       Keep this email for your records.
-      Your event purchase is also recorded
-      with the email address used at checkout.
+      Your event purchase is recorded
+      under the email address used at
+      checkout.
     </p>
   `;
 
@@ -1276,9 +1578,12 @@ const createAdminEmail = ({
       (
         total,
         reservation
-      ) =>
-        total +
-        reservation.quantity,
+      ) => {
+        return (
+          total +
+          reservation.quantity
+        );
+      },
       0
     );
 
@@ -1339,6 +1644,7 @@ const createAdminEmail = ({
     >
       A customer successfully purchased
       tickets for
+
       <strong
         style="
           color: #27271f;
@@ -1359,7 +1665,9 @@ const createAdminEmail = ({
       style="
         width: 100%;
         margin-top: 24px;
-        border-top: 1px solid #aaa38d;
+        border-top:
+          1px solid
+          #aaa38d;
       "
     >
       ${createSummaryRow(
@@ -1448,14 +1756,10 @@ const getAdminRecipients =
   async () => {
     const recipients = [];
 
-    const environmentRecipients =
-      normalizeRecipientList(
-        process.env
-          .ADMIN_EMAIL
-      );
-
     recipients.push(
-      ...environmentRecipients
+      ...normalizeRecipientList(
+        process.env.ADMIN_EMAIL
+      )
     );
 
     try {
@@ -1484,8 +1788,8 @@ const getAdminRecipients =
       }
     } catch (error) {
       /*
-       * Keep ADMIN_EMAIL usable even if the
-       * database query temporarily fails.
+       * ADMIN_EMAIL can still be used even if the
+       * database lookup temporarily fails.
        */
       console.error(
         'Could not load admin email recipients:',
@@ -1548,7 +1852,6 @@ const sendResendEmail = async ({
         'support@bakersburns.com',
 
       subject,
-
       html,
     });
 
@@ -1564,34 +1867,22 @@ const sendResendEmail = async ({
   return data;
 };
 
-/*
- * Expected completion result:
- *
- * {
- *   event: Event instance or plain object,
- *   reservations: [
- *     {
- *       id,
- *       occurrenceId,
- *       occurrenceDate,
- *       quantity,
- *       capacity,
- *       soldCount,
- *       remainingTickets
- *     }
- *   ]
- * }
- */
 const sendEventCheckoutEmails =
   async ({
     session,
     completionResult,
   }) => {
-    const event =
-      completionResult?.event ||
-      {};
+    if (!session?.id) {
+      throw new Error(
+        'A Stripe Checkout Session is required to send event emails.'
+      );
+    }
 
-    const rawReservations =
+    let event =
+      completionResult?.event ||
+      null;
+
+    let rawReservations =
       Array.isArray(
         completionResult
           ?.reservations
@@ -1599,6 +1890,44 @@ const sendEventCheckoutEmails =
         ? completionResult
             .reservations
         : [];
+
+    /*
+     * The inventory service may return only a success
+     * status. Load the finalized records directly when
+     * the email data was not returned.
+     */
+    if (
+      !event ||
+      rawReservations.length ===
+        0
+    ) {
+      console.log(
+        'Loading finalized event checkout details for email:',
+        {
+          stripeSessionId:
+            session.id,
+
+          completionResultHasEvent:
+            Boolean(event),
+
+          completionResultReservationCount:
+            rawReservations.length,
+        }
+      );
+
+      const databaseResult =
+        await loadCompletedEventCheckout({
+          stripeSessionId:
+            session.id,
+        });
+
+      event =
+        databaseResult.event;
+
+      rawReservations =
+        databaseResult
+          .reservations;
+    }
 
     const reservations =
       rawReservations
@@ -1620,7 +1949,7 @@ const sendEventCheckoutEmails =
       reservations.length === 0
     ) {
       throw new Error(
-        `No completed event reservations were returned for Checkout Session ${session.id}.`
+        `No usable completed event reservations were found for Checkout Session ${session.id}.`
       );
     }
 
@@ -1634,6 +1963,11 @@ const sendEventCheckoutEmails =
       admins: null,
     };
 
+    /*
+     * Send the purchaser email and admin email
+     * independently so an admin-email failure does not
+     * hide a successful purchaser delivery.
+     */
     if (purchaserEmail) {
       const customerEmail =
         createCustomerEmail({
@@ -1642,14 +1976,51 @@ const sendEventCheckoutEmails =
           reservations,
         });
 
-      emailResults.customer =
-        await sendResendEmail({
-          to: purchaserEmail,
-          subject:
-            customerEmail.subject,
-          html:
-            customerEmail.html,
-        });
+      try {
+        emailResults.customer =
+          await sendResendEmail({
+            to: purchaserEmail,
+
+            subject:
+              customerEmail.subject,
+
+            html:
+              customerEmail.html,
+          });
+
+        console.log(
+          'Event customer confirmation email sent:',
+          {
+            stripeSessionId:
+              session.id,
+
+            purchaserEmail,
+
+            resendEmailId:
+              emailResults
+                .customer?.id ||
+              null,
+          }
+        );
+      } catch (error) {
+        console.error(
+          'Event customer confirmation email failed:',
+          {
+            stripeSessionId:
+              session.id,
+
+            purchaserEmail,
+
+            message:
+              error.message,
+
+            stack:
+              error.stack,
+          }
+        );
+
+        throw error;
+      }
     } else {
       console.warn(
         `Event Checkout Session ${session.id} has no purchaser email.`
@@ -1670,14 +2041,52 @@ const sendEventCheckoutEmails =
           reservations,
         });
 
-      emailResults.admins =
-        await sendResendEmail({
-          to: adminRecipients,
-          subject:
-            adminEmail.subject,
-          html:
-            adminEmail.html,
-        });
+      try {
+        emailResults.admins =
+          await sendResendEmail({
+            to: adminRecipients,
+
+            subject:
+              adminEmail.subject,
+
+            html:
+              adminEmail.html,
+          });
+
+        console.log(
+          'Event admin notification email sent:',
+          {
+            stripeSessionId:
+              session.id,
+
+            recipientCount:
+              adminRecipients.length,
+
+            resendEmailId:
+              emailResults
+                .admins?.id ||
+              null,
+          }
+        );
+      } catch (error) {
+        console.error(
+          'Event admin notification email failed:',
+          {
+            stripeSessionId:
+              session.id,
+
+            adminRecipients,
+
+            message:
+              error.message,
+
+            stack:
+              error.stack,
+          }
+        );
+
+        throw error;
+      }
     } else {
       console.warn(
         'No event admin email recipients are configured.'
@@ -1690,9 +2099,16 @@ const sendEventCheckoutEmails =
         stripeSessionId:
           session.id,
 
+        eventId:
+          event.id ||
+          null,
+
         purchaserEmail:
           purchaserEmail ||
           null,
+
+        reservationCount:
+          reservations.length,
 
         adminRecipientCount:
           adminRecipients.length,
