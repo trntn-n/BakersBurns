@@ -153,8 +153,8 @@ import React, {
       0
     );
   
-    const totalPrice =
-      totalTickets * Number(event.price || 0);
+    const eventPrice = Number(event.price || 0);
+    const totalPrice = totalTickets * eventPrice;
   
     const submit = (submitEvent) => {
       submitEvent.preventDefault();
@@ -211,105 +211,123 @@ import React, {
           </header>
   
           <form onSubmit={submit}>
-            <div className="ticket-modal__dates">
-              {availableOccurrences.map(
-                (occurrence) => {
-                  const quantity =
-                    quantities[
-                      occurrence.occurrenceDate
-                    ] || 0;
-  
-                  return (
-                    <div
-                      className="ticket-modal__date-row"
-                      key={
+            {availableOccurrences.length === 0 ? (
+              <div className="ticket-modal__empty">
+                <p>
+                  There are no upcoming dates
+                  available for this event.
+                </p>
+              </div>
+            ) : (
+              <div className="ticket-modal__dates">
+                {availableOccurrences.map(
+                  (occurrence) => {
+                    const quantity =
+                      quantities[
                         occurrence.occurrenceDate
-                      }
-                    >
-                      <div>
-                        <strong>
-                          {moment(
-                            occurrence.occurrenceDate
-                          ).format(
-                            "dddd, MMMM D, YYYY"
-                          )}
-                        </strong>
+                      ] || 0;
   
-                        {event.startTime && (
-                          <span>
+                    return (
+                      <div
+                        className="ticket-modal__date-row"
+                        key={
+                          occurrence.occurrenceDate
+                        }
+                      >
+                        <div>
+                          <strong>
                             {moment(
-                              event.startTime,
-                              [
-                                "HH:mm:ss",
-                                "HH:mm",
-                              ]
+                              occurrence.occurrenceDate
                             ).format(
-                              "h:mm A"
+                              "dddd, MMMM D, YYYY"
                             )}
+                          </strong>
+  
+                          {event.startTime && (
+                            <span>
+                              {moment(
+                                event.startTime,
+                                [
+                                  "HH:mm:ss",
+                                  "HH:mm",
+                                ]
+                              ).format(
+                                "h:mm A"
+                              )}
+                            </span>
+                          )}
+                        </div>
+  
+                        <div className="ticket-modal__quantity">
+                          <button
+                            type="button"
+                            aria-label={`Remove one ticket for ${occurrence.occurrenceDate}`}
+                            onClick={() =>
+                              updateQuantity(
+                                occurrence.occurrenceDate,
+                                quantity - 1
+                              )
+                            }
+                            disabled={
+                              isSubmitting ||
+                              quantity === 0
+                            }
+                          >
+                            −
+                          </button>
+  
+                          <input
+                            type="number"
+                            min="0"
+                            max={
+                              MAX_TICKETS_PER_DAY
+                            }
+                            step="1"
+                            value={quantity}
+                            aria-label={`Ticket quantity for ${occurrence.occurrenceDate}`}
+                            onChange={(changeEvent) =>
+                              updateQuantity(
+                                occurrence.occurrenceDate,
+                                changeEvent.target
+                                  .value
+                              )
+                            }
+                            disabled={isSubmitting}
+                          />
+  
+                          <button
+                            type="button"
+                            aria-label={`Add one ticket for ${occurrence.occurrenceDate}`}
+                            onClick={() =>
+                              updateQuantity(
+                                occurrence.occurrenceDate,
+                                quantity + 1
+                              )
+                            }
+                            disabled={
+                              isSubmitting ||
+                              quantity >=
+                                MAX_TICKETS_PER_DAY
+                            }
+                          >
+                            +
+                          </button>
+                        </div>
+  
+                        {quantity > 0 && (
+                          <span className="ticket-modal__row-subtotal">
+                            $
+                            {(
+                              quantity * eventPrice
+                            ).toFixed(2)}
                           </span>
                         )}
                       </div>
-  
-                      <div className="ticket-modal__quantity">
-                        <button
-                          type="button"
-                          aria-label={`Remove one ticket for ${occurrence.occurrenceDate}`}
-                          onClick={() =>
-                            updateQuantity(
-                              occurrence.occurrenceDate,
-                              quantity - 1
-                            )
-                          }
-                          disabled={
-                            isSubmitting ||
-                            quantity === 0
-                          }
-                        >
-                          −
-                        </button>
-  
-                        <input
-                          type="number"
-                          min="0"
-                          max={
-                            MAX_TICKETS_PER_DAY
-                          }
-                          step="1"
-                          value={quantity}
-                          aria-label={`Ticket quantity for ${occurrence.occurrenceDate}`}
-                          onChange={(changeEvent) =>
-                            updateQuantity(
-                              occurrence.occurrenceDate,
-                              changeEvent.target
-                                .value
-                            )
-                          }
-                          disabled={isSubmitting}
-                        />
-  
-                        <button
-                          type="button"
-                          aria-label={`Add one ticket for ${occurrence.occurrenceDate}`}
-                          onClick={() =>
-                            updateQuantity(
-                              occurrence.occurrenceDate,
-                              quantity + 1
-                            )
-                          }
-                          disabled={
-                            isSubmitting ||
-                            quantity >=
-                              MAX_TICKETS_PER_DAY
-                          }
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  );
-                }
-              )}
-            </div>
+                    );
+                  }
+                )}
+              </div>
+            )}
   
             {error && (
               <div
@@ -354,4 +372,3 @@ import React, {
   };
   
   export default TicketQuantityModal;
-  
