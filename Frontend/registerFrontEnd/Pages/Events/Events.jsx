@@ -2,6 +2,7 @@
 import React, {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -557,6 +558,46 @@ const buildOccurrences = (event) => {
   return occurrences;
 };
 
+/*
+ * Legend entries for the calendar color key popover.
+ * Kept in one place so the swatches always describe
+ * the actual visual treatments used on calendar days.
+ */
+const CALENDAR_COLOR_KEY_ITEMS = [
+  {
+    id: "today",
+    swatchClassName:
+      "customer-calendar-key-swatch--today",
+    label: "Today",
+    description:
+      "The current date on the calendar.",
+  },
+  {
+    id: "selected",
+    swatchClassName:
+      "customer-calendar-key-swatch--selected",
+    label: "Selected date",
+    description:
+      "The date currently shown in the panel to the right.",
+  },
+  {
+    id: "has-event",
+    swatchClassName:
+      "customer-calendar-key-swatch--event",
+    label: "Has event(s)",
+    description:
+      "A dot and count mean at least one event is scheduled.",
+  },
+  {
+    id: "outside-month",
+    swatchClassName:
+      "customer-calendar-key-swatch--outside",
+    label: "Other month",
+    description:
+      "Dimmed dates belong to the previous or next month.",
+  },
+];
+
 const EventCalendar = () => {
   const navigate = useNavigate();
 
@@ -599,6 +640,14 @@ const EventCalendar = () => {
     checkoutModalEvent,
     setCheckoutModalEvent,
   ] = useState(null);
+
+  const [
+    isColorKeyOpen,
+    setIsColorKeyOpen,
+  ] = useState(false);
+
+  const colorKeyButtonRef = useRef(null);
+  const colorKeyPopoverRef = useRef(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -912,6 +961,76 @@ const EventCalendar = () => {
 
       setCheckoutError("");
     };
+
+  /*
+   * Closes the color key popover when clicking
+   * outside of it, or when pressing Escape.
+   */
+  useEffect(() => {
+    if (!isColorKeyOpen) {
+      return undefined;
+    }
+
+    const handlePointerDown = (
+      pointerEvent
+    ) => {
+      const target =
+        pointerEvent.target;
+
+      if (
+        colorKeyPopoverRef.current?.contains(
+          target
+        ) ||
+        colorKeyButtonRef.current?.contains(
+          target
+        )
+      ) {
+        return;
+      }
+
+      setIsColorKeyOpen(false);
+    };
+
+    const handleKeyDown = (
+      keyEvent
+    ) => {
+      if (
+        keyEvent.key === "Escape"
+      ) {
+        setIsColorKeyOpen(false);
+        colorKeyButtonRef.current?.focus();
+      }
+    };
+
+    document.addEventListener(
+      "mousedown",
+      handlePointerDown
+    );
+
+    document.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handlePointerDown
+      );
+
+      document.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
+  }, [isColorKeyOpen]);
+
+  const toggleColorKey = () => {
+    setIsColorKeyOpen(
+      (previousValue) =>
+        !previousValue
+    );
+  };
 
   /*
    * Starts Stripe ticket checkout after acceptance
@@ -1271,10 +1390,93 @@ const EventCalendar = () => {
         <div className="customer-events-layout">
           <section className="customer-calendar-card">
             <div className="customer-calendar-toolbar">
-              <div>
-                <span>
-                  Event calendar
-                </span>
+              <div className="customer-calendar-toolbar-title">
+                <div className="customer-calendar-title-row">
+                  <span>
+                    Event calendar
+                  </span>
+
+                  <button
+                    type="button"
+                    ref={colorKeyButtonRef}
+                    className={[
+                      "customer-calendar-info-button",
+                      isColorKeyOpen
+                        ? "customer-calendar-info-button--active"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    aria-label="View calendar color key"
+                    aria-expanded={
+                      isColorKeyOpen
+                    }
+                    aria-haspopup="dialog"
+                    onClick={
+                      toggleColorKey
+                    }
+                  >
+                    i
+                  </button>
+
+                  {isColorKeyOpen && (
+                    <div
+                      className="customer-calendar-color-key"
+                      role="dialog"
+                      aria-label="Calendar color key"
+                      ref={colorKeyPopoverRef}
+                    >
+                      <div className="customer-calendar-color-key-header">
+                        <span>
+                          Calendar key
+                        </span>
+
+                        <button
+                          type="button"
+                          aria-label="Close color key"
+                          onClick={() =>
+                            setIsColorKeyOpen(
+                              false
+                            )
+                          }
+                        >
+                          ×
+                        </button>
+                      </div>
+
+                      <ul className="customer-calendar-color-key-list">
+                        {CALENDAR_COLOR_KEY_ITEMS.map(
+                          (item) => (
+                            <li
+                              key={
+                                item.id
+                              }
+                            >
+                              <span
+                                className={`customer-calendar-key-swatch ${item.swatchClassName}`}
+                                aria-hidden="true"
+                              />
+
+                              <div>
+                                <strong>
+                                  {
+                                    item.label
+                                  }
+                                </strong>
+
+                                <p>
+                                  {
+                                    item.description
+                                  }
+                                </p>
+                              </div>
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                </div>
 
                 <h2>
                   {currentMonth.format(
