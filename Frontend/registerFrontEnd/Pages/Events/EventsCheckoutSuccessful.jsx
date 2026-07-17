@@ -17,14 +17,62 @@ import React, {
   const CHECKOUT_DETAILS_ENDPOINT =
     "/register-events/checkout-success";
   
-  const EVENT_UPDATES_ENDPOINT =
-    "/register-events/event-updates";
+  /*
+   * Placeholder — this route does not exist on the backend yet.
+   * Expected request body:
+   *   {
+   *     email: string,
+   *     eventId: number | null,
+   *     sessionId: string | null,
+   *     occurrenceIds: number[],
+   *     oneMonthBeforeRequested: boolean,
+   *     oneWeekBeforeRequested: boolean,
+   *     oneDayBeforeRequested: boolean,
+   *   }
+   * Should upsert one EventNotificationSubscription row per
+   * occurrenceId, keyed on (email, eventOccurrenceId).
+   */
+  const EVENT_NOTIFICATION_SUBSCRIBE_ENDPOINT =
+    "/register-events/event-notification-subscriptions";
   
   const DEFAULT_EVENT_TIMEZONE =
     "America/Denver";
   
   const DETAILS_RETRY_ATTEMPTS = 5;
   const DETAILS_RETRY_DELAY_MS = 1200;
+  
+  const EMAIL_PATTERN =
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+  /*
+   * Single source of truth for the reminder checkboxes —
+   * used to render the fieldset, validate selection, and
+   * build the confirmation modal summary, so all three
+   * always stay in sync.
+   */
+  const REMINDER_FREQUENCY_OPTIONS = [
+    {
+      key: "oneMonthBeforeRequested",
+      label: "1 month before",
+    },
+    {
+      key: "oneWeekBeforeRequested",
+      label: "1 week before",
+    },
+    {
+      key: "oneDayBeforeRequested",
+      label: "1 day before",
+    },
+  ];
+  
+  const DEFAULT_REMINDER_FREQUENCIES =
+    REMINDER_FREQUENCY_OPTIONS.reduce(
+      (defaults, option) => ({
+        ...defaults,
+        [option.key]: true,
+      }),
+      {}
+    );
   
   /*
    * Keeps date-only values from shifting through UTC.
@@ -54,6 +102,24 @@ import React, {
       .match(/^(\d{2}:\d{2})/);
   
     return match ? match[1] : fallback;
+  };
+  
+  /*
+   * Reservation objects may expose the occurrence's primary
+   * key under any of these names depending on the endpoint.
+   * Returns null (rather than a fallback string) when no real
+   * ID is present, since a subscription must reference a real
+   * EventOccurrence row.
+   */
+  const extractOccurrenceId = (
+    reservation
+  ) => {
+    return (
+      reservation.eventOccurrenceId ??
+      reservation.occurrenceId ??
+      reservation.occurrence_id ??
+      null
+    );
   };
   
   const formatDate = (value) => {
@@ -608,24 +674,36 @@ import React, {
     ] = useState("");
   
     const [
-      updatesEmail,
-      setUpdatesEmail,
+      reminderEmail,
+      setReminderEmail,
     ] = useState("");
   
     const [
-      signupLoading,
-      setSignupLoading,
+      reminderFrequencies,
+      setReminderFrequencies,
+    ] = useState(
+      DEFAULT_REMINDER_FREQUENCIES
+    );
+  
+    const [
+      reminderLoading,
+      setReminderLoading,
     ] = useState(false);
   
     const [
-      signupMessage,
-      setSignupMessage,
+      reminderError,
+      setReminderError,
     ] = useState("");
   
+    /*
+     * null when closed. When a subscription succeeds this
+     * holds the email + chosen frequency labels so the
+     * confirmation modal can summarize what was saved.
+     */
     const [
-      signupError,
-      setSignupError,
-    ] = useState("");
+      reminderConfirmation,
+      setReminderConfirmation,
+    ] = useState(null);
   
     useEffect(() => {
       let isMounted = true;
@@ -676,7 +754,7 @@ import React, {
                   ?.purchaserEmail ||
                 "";
   
-              setUpdatesEmail(
+              setReminderEmail(
                 customerEmail
               );
   
@@ -731,6 +809,40 @@ import React, {
       };
     }, [sessionId]);
   
+    /*
+     * Closes the confirmation modal on Escape.
+     */
+    useEffect(() => {
+      if (!reminderConfirmation) {
+        return undefined;
+      }
+  
+      const handleKeyDown = (
+        keyboardEvent
+      ) => {
+        if (
+          keyboardEvent.key ===
+          "Escape"
+        ) {
+          setReminderConfirmation(
+            null
+          );
+        }
+      };
+  
+      document.addEventListener(
+        "keydown",
+        handleKeyDown
+      );
+  
+      return () => {
+        document.removeEventListener(
+          "keydown",
+          handleKeyDown
+        );
+      };
+    }, [reminderConfirmation]);
+  
     const event =
       checkoutDetails?.event || {};
   
@@ -775,6 +887,40 @@ import React, {
         );
       }, [reservations]);
   
+    /*
+     * The dates a reminder subscription can actually be
+     * attached to — only reservations that carry a real
+     * EventOccurrence ID qualify.
+     */
+    const reminderEligibleDates =
+      useMemo(() => {
+        return reservations
+          .map((reservation) => {
+            const occurrenceId =
+              extractOccurrenceId(
+                reservation
+              );
+  
+            const occurrenceDate =
+              normalizeDateOnly(
+                reservation.occurrenceDate
+              );
+  
+            if (
+              !occurrenceId ||
+              !occurrenceDate
+            ) {
+              return null;
+            }
+  
+            return {
+              occurrenceId,
+              occurrenceDate,
+            };
+          })
+          .filter(Boolean);
+      }, [reservations]);
+  
     const totalPaid =
       checkoutDetails
         ?.amountTotal;
@@ -783,67 +929,123 @@ import React, {
       checkoutDetails
         ?.currency || "usd";
   
-    const submitUpdatesSignup =
+    const toggleReminderFrequency = (
+      frequencyKey
+    ) => {
+      setReminderFrequencies(
+        (previous) => ({
+          ...previous,
+          [frequencyKey]:
+            !previous[
+              frequencyKey
+            ],
+        })
+      );
+  
+      setReminderError("");
+    };
+  
+    const submitReminderSubscription =
       async (submitEvent) => {
         submitEvent.preventDefault();
   
         const normalizedEmail =
-          updatesEmail
+          reminderEmail
             .trim()
             .toLowerCase();
   
-        setSignupMessage("");
-        setSignupError("");
+        setReminderError("");
   
         if (
-          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+          !EMAIL_PATTERN.test(
             normalizedEmail
           )
         ) {
-          setSignupError(
+          setReminderError(
             "Enter a valid email address."
           );
   
           return;
         }
   
-        try {
-          setSignupLoading(true);
-  
-          const response =
-            await registerApi.post(
-              EVENT_UPDATES_ENDPOINT,
-              {
-                email:
-                  normalizedEmail,
-  
-                sessionId,
-  
-                eventId:
-                  event.id || null,
-  
-                source:
-                  "event-checkout-success",
-              }
-            );
-  
-          setSignupMessage(
-            response.data?.message ||
-              "You are signed up for event updates."
+        const selectedFrequencyOptions =
+          REMINDER_FREQUENCY_OPTIONS.filter(
+            (option) =>
+              reminderFrequencies[
+                option.key
+              ]
           );
+  
+        if (
+          selectedFrequencyOptions.length ===
+          0
+        ) {
+          setReminderError(
+            "Select at least one reminder timing."
+          );
+  
+          return;
+        }
+  
+        if (
+          reminderEligibleDates.length ===
+          0
+        ) {
+          setReminderError(
+            "Reminders are not available for this booking."
+          );
+  
+          return;
+        }
+  
+        try {
+          setReminderLoading(true);
+  
+          await registerApi.post(
+            EVENT_NOTIFICATION_SUBSCRIBE_ENDPOINT,
+            {
+              email:
+                normalizedEmail,
+  
+              eventId:
+                event.id || null,
+  
+              sessionId,
+  
+              occurrenceIds:
+                reminderEligibleDates.map(
+                  (date) =>
+                    date.occurrenceId
+                ),
+  
+              ...reminderFrequencies,
+            }
+          );
+  
+          setReminderConfirmation({
+            email:
+              normalizedEmail,
+            frequencyLabels:
+              selectedFrequencyOptions.map(
+                (option) =>
+                  option.label
+              ),
+          });
         } catch (error) {
           console.error(
-            "Failed to sign up for event updates:",
+            "Failed to subscribe to event reminders:",
             error
           );
   
-          setSignupError(
+          setReminderError(
             error.response?.data
               ?.message ||
-              "We could not complete your signup."
+              "We could not save your reminder preferences."
           );
         } finally {
-          setSignupLoading(false);
+          setReminderLoading(
+            false
+          );
         }
       };
   
@@ -1063,6 +1265,7 @@ import React, {
                       </span>
                     </div>
   
+  
                     <a
                       className="event-success-button event-success-button--google"
                       href={buildGoogleCalendarUrl(
@@ -1104,89 +1307,135 @@ import React, {
               </span>
   
               <h2>
-                Get updates about your
-                upcoming events
+                Get reminders as the
+                date approaches
               </h2>
   
               <p>
-                Receive schedule changes,
-                reminders, and important
-                information about events
-                you purchased.
+                Choose when you'd like a
+                reminder email before{" "}
+                {reminderEligibleDates.length >
+                1
+                  ? "each date you're attending"
+                  : "the event"}
+                . All three are on by
+                default — just confirm
+                your email and hit
+                subscribe.
               </p>
             </div>
   
-            <form
-              className="event-success-updates__form"
-              onSubmit={
-                submitUpdatesSignup
-              }
-            >
-              <label htmlFor="eventUpdatesEmail">
-                Email address
-              </label>
+            {reminderEligibleDates.length ===
+            0 ? (
+              <p className="event-success-form-message event-success-form-message--error">
+                Reminders are not
+                currently available
+                for this booking.
+              </p>
+            ) : (
+              <form
+                className="event-success-updates__form"
+                onSubmit={
+                  submitReminderSubscription
+                }
+              >
+                <label htmlFor="eventReminderEmail">
+                  Email address
+                </label>
   
-              <div className="event-success-updates__controls">
-                <input
-                  id="eventUpdatesEmail"
-                  type="email"
-                  value={
-                    updatesEmail
-                  }
-                  onChange={(
-                    changeEvent
-                  ) => {
-                    setUpdatesEmail(
+                <div className="event-success-updates__controls">
+                  <input
+                    id="eventReminderEmail"
+                    type="email"
+                    value={
+                      reminderEmail
+                    }
+                    onChange={(
                       changeEvent
-                        .target.value
-                    );
+                    ) => {
+                      setReminderEmail(
+                        changeEvent
+                          .target.value
+                      );
   
-                    setSignupMessage(
-                      ""
-                    );
+                      setReminderError(
+                        ""
+                      );
+                    }}
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    disabled={
+                      reminderLoading
+                    }
+                  />
+                </div>
   
-                    setSignupError(
-                      ""
-                    );
-                  }}
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  disabled={
-                    signupLoading
-                  }
-                />
+                <fieldset className="event-success-frequency-fieldset">
+                  <legend>
+                    Remind me
+                  </legend>
+  
+                  {REMINDER_FREQUENCY_OPTIONS.map(
+                    (option) => (
+                      <label
+                        className="event-success-checkbox"
+                        key={
+                          option.key
+                        }
+                      >
+                        <input
+                          type="checkbox"
+                          className="event-success-checkbox-input"
+                          checked={
+                            reminderFrequencies[
+                              option.key
+                            ]
+                          }
+                          onChange={() =>
+                            toggleReminderFrequency(
+                              option.key
+                            )
+                          }
+                          disabled={
+                            reminderLoading
+                          }
+                        />
+  
+                        <span
+                          className="event-success-checkbox-box"
+                          aria-hidden="true"
+                        />
+  
+                        <span className="event-success-checkbox-label">
+                          {option.label}
+                        </span>
+                      </label>
+                    )
+                  )}
+                </fieldset>
   
                 <button
                   type="submit"
                   className="event-success-button event-success-button--primary"
                   disabled={
-                    signupLoading
+                    reminderLoading
                   }
                 >
-                  {signupLoading
-                    ? "Signing up..."
-                    : "Sign up for updates"}
+                  {reminderLoading
+                    ? "Saving..."
+                    : "Subscribe to reminders"}
                 </button>
-              </div>
   
-              {signupMessage && (
-                <p
-                  className="event-success-form-message event-success-form-message--success"
-                  role="status"
-                >
-                  {signupMessage}
-                </p>
-              )}
-  
-              {signupError && (
-                <p
-                  className="event-success-form-message event-success-form-message--error"
-                  role="alert"
-                >
-                  {signupError}
-                </p>
-              )}
-            </form>
+                {reminderError && (
+                  <p
+                    className="event-success-form-message event-success-form-message--error"
+                    role="alert"
+                  >
+                    {reminderError}
+                  </p>
+                )}
+              </form>
+            )}
           </section>
   
           <footer className="event-success-footer">
@@ -1205,6 +1454,90 @@ import React, {
             </Link>
           </footer>
         </section>
+  
+        {reminderConfirmation && (
+          <div
+            className="event-reminder-confirm-backdrop"
+            role="presentation"
+            onMouseDown={(
+              mouseEvent
+            ) => {
+              if (
+                mouseEvent.target ===
+                mouseEvent.currentTarget
+              ) {
+                setReminderConfirmation(
+                  null
+                );
+              }
+            }}
+          >
+            <section
+              className="event-reminder-confirm-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="event-reminder-confirm-title"
+            >
+              <header className="event-reminder-confirm-modal__header">
+                <h2 id="event-reminder-confirm-title">
+                  You're all set
+                </h2>
+  
+                <button
+                  type="button"
+                  className="event-reminder-confirm-modal__close"
+                  aria-label="Close confirmation"
+                  onClick={() =>
+                    setReminderConfirmation(
+                      null
+                    )
+                  }
+                >
+                  ×
+                </button>
+              </header>
+  
+              <div className="event-reminder-confirm-modal__body">
+                <p>
+                  We'll email{" "}
+                  <strong>
+                    {
+                      reminderConfirmation.email
+                    }
+                  </strong>{" "}
+                  reminders for{" "}
+                  {event.name ||
+                    "this event"}
+                  :
+                </p>
+  
+                <ul className="event-reminder-confirm-modal__list">
+                  {reminderConfirmation.frequencyLabels.map(
+                    (label) => (
+                      <li key={label}>
+                        {label}
+                      </li>
+                    )
+                  )}
+                </ul>
+              </div>
+  
+              <div className="event-reminder-confirm-modal__footer">
+                <button
+                  type="button"
+                  className="event-reminder-confirm-modal__done"
+                  onClick={() =>
+                    setReminderConfirmation(
+                      null
+                    )
+                  }
+                >
+                  Done
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
       </main>
     );
   };

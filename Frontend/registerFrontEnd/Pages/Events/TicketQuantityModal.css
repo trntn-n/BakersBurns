@@ -170,6 +170,10 @@
 .ticket-modal__quantity input {
   height: 38px;
 
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
   border: 0;
 
   background: var(--ticket-modal-surface-alt);
@@ -177,9 +181,9 @@
 
   font: inherit;
   font-weight: 700;
+  line-height: 1;
   text-align: center;
 }
-
 .ticket-modal__quantity button {
   color: var(--ticket-modal-heading);
   font-size: 1.1rem;
