@@ -71,6 +71,23 @@ const EventReservation = sequelize.define(
       allowNull: false,
       defaultValue: 'paid',
     },
+    refundNotificationSentAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'refund_notification_sent_at',
+      },
+      
+      refundNotificationEmailId: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'refund_notification_email_id',
+      },
+      
+      refundNotificationError: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'refund_notification_error',
+      },
   },
   {
     tableName: 'EventReservations',

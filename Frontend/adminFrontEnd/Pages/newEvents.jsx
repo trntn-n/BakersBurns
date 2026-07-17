@@ -49,6 +49,15 @@ const Events = () => {
   const [showAddEventForm, setShowAddEventForm] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [editEventId, setEditEventId] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    step: 'preview',
+    event: null,
+    preview: null,
+  });
+  const [deleteProcessing, setDeleteProcessing] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
 
   const [currentDate, setCurrentDate] = useState(
     moment().startOf('month')
@@ -1536,33 +1545,394 @@ const Events = () => {
       );
     }
   };
-
-  const handleDeleteEvent = async (
-    eventId
-  ) => {
+  // Handle Event deletion and refund 
+  const closeDeleteModal = () => {
+    //reset state
+    if(deleteProcessing) {
+      return;
+    }
+    setDeleteModal({
+      isOpen: false,
+      step: 'preview',
+      event: null, 
+      preview: null,
+    });
+    setDeleteError('');
+  };
+  const handleDeleteEvent = async (eventId) => {
+    const sourceEvent = findSourceEvent(eventId);
+    if(!sourceEvent) {
+      setValidationError('Unable to locate the selected event.');
+      return;
+    }
+    if(deleteProcessing) {
+      return;
+    }
+    setDeleteProcessing(true);
+    setDeleteError('');
+    setValidationError('');
     try {
-      await adminApi.delete(
-        `/admin-event/events/${eventId}`
-      );
+      //send request to backend
+      const response = await adminApi.get(`/admin-event/events/${eventId}/get-refund-preview`);
+      const preview = response.data?.summary ||
+                      response.data?.preview ||
+                      response.data ||
+                      {};
 
-      if (editEventId === eventId) {
-        closeEventForm();
-      }
+      const refundableReservations = normalizeIntegerValue(preview.refundableReservations ?? preview.refundableReservationCount, 0);
+      const totalTickets = normalizeIntegerValue(preview.totalTickets ?? preview.ticketCount, 0);
+      const uniquePaymentsToRefund = normalizeIntegerValue(preview.uniquePaymentsToRefund ?? preview.paymentCount,0);
+      const hasRefundableTickets = refundableReservations > 0 || uniquePaymentsToRefund > 0 || totalTickets > 0;
 
-      await fetchEvents();
-    } catch (deleteError) {
-      console.error(
-        'Error deleting event:',
-        deleteError
-      );
-
-      setValidationError(
-        deleteError.response?.data?.message ||
-          'Unable to delete the event.'
-      );
+      setDeleteModal({
+        isOpen: true,
+        step: hasRefundableTickets
+          ? 'refundable-confirmation'
+          : 'delete-confirmation',
+          event: sourceEvent,
+          preview: {
+            ...preview, 
+            refundableReservations, 
+            uniquePaymentsToRefund,
+            totalTickets,
+          },
+      })
+    } catch (previewError) {
+      console.error('Error checking event refunds:', previewError);
+      setValidationError(previewError.response?.data?.message || 'Unable to check if this event has tickets that must be refunded'); 
+    } finally {
+      setDeleteProcessing(false);
     }
   };
+  const continueToFinalRefundConfirmation = () => {
+    setDeleteError('');
+    setDeleteModal((previousModal) => ({
+      ...previousModal, 
+      step: 'refund-final',
+    })
+    );
+  };
 
+  const confirmDeleteWithoutRefund = async () => {
+    const eventId = deleteModal.event?.id;
+    if(!eventId || deleteProcessing) {
+      return;
+    }
+    setDeleteProcessing(true);
+    setDeleteError('');
+    try {
+      await adminApi.delete(`/admin-event/events/${eventId}`);
+      if(editEventId === eventId) {
+        closeEventForm();
+      }
+      setDeleteModal({
+        isOpen: false,
+        step: 'preview',
+        event: null,
+        preview: null,
+      });
+      await fetchEvents();
+    } catch (deleteRequestError) {
+      console.error('Error deleting event:', deleteRequestError);
+      setDeleteError(deleteRequestError.response?.data?.message || 'Unable to delete the event.');
+    } finally {
+      setDeleteProcessing(false);
+    }
+  };
+  const confirmRefundAndDeleteEvent = async () => {
+    const eventId = deleteModal.event?.id;
+    if(!eventId || deleteProcessing) {
+      return;
+    }
+    setDeleteProcessing(true);
+    setDeleteError('');
+    try {
+      const refundResponse = await adminApi.post(`/admin-event/events/${eventId}/refund-all-event-tickets`,{confirmRefund:true, reason: 'Event cancelled by administrator'});
+      const refundResult = refundResponse.data || {};
+      const failedPayments = normalizeIntegerValue(refundResult.summary?.failedPayments ?? refundResult.failedPayments, 0);
+      // Do NOT delete when the controller reports a partial result or any failed payments
+      if (refundResult.success !== true || refundResult.partiallySuccessful === true || failedPayments > 0) {
+        const successfulPayments = normalizeIntegerValue(refundResult.summary?.successfulPayments, 0);
+        throw new Error(
+          successfulPayments > 0
+            ? `${successfulPayments} payment(s) were refunded, but ${failedPayments} payment(s) failed. The event was not deleted.`
+            : refundResult.message ||
+                'The ticket refunds did not complete successfully.'
+        );
+      }
+
+      //Only delete after refund controller confirms that every applicable payment was handles
+      await adminApi.delete(`/admin-event/events/${eventId}`);
+      if(editEventId === eventId) {
+        closeEventForm();
+      }
+      setDeleteModal({
+        isOpen: false,
+        step: 'preview',
+        event: null,
+        preview: null,
+      });
+      await fetchEvents();
+    } catch (refundError) {
+      console.error('Error refunding and deleting the event:', refundError);
+      setDeleteError(refundError.response?.data?.message ||refundError.message || 'Unable to refund all tickets. The event was not deleted');
+    } finally {
+      setDeleteProcessing(false);
+    }
+  };
+  const renderDeleteModal = () => {
+    if (
+      !deleteModal.isOpen ||
+      !deleteModal.event
+    ) {
+      return null;
+    }
+  
+    const {
+      event,
+      preview,
+      step,
+    } = deleteModal;
+  
+    const ticketCount =
+      normalizeIntegerValue(
+        preview?.totalTickets,
+        0
+      );
+  
+    const paymentCount =
+      normalizeIntegerValue(
+        preview?.uniquePaymentsToRefund,
+        0
+      );
+  
+    return (
+      <AnimatePresence>
+        <motion.div
+          className="event-modal"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onMouseDown={closeDeleteModal}
+        >
+          <motion.div
+            className="event-modal__dialog event-delete-modal__dialog"
+            initial={{
+              opacity: 0,
+              y: 24,
+              scale: 0.98,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              scale: 1,
+            }}
+            exit={{
+              opacity: 0,
+              y: 16,
+              scale: 0.98,
+            }}
+            onMouseDown={(modalEvent) =>
+              modalEvent.stopPropagation()
+            }
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-event-title"
+            aria-describedby="delete-event-description"
+          >
+            <div className="event-modal__header">
+              <div>
+                <span className="event-modal__eyebrow">
+                  Event deletion
+                </span>
+  
+                <h2 id="delete-event-title">
+                  {step ===
+                  'refundable-confirmation'
+                    ? 'Refund purchased tickets?'
+                    : step === 'refund-final'
+                      ? 'Final confirmation'
+                      : 'Delete this event?'}
+                </h2>
+              </div>
+  
+              <button
+                type="button"
+                className="event-modal__close"
+                onClick={closeDeleteModal}
+                disabled={deleteProcessing}
+                aria-label="Close delete confirmation"
+              >
+                ×
+              </button>
+            </div>
+  
+            <div className="event-modal__content">
+              {deleteError && (
+                <div
+                  className="event-alert event-alert--error"
+                  role="alert"
+                >
+                  {deleteError}
+                </div>
+              )}
+  
+              <div
+                id="delete-event-description"
+                className="event-delete-warning"
+              >
+                <h3>{event.name}</h3>
+  
+                {step ===
+                  'refundable-confirmation' && (
+                  <>
+                    <p>
+                      This event has purchased
+                      tickets. Deleting it requires
+                      refunding all eligible customer
+                      payments.
+                    </p>
+  
+                    <div className="event-delete-warning__summary">
+                      <span>
+                        <strong>
+                          {ticketCount}
+                        </strong>{' '}
+                        ticket
+                        {ticketCount === 1
+                          ? ''
+                          : 's'}
+                      </span>
+  
+                      <span>
+                        <strong>
+                          {paymentCount}
+                        </strong>{' '}
+                        payment
+                        {paymentCount === 1
+                          ? ''
+                          : 's'}
+                      </span>
+                    </div>
+  
+                    <p>
+                      Selecting Continue will take
+                      you to one final confirmation
+                      before any refunds are issued.
+                    </p>
+                  </>
+                )}
+  
+                {step === 'refund-final' && (
+                  <>
+                    <p>
+                      Are you absolutely sure?
+                    </p>
+  
+                    <p>
+                      This will refund every eligible
+                      ticket payment and then delete
+                      the event. This action cannot
+                      be undone.
+                    </p>
+  
+                    <div className="event-delete-warning__summary">
+                      <span>
+                        <strong>
+                          {ticketCount}
+                        </strong>{' '}
+                        ticket
+                        {ticketCount === 1
+                          ? ''
+                          : 's'}
+                      </span>
+  
+                      <span>
+                        <strong>
+                          {paymentCount}
+                        </strong>{' '}
+                        payment
+                        {paymentCount === 1
+                          ? ''
+                          : 's'}
+                      </span>
+                    </div>
+                  </>
+                )}
+  
+                {step ===
+                  'delete-confirmation' && (
+                  <p>
+                    This event does not have
+                    purchased tickets requiring a
+                    refund. Are you sure you want to
+                    delete it? This action cannot be
+                    undone.
+                  </p>
+                )}
+              </div>
+            </div>
+  
+            <div className="event-modal__footer">
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={closeDeleteModal}
+                disabled={deleteProcessing}
+              >
+                Cancel
+              </button>
+  
+              {step ===
+                'refundable-confirmation' && (
+                <button
+                  type="button"
+                  className="button button--danger"
+                  onClick={
+                    continueToFinalRefundConfirmation
+                  }
+                  disabled={deleteProcessing}
+                >
+                  Continue
+                </button>
+              )}
+  
+              {step === 'refund-final' && (
+                <button
+                  type="button"
+                  className="button button--danger"
+                  onClick={
+                    confirmRefundAndDeleteEvent
+                  }
+                  disabled={deleteProcessing}
+                >
+                  {deleteProcessing
+                    ? 'Processing refunds...'
+                    : 'Refund all tickets and delete'}
+                </button>
+              )}
+  
+              {step ===
+                'delete-confirmation' && (
+                <button
+                  type="button"
+                  className="button button--danger"
+                  onClick={
+                    confirmDeleteWithoutRefund
+                  }
+                  disabled={deleteProcessing}
+                >
+                  {deleteProcessing
+                    ? 'Deleting...'
+                    : 'Delete event'}
+                </button>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
+    );
+  };
   const eventsByDate = useMemo(() => {
     return calendarEvents.reduce(
       (calendar, event) => {
@@ -2708,6 +3078,7 @@ const Events = () => {
       </section>
 
       {renderEventForm()}
+      {renderDeleteModal()}
     </main>
   );
 };

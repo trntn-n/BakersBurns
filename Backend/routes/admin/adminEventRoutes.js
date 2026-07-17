@@ -1,20 +1,19 @@
 const express = require('express');
 
 const router = express.Router();
-const galleryController = require('../../controllers/admin/adminEventController');
+const adminEventController = require('../../controllers/admin/adminEventController');
 const adminAuthMiddleware = require('../../middleware/adminAuthMiddleware');
+const { refundAllEventReservations, getEventRefundPreview} = require('../../controllers/admin/eventRefundController');
 
+// general crud routes
+router.get('/events',  adminAuthMiddleware(), adminEventController.getAllEvents);
+router.get('/events/:id',  adminAuthMiddleware(), adminEventController.getEventById);
+router.post('/events', adminAuthMiddleware(), adminEventController.createEvent);
+router.put('/events/:id', adminAuthMiddleware(), adminEventController.updateEvent);
+router.delete('/events/:id', adminAuthMiddleware(), adminEventController.deleteEvent);
 
-
-
-
-// Routes accessible by both admins and regular users
-router.get('/events',  adminAuthMiddleware(), galleryController.getAllEvents);
-router.get('/events/:id',  adminAuthMiddleware(), galleryController.getEventById);
-
-// Routes restricted to admin-only access
-router.post('/events', adminAuthMiddleware(), galleryController.createEvent);
-router.put('/events/:id', adminAuthMiddleware(), galleryController.updateEvent);
-router.delete('/events/:id', adminAuthMiddleware(), galleryController.deleteEvent);
+// Refund routes
+router.get('/events/:eventId/get-refund-preview', adminAuthMiddleware(), getEventRefundPreview);
+router.post('/events/:eventId/refund-all-event-tickets',adminAuthMiddleware(),refundAllEventReservations);
 
 module.exports = router;
