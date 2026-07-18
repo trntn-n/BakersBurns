@@ -11,22 +11,32 @@ const {
   releaseEventCheckoutHold,
 } = require('../../services/eventCheckoutInventoryService.js');
 
-const stripeModeIsTest = process.env.STRIPE_MODE === 'test';
-
-const stripeSecretKey = stripeModeIsTest
-  ? process.env.STRIPE_TEST_SECRET_KEY
-  : process.env.STRIPE_SECRET_KEY;
+const stripeModeTest = process.env.STRIPE_MODE === 'test';
+const stripeSecretKey = stripeModeTest 
+                        ? process.env.STRIPE_TEST_SECRET_KEY
+                        : process.env.STRIPE_SECRET_KEY;
+        
+const stripeConnectedAccountId = stripeModeTest
+                                ? process.env.BAKERS_BURNS_TEST_ACCOUNT_ID
+                                : process.env.BAKERS_BURNS_ACCOUNT_ID;
 
 if (!stripeSecretKey) {
   throw new Error(
-    stripeModeIsTest
+    stripeModeTest
       ? 'Missing STRIPE_TEST_SECRET_KEY environment variable.'
       : 'Missing STRIPE_SECRET_KEY environment variable.'
   );
 }
+const stripeConnectedAccountEnvCheck = stripeModeTest
+                                        ? 'Missing BAKERS_BURNS_ACCOUNT_ID'
+                                        : 'Missing BAKERS_BURNS_ACCOUNT_ID';
+if (!stripeConnectedAccountId) {
+    throw new Error(
+        stripeConnectedAccountEnvCheck
+    );
+}
 
 const stripe = require('stripe')(stripeSecretKey);
-
 const MAX_TICKETS_PER_DAY = 20;
 const MAX_SELECTED_DAYS = 50;
 const HOLD_MINUTES = 30;
@@ -143,13 +153,7 @@ const createEventCheckoutSession = async (req, res) => {
       throw new Error('Missing REGISTER_FRONTEND environment variable.');
     }
 
-    const connectedAccountId = process.env.BAKERS_BURNS_ACCOUNT_ID;
-
-    if (!connectedAccountId?.startsWith('acct_')) {
-      throw new Error(
-        'BAKERS_BURNS_ACCOUNT_ID is missing or invalid.'
-      );
-    }
+    const connectedAccountId = stripeConnectedAccountId;
 
     const holdExpiresAt = new Date(
       Date.now() + HOLD_MINUTES * 60 * 1000
@@ -467,20 +471,7 @@ const getEventCheckoutSuccess =
         });
       }
 
-      const connectedAccountId =
-        process.env
-          .BAKERS_BURNS_ACCOUNT_ID;
-
-      if (
-        !connectedAccountId ||
-        !connectedAccountId.startsWith(
-          'acct_'
-        )
-      ) {
-        throw new Error(
-          'BAKERS_BURNS_ACCOUNT_ID is missing or invalid.'
-        );
-      }
+      const connectedAccountId = stripeConnectedAccountId;
 
       /*
        * The Checkout Session was created directly on
