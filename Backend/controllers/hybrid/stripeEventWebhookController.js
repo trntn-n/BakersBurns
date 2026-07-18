@@ -1,43 +1,7 @@
-
 // controllers/hybrid/stripeEventWebhookController.js
 'use strict';
 
-const stripeModeIsTest =
-  process.env.STRIPE_MODE === 'test';
-
-const stripeSecretKey =
-  stripeModeIsTest
-    ? process.env.STRIPE_TEST_SECRET_KEY
-    : process.env.STRIPE_SECRET_KEY;
-
-const stripeWebhookSecret =
-  stripeModeIsTest
-    ? process.env.STRIPE_TEST_EVENT_WEBHOOK_SECRET
-    : process.env.STRIPE_EVENT_WEBHOOK_SECRET;
-
-if (!stripeSecretKey) {
-  throw new Error(
-    stripeModeIsTest
-      ? 'Missing STRIPE_TEST_SECRET_KEY environment variable.'
-      : 'Missing STRIPE_SECRET_KEY environment variable.'
-  );
-}
-
-if (!stripeWebhookSecret) {
-  throw new Error(
-    stripeModeIsTest
-      ? 'Missing STRIPE_TEST_EVENT_WEBHOOK_SECRET environment variable.'
-      : 'Missing STRIPE_EVENT_WEBHOOK_SECRET environment variable.'
-  );
-}
-
-const stripe = require('stripe')(
-  stripeSecretKey
-);
-
-const Event = require(
-  '../../models/events'
-);
+const Event = require('../../models/events');
 
 const EventReservation = require(
   '../../models/eventReservation.js'
@@ -61,6 +25,107 @@ const {
 } = require(
   '../../utils/eventRefundNotificationEmail.js'
 );
+
+/*
+ * =============================
+ * Stripe configuration
+ * =============================
+ *
+ * Test mode:
+ *   STRIPE_TEST_SECRET_KEY
+ *   STRIPE_TEST_EVENT_WEBHOOK_SECRET
+ *   BAKERS_BURNS_TEST_ACCOUNT_ID
+ *
+ * Live mode:
+ *   STRIPE_SECRET_KEY
+ *   STRIPE_EVENT_WEBHOOK_SECRET
+ *   BAKERS_BURNS_LIVE_ACCOUNT_ID
+ */
+
+const stripeMode = String(
+  process.env.STRIPE_MODE || 'live'
+)
+  .trim()
+  .toLowerCase();
+
+if (
+  stripeMode !== 'test' &&
+  stripeMode !== 'live'
+) {
+  throw new Error(
+    'STRIPE_MODE must be either "test" or "live".'
+  );
+}
+
+const stripeModeTest =
+  stripeMode === 'test';
+
+const stripeSecretKey =
+  stripeModeTest
+    ? process.env.STRIPE_TEST_SECRET_KEY
+    : process.env.STRIPE_SECRET_KEY;
+
+const stripeWebhookSecret =
+  stripeModeTest
+    ? process.env
+        .STRIPE_TEST_EVENT_WEBHOOK_SECRET
+    : process.env
+        .STRIPE_EVENT_WEBHOOK_SECRET;
+
+const stripeConnectedAccountId =
+  stripeModeTest
+    ? process.env
+        .BAKERS_BURNS_TEST_ACCOUNT_ID
+    : process.env
+        .BAKERS_BURNS_LIVE_ACCOUNT_ID;
+
+const stripeSecretKeyEnvName =
+  stripeModeTest
+    ? 'STRIPE_TEST_SECRET_KEY'
+    : 'STRIPE_SECRET_KEY';
+
+const stripeWebhookSecretEnvName =
+  stripeModeTest
+    ? 'STRIPE_TEST_EVENT_WEBHOOK_SECRET'
+    : 'STRIPE_EVENT_WEBHOOK_SECRET';
+
+const stripeConnectedAccountEnvName =
+  stripeModeTest
+    ? 'BAKERS_BURNS_TEST_ACCOUNT_ID'
+    : 'BAKERS_BURNS_LIVE_ACCOUNT_ID';
+
+if (!stripeSecretKey) {
+  throw new Error(
+    `Missing ${stripeSecretKeyEnvName} environment variable.`
+  );
+}
+
+if (!stripeWebhookSecret) {
+  throw new Error(
+    `Missing ${stripeWebhookSecretEnvName} environment variable.`
+  );
+}
+
+if (
+  !stripeConnectedAccountId ||
+  !stripeConnectedAccountId.startsWith(
+    'acct_'
+  )
+) {
+  throw new Error(
+    `${stripeConnectedAccountEnvName} is missing or invalid.`
+  );
+}
+
+const stripe = require('stripe')(
+  stripeSecretKey
+);
+
+/*
+ * =============================
+ * Constants
+ * =============================
+ */
 
 const EVENT_CHECKOUT_TYPE =
   'event_preorder';
@@ -87,13 +152,29 @@ const REFUND_EVENT_TYPES =
     'refund.failed',
   ]);
 
-/**
- * Return the Sequelize attributes declared on a model.
- *
- * @param {object} model
- * @returns {object}
+console.log(
+  'Event Stripe webhook configuration loaded:',
+  {
+    stripeMode,
+    stripeModeTest,
+    connectedAccountId:
+      stripeConnectedAccountId,
+    secretKeyConfigured:
+      Boolean(stripeSecretKey),
+    webhookSecretConfigured:
+      Boolean(stripeWebhookSecret),
+  }
+);
+
+/*
+ * =============================
+ * General helpers
+ * =============================
  */
-const getModelAttributes = (model) => {
+
+const getModelAttributes = (
+  model
+) => {
   return (
     model?.rawAttributes ||
     model?.getAttributes?.() ||
@@ -101,14 +182,6 @@ const getModelAttributes = (model) => {
   );
 };
 
-/**
- * Determine which one of several possible field names
- * exists on a Sequelize model.
- *
- * @param {object} model
- * @param {string[]} candidateNames
- * @returns {string|null}
- */
 const getExistingModelField = (
   model,
   candidateNames
@@ -119,27 +192,25 @@ const getExistingModelField = (
   return (
     candidateNames.find(
       (fieldName) =>
-        Object.prototype.hasOwnProperty.call(
-          attributes,
-          fieldName
-        )
+        Object.prototype
+          .hasOwnProperty.call(
+            attributes,
+            fieldName
+          )
     ) || null
   );
 };
 
-/**
- * Convert a Sequelize instance into a plain object.
- *
- * @param {object|null} record
- * @returns {object|null}
- */
-const toPlainObject = (record) => {
+const toPlainObject = (
+  record
+) => {
   if (!record) {
     return null;
   }
 
   if (
-    typeof record.get === 'function'
+    typeof record.get ===
+    'function'
   ) {
     return record.get({
       plain: true,
@@ -149,14 +220,6 @@ const toPlainObject = (record) => {
   return record;
 };
 
-/**
- * Read a value while supporting both camelCase and
- * snake_case Sequelize attributes.
- *
- * @param {object|null} record
- * @param {string[]} fieldNames
- * @returns {*}
- */
 const getField = (
   record,
   fieldNames
@@ -165,8 +228,8 @@ const getField = (
     toPlainObject(record);
 
   for (
-    const fieldName
-    of fieldNames
+    const fieldName of
+    fieldNames
   ) {
     if (
       plainRecord &&
@@ -184,17 +247,6 @@ const getField = (
   return null;
 };
 
-/**
- * Build an update object containing only fields declared
- * on the EventReservation model.
- *
- * The object may include both camelCase and snake_case
- * candidates. Only the version that actually exists on
- * the model is retained.
- *
- * @param {object} values
- * @returns {object}
- */
 const buildReservationUpdate = (
   values
 ) => {
@@ -211,10 +263,11 @@ const buildReservationUpdate = (
       [fieldName, value]
     ) => {
       if (
-        Object.prototype.hasOwnProperty.call(
-          attributes,
-          fieldName
-        )
+        Object.prototype
+          .hasOwnProperty.call(
+            attributes,
+            fieldName
+          )
       ) {
         updateValues[fieldName] =
           value;
@@ -226,14 +279,6 @@ const buildReservationUpdate = (
   );
 };
 
-/**
- * Safely update an EventReservation using only model
- * attributes that actually exist.
- *
- * @param {object} reservation
- * @param {object} values
- * @returns {Promise<boolean>}
- */
 const updateReservationSafely =
   async (
     reservation,
@@ -267,13 +312,49 @@ const updateReservationSafely =
     return true;
   };
 
-/**
- * Determine whether this Checkout Session belongs to
- * the event checkout system.
- *
- * @param {object} session
- * @returns {boolean}
+const normalizeEmail = (
+  value
+) => {
+  if (
+    typeof value !==
+    'string'
+  ) {
+    return null;
+  }
+
+  const normalizedEmail =
+    value
+      .trim()
+      .toLowerCase();
+
+  return normalizedEmail ||
+    null;
+};
+
+const normalizeQuantity = (
+  value
+) => {
+  const parsedValue =
+    Number(value);
+
+  if (
+    Number.isInteger(
+      parsedValue
+    ) &&
+    parsedValue > 0
+  ) {
+    return parsedValue;
+  }
+
+  return 1;
+};
+
+/*
+ * =============================
+ * Stripe object helpers
+ * =============================
  */
+
 const isEventCheckoutSession = (
   session
 ) => {
@@ -284,30 +365,18 @@ const isEventCheckoutSession = (
   );
 };
 
-/**
- * Determine whether a Stripe Refund was created by the
- * event cancellation refund controller.
- *
- * @param {object} refund
- * @returns {boolean}
- */
 const isEventCancellationRefund = (
   refund
 ) => {
   return (
     refund?.object ===
       'refund' &&
-    refund?.metadata?.source ===
+    refund?.metadata
+      ?.source ===
       EVENT_REFUND_SOURCE
   );
 };
 
-/**
- * Extract the purchaser email from a Checkout Session.
- *
- * @param {object} session
- * @returns {string|null}
- */
 const getPurchaserEmail = (
   session
 ) => {
@@ -319,13 +388,6 @@ const getPurchaserEmail = (
   );
 };
 
-/**
- * Extract a PaymentIntent ID from either an expanded
- * object or a string identifier.
- *
- * @param {object} session
- * @returns {string|null}
- */
 const getPaymentIntentId = (
   session
 ) => {
@@ -334,21 +396,17 @@ const getPaymentIntentId = (
       ?.payment_intent ===
     'string'
   ) {
-    return session.payment_intent;
+    return session
+      .payment_intent;
   }
 
   return (
-    session?.payment_intent?.id ||
+    session
+      ?.payment_intent?.id ||
     null
   );
 };
 
-/**
- * Extract the PaymentIntent ID from a Stripe Refund.
- *
- * @param {object} refund
- * @returns {string|null}
- */
 const getRefundPaymentIntentId = (
   refund
 ) => {
@@ -357,21 +415,17 @@ const getRefundPaymentIntentId = (
       ?.payment_intent ===
     'string'
   ) {
-    return refund.payment_intent;
+    return refund
+      .payment_intent;
   }
 
   return (
-    refund?.payment_intent?.id ||
+    refund
+      ?.payment_intent?.id ||
     null
   );
 };
 
-/**
- * Return the event ID stored in refund metadata.
- *
- * @param {object} refund
- * @returns {string|null}
- */
 const getRefundEventId = (
   refund
 ) => {
@@ -381,181 +435,385 @@ const getRefundEventId = (
   if (
     eventId === undefined ||
     eventId === null ||
-    String(eventId).trim() === ''
+    String(eventId).trim() ===
+      ''
   ) {
     return null;
   }
 
-  return String(eventId).trim();
+  return String(
+    eventId
+  ).trim();
 };
 
-/**
- * Normalize an email address for grouping and duplicate
- * notification checks.
- *
- * @param {*} value
- * @returns {string|null}
+/*
+ * =============================
+ * Webhook validation
+ * =============================
  */
-const normalizeEmail = (
-  value
+
+const validateWebhookAccount = (
+  stripeEvent
 ) => {
+  const expectedLiveMode =
+    !stripeModeTest;
+
   if (
-    typeof value !== 'string'
+    Boolean(
+      stripeEvent.livemode
+    ) !== expectedLiveMode
   ) {
-    return null;
-  }
+    const error = new Error(
+      `Stripe webhook mode mismatch. Expected ${
+        expectedLiveMode
+          ? 'live'
+          : 'test'
+      } mode.`
+    );
 
-  const normalizedEmail =
-    value.trim().toLowerCase();
+    error.status = 400;
 
-  return normalizedEmail ||
-    null;
-};
-
-/**
- * Normalize a positive ticket quantity.
- *
- * @param {*} value
- * @returns {number}
- */
-const normalizeQuantity = (
-  value
-) => {
-  const parsedValue =
-    Number(value);
-
-  return (
-    Number.isInteger(
-      parsedValue
-    ) &&
-    parsedValue > 0
-  )
-    ? parsedValue
-    : 1;
-};
-
-/**
- * Return the first available event date.
- *
- * @param {object|null} event
- * @param {object[]} reservations
- * @returns {*}
- */
-const getEventDateForEmail = (
-  event,
-  reservations
-) => {
-  const reservation =
-    reservations[0] ||
-    null;
-
-  return (
-    getField(reservation, [
-      'occurrenceDate',
-      'occurrence_date',
-      'eventDate',
-      'event_date',
-    ]) ||
-    getField(event, [
-      'startDate',
-      'start_date',
-      'date',
-    ]) ||
-    null
-  );
-};
-
-/**
- * Return the event start time for the notification.
- *
- * @param {object|null} event
- * @returns {*}
- */
-const getEventStartTimeForEmail = (
-  event
-) => {
-  return getField(event, [
-    'startTime',
-    'start_time',
-  ]);
-};
-
-/**
- * Return the event name from the database or Stripe
- * refund metadata.
- *
- * @param {object|null} event
- * @param {object} refund
- * @returns {string}
- */
-const getEventNameForEmail = (
-  event,
-  refund
-) => {
-  return (
-    getField(event, [
-      'name',
-      'title',
-      'eventName',
-      'event_name',
-    ]) ||
-    refund?.metadata?.eventName ||
-    'Your event'
-  );
-};
-
-/**
- * Determine whether a reservation was already sent a
- * notification for this refund.
- *
- * The timestamp is the primary guard. The refund ID is
- * also checked when that field exists.
- *
- * @param {object} reservation
- * @param {string} refundId
- * @returns {boolean}
- */
-const reservationWasNotified = (
-  reservation,
-  refundId
-) => {
-  const notificationSentAt =
-    getField(reservation, [
-      'refundNotificationSentAt',
-      'refund_notification_sent_at',
-    ]);
-
-  const notifiedRefundId =
-    getField(reservation, [
-      'refundNotificationRefundId',
-      'refund_notification_refund_id',
-    ]);
-
-  if (!notificationSentAt) {
-    return false;
+    throw error;
   }
 
   /*
-   * Older rows may have a notification timestamp but no
-   * dedicated notification refund ID.
+   * Connect webhook events include the connected account
+   * in stripeEvent.account.
+   *
+   * Platform-level webhook events may not include account.
    */
-  if (!notifiedRefundId) {
-    return true;
-  }
+  if (
+    stripeEvent.account &&
+    stripeEvent.account !==
+      stripeConnectedAccountId
+  ) {
+    const error = new Error(
+      `Stripe webhook account mismatch. Expected ${stripeConnectedAccountId}, received ${stripeEvent.account}.`
+    );
 
-  return (
-    String(notifiedRefundId) ===
-    String(refundId)
-  );
+    error.status = 400;
+
+    throw error;
+  }
 };
 
-/**
- * Find all reservations associated with one event refund.
- *
- * @param {string} eventId
- * @param {string} paymentIntentId
- * @returns {Promise<object[]>}
+/*
+ * =============================
+ * Checkout Session retrieval
+ * =============================
  */
+
+const retrieveEventCheckoutSession =
+  async (
+    webhookSession
+  ) => {
+    if (!webhookSession?.id) {
+      throw new Error(
+        'Stripe Checkout Session ID is missing.'
+      );
+    }
+
+    /*
+     * The Session was created directly on the connected
+     * account. It must be retrieved using that same account.
+     */
+    return stripe
+      .checkout
+      .sessions
+      .retrieve(
+        webhookSession.id,
+        {
+          expand: [
+            'payment_intent',
+            'customer',
+          ],
+        },
+        {
+          stripeAccount:
+            stripeConnectedAccountId,
+        }
+      );
+  };
+
+/*
+ * =============================
+ * Completed checkout handling
+ * =============================
+ */
+
+const processCompletedEventCheckout =
+  async (
+    webhookSession
+  ) => {
+    const session =
+      await retrieveEventCheckoutSession(
+        webhookSession
+      );
+
+    if (
+      !isEventCheckoutSession(
+        session
+      )
+    ) {
+      console.log(
+        'Ignored non-event Checkout Session:',
+        {
+          stripeSessionId:
+            session?.id ||
+            null,
+          checkoutType:
+            session?.metadata
+              ?.checkoutType ||
+            null,
+        }
+      );
+
+      return {
+        handled: false,
+        reason:
+          'not_event_checkout',
+      };
+    }
+
+    const holdToken =
+      session.metadata
+        ?.holdToken;
+
+    if (!holdToken) {
+      throw new Error(
+        `Event Checkout Session ${session.id} is missing holdToken metadata.`
+      );
+    }
+
+    if (
+      session.payment_status !==
+      'paid'
+    ) {
+      console.log(
+        'Event Checkout Session is not paid yet:',
+        {
+          stripeSessionId:
+            session.id,
+          paymentStatus:
+            session
+              .payment_status,
+        }
+      );
+
+      return {
+        handled: false,
+        reason:
+          'payment_not_paid',
+      };
+    }
+
+    const purchaserEmail =
+      getPurchaserEmail(
+        session
+      );
+
+    const paymentIntentId =
+      getPaymentIntentId(
+        session
+      );
+
+    console.log(
+      'Completing event checkout hold:',
+      {
+        stripeSessionId:
+          session.id,
+        paymentIntentId,
+        holdToken,
+        purchaserEmail,
+        connectedAccountId:
+          stripeConnectedAccountId,
+      }
+    );
+
+    /*
+     * This service should:
+     *
+     * 1. Find the EventCheckoutHold.
+     * 2. Convert reservedCount into soldCount.
+     * 3. Create EventReservation records.
+     * 4. Mark the hold completed.
+     *
+     * It must be idempotent because Stripe can retry.
+     */
+    const completionResult =
+      await completeEventCheckoutHold({
+        holdToken,
+        stripeSessionId:
+          session.id,
+        stripePaymentIntentId:
+          paymentIntentId,
+        purchaserEmail,
+      });
+
+    const reservations =
+      Array.isArray(
+        completionResult
+          ?.reservations
+      )
+        ? completionResult
+            .reservations
+        : [];
+
+    console.log(
+      'Event checkout inventory completed:',
+      {
+        stripeSessionId:
+          session.id,
+        holdToken,
+        hasCompletionResult:
+          Boolean(
+            completionResult
+          ),
+        hasEvent:
+          Boolean(
+            completionResult
+              ?.event
+          ),
+        reservationCount:
+          reservations.length,
+      }
+    );
+
+    /*
+     * The success page depends on EventReservation records.
+     * Do not acknowledge the webhook if none were created.
+     */
+    if (
+      reservations.length === 0
+    ) {
+      throw new Error(
+        `Event Checkout Session ${session.id} completed without creating EventReservation records.`
+      );
+    }
+
+    console.log(
+      'Sending event confirmation emails:',
+      {
+        stripeSessionId:
+          session.id,
+        purchaserEmail,
+        reservationCount:
+          reservations.length,
+      }
+    );
+
+    /*
+     * Email errors are allowed to throw so Stripe retries
+     * the webhook. The email utility should protect against
+     * duplicate delivery if the webhook is retried.
+     */
+    const emailResults =
+      await sendEventCheckoutEmails({
+        session,
+        completionResult,
+      });
+
+    console.log(
+      'Event confirmation emails sent:',
+      {
+        stripeSessionId:
+          session.id,
+        customerEmailId:
+          emailResults
+            ?.customer?.id ||
+          emailResults
+            ?.customer
+            ?.emailId ||
+          null,
+        adminEmailId:
+          emailResults
+            ?.admins?.id ||
+          emailResults
+            ?.admins
+            ?.emailId ||
+          null,
+      }
+    );
+
+    return {
+      handled: true,
+      completionResult,
+      emailResults,
+    };
+  };
+
+/*
+ * =============================
+ * Expired checkout handling
+ * =============================
+ */
+
+const processReleasedEventCheckout =
+  async (
+    webhookSession
+  ) => {
+    const session =
+      await retrieveEventCheckoutSession(
+        webhookSession
+      );
+
+    if (
+      !isEventCheckoutSession(
+        session
+      )
+    ) {
+      return {
+        handled: false,
+        reason:
+          'not_event_checkout',
+      };
+    }
+
+    const holdToken =
+      session.metadata
+        ?.holdToken;
+
+    if (!holdToken) {
+      console.warn(
+        'Unable to release event inventory because holdToken is missing:',
+        {
+          stripeSessionId:
+            session.id,
+        }
+      );
+
+      return {
+        handled: false,
+        reason:
+          'missing_hold_token',
+      };
+    }
+
+    await releaseEventCheckoutHold(
+      holdToken,
+      'released'
+    );
+
+    console.log(
+      'Event checkout inventory released:',
+      {
+        stripeSessionId:
+          session.id,
+        holdToken,
+      }
+    );
+
+    return {
+      handled: true,
+    };
+  };
+
+/*
+ * =============================
+ * Refund helpers
+ * =============================
+ */
+
 const findRefundReservations =
   async (
     eventId,
@@ -591,32 +849,25 @@ const findRefundReservations =
       );
     }
 
-    return EventReservation.findAll({
-      where: {
-        [eventIdField]:
-          eventId,
+    return EventReservation
+      .findAll({
+        where: {
+          [eventIdField]:
+            eventId,
 
-        [paymentIntentField]:
-          paymentIntentId,
-      },
+          [paymentIntentField]:
+            paymentIntentId,
+        },
 
-      order: [
-        ['createdAt', 'ASC'],
-      ],
-    });
+        order: [
+          [
+            'createdAt',
+            'ASC',
+          ],
+        ],
+      });
   };
 
-/**
- * Mark reservations with the current Stripe refund
- * status.
- *
- * This does not overwrite a successfully refunded
- * reservation with a pending status.
- *
- * @param {object[]} reservations
- * @param {object} refund
- * @returns {Promise<void>}
- */
 const updateReservationsForRefundStatus =
   async (
     reservations,
@@ -644,18 +895,6 @@ const updateReservationsForRefundStatus =
     ) {
       reservationStatus =
         'refund_pending';
-    } else if (
-      refundStatus ===
-        'failed' ||
-      refundStatus ===
-        'canceled'
-    ) {
-      /*
-       * Keep the reservation eligible for another refund
-       * attempt instead of marking it fully refunded.
-       */
-      reservationStatus =
-        null;
     }
 
     const failureReason =
@@ -664,8 +903,8 @@ const updateReservationsForRefundStatus =
       null;
 
     for (
-      const reservation
-      of reservations
+      const reservation of
+      reservations
     ) {
       const updateValues = {
         stripe_refund_id:
@@ -700,19 +939,23 @@ const updateReservationsForRefundStatus =
         refundStatus ===
         'succeeded'
       ) {
-        const existingRefundedAt =
-          getField(reservation, [
-            'refundedAt',
-            'refunded_at',
-          ]);
-
-        updateValues.refunded_at =
-          existingRefundedAt ||
+        const refundedAt =
+          getField(
+            reservation,
+            [
+              'refundedAt',
+              'refunded_at',
+            ]
+          ) ||
           new Date();
 
-        updateValues.refundedAt =
-          existingRefundedAt ||
-          new Date();
+        updateValues
+          .refunded_at =
+          refundedAt;
+
+        updateValues
+          .refundedAt =
+          refundedAt;
       }
 
       await updateReservationSafely(
@@ -722,15 +965,44 @@ const updateReservationsForRefundStatus =
     }
   };
 
-/**
- * Save a successful notification marker on every
- * reservation represented by the email.
- *
- * @param {object[]} reservations
- * @param {object} refund
- * @param {object} emailResult
- * @returns {Promise<void>}
- */
+const reservationWasNotified = (
+  reservation,
+  refundId
+) => {
+  const sentAt =
+    getField(
+      reservation,
+      [
+        'refundNotificationSentAt',
+        'refund_notification_sent_at',
+      ]
+    );
+
+  const notifiedRefundId =
+    getField(
+      reservation,
+      [
+        'refundNotificationRefundId',
+        'refund_notification_refund_id',
+      ]
+    );
+
+  if (!sentAt) {
+    return false;
+  }
+
+  if (!notifiedRefundId) {
+    return true;
+  }
+
+  return (
+    String(
+      notifiedRefundId
+    ) ===
+    String(refundId)
+  );
+};
+
 const markRefundNotificationSent =
   async ({
     reservations,
@@ -741,8 +1013,8 @@ const markRefundNotificationSent =
       new Date();
 
     for (
-      const reservation
-      of reservations
+      const reservation of
+      reservations
     ) {
       await updateReservationSafely(
         reservation,
@@ -779,15 +1051,6 @@ const markRefundNotificationSent =
     }
   };
 
-/**
- * Save a refund notification failure without changing
- * the successful Stripe refund status.
- *
- * @param {object[]} reservations
- * @param {object} refund
- * @param {Error} error
- * @returns {Promise<void>}
- */
 const markRefundNotificationFailed =
   async ({
     reservations,
@@ -799,8 +1062,8 @@ const markRefundNotificationFailed =
       'Unable to send the refund notification email.';
 
     for (
-      const reservation
-      of reservations
+      const reservation of
+      reservations
     ) {
       try {
         await updateReservationSafely(
@@ -823,7 +1086,7 @@ const markRefundNotificationFailed =
         updateError
       ) {
         console.error(
-          'Unable to record event refund notification failure:',
+          'Unable to record refund notification failure:',
           {
             refundId:
               refund.id,
@@ -838,324 +1101,51 @@ const markRefundNotificationFailed =
               errorMessage,
 
             databaseError:
-              updateError.message,
+              updateError
+                .message,
           }
         );
       }
     }
   };
 
-/**
- * Complete inventory and reservation records for a
- * successfully paid event Checkout Session.
- *
- * @param {object} session
- * @returns {Promise<object>}
+const getEventDateForEmail = (
+  event,
+  reservations
+) => {
+  const reservation =
+    reservations[0] ||
+    null;
+
+  return (
+    getField(
+      reservation,
+      [
+        'occurrenceDate',
+        'occurrence_date',
+        'eventDate',
+        'event_date',
+      ]
+    ) ||
+    getField(
+      event,
+      [
+        'startDate',
+        'start_date',
+        'date',
+      ]
+    ) ||
+    null
+  );
+};
+
+/*
+ * =============================
+ * Refund handling
+ * =============================
  */
-const processCompletedEventCheckout =
-  async (
-    session
-  ) => {
-    if (
-      !isEventCheckoutSession(
-        session
-      )
-    ) {
-      console.log(
-        'Event webhook ignored non-event Checkout Session:',
-        {
-          stripeSessionId:
-            session?.id,
 
-          checkoutType:
-            session?.metadata
-              ?.checkoutType ||
-            null,
-        }
-      );
-
-      return {
-        handled: false,
-        reason:
-          'not_event_checkout',
-      };
-    }
-
-    const holdToken =
-      session.metadata
-        ?.holdToken;
-
-    if (!holdToken) {
-      throw new Error(
-        `Event Checkout Session ${session.id} is missing holdToken metadata.`
-      );
-    }
-
-    /*
-     * checkout.session.completed can arrive before an
-     * asynchronous payment has succeeded.
-     */
-    if (
-      session.payment_status !==
-      'paid'
-    ) {
-      console.log(
-        'Event checkout is not paid yet:',
-        {
-          stripeSessionId:
-            session.id,
-
-          paymentStatus:
-            session.payment_status,
-        }
-      );
-
-      return {
-        handled: false,
-        reason:
-          'payment_not_paid',
-      };
-    }
-
-    console.log(
-      'Completing event checkout hold:',
-      {
-        stripeSessionId:
-          session.id,
-
-        holdToken,
-
-        purchaserEmail:
-          getPurchaserEmail(
-            session
-          ),
-      }
-    );
-
-    /*
-     * This inventory service must remain idempotent
-     * because Stripe may deliver the same webhook more
-     * than once.
-     */
-    const completionResult =
-      await completeEventCheckoutHold({
-        holdToken,
-
-        stripeSessionId:
-          session.id,
-
-        stripePaymentIntentId:
-          getPaymentIntentId(
-            session
-          ),
-
-        purchaserEmail:
-          getPurchaserEmail(
-            session
-          ),
-      });
-
-    console.log(
-      'Event checkout inventory completed:',
-      {
-        stripeSessionId:
-          session.id,
-
-        holdToken,
-
-        hasCompletionResult:
-          Boolean(
-            completionResult
-          ),
-
-        hasEvent:
-          Boolean(
-            completionResult
-              ?.event
-          ),
-
-        reservationCount:
-          Array.isArray(
-            completionResult
-              ?.reservations
-          )
-            ? completionResult
-                .reservations
-                .length
-            : 0,
-      }
-    );
-
-    /*
-     * The reservation has already been committed. A
-     * confirmation email failure must not undo the
-     * successful ticket purchase.
-     */
-    let emailResults =
-      null;
-
-    let emailError =
-      null;
-
-    try {
-      console.log(
-        'Sending event confirmation emails:',
-        {
-          stripeSessionId:
-            session.id,
-
-          purchaserEmail:
-            getPurchaserEmail(
-              session
-            ),
-        }
-      );
-
-      emailResults =
-        await sendEventCheckoutEmails({
-          session,
-          completionResult,
-        });
-
-      console.log(
-        'Event confirmation emails sent:',
-        {
-          stripeSessionId:
-            session.id,
-
-          customerEmailId:
-            emailResults
-              ?.customer?.id ||
-            null,
-
-          adminEmailId:
-            emailResults
-              ?.admins?.id ||
-            null,
-        }
-      );
-    } catch (error) {
-      emailError =
-        error;
-
-      console.error(
-        'Event checkout completed, but confirmation email delivery failed:',
-        {
-          stripeSessionId:
-            session.id,
-
-          holdToken,
-
-          purchaserEmail:
-            getPurchaserEmail(
-              session
-            ),
-
-          message:
-            error.message,
-
-          stack:
-            error.stack,
-        }
-      );
-    }
-
-    return {
-      handled: true,
-      completionResult,
-      emailResults,
-      emailError,
-    };
-  };
-
-/**
- * Release inventory reserved by an expired or failed
- * event Checkout Session.
- *
- * @param {object} session
- * @returns {Promise<object>}
- */
-const processReleasedEventCheckout =
-  async (
-    session
-  ) => {
-    if (
-      !isEventCheckoutSession(
-        session
-      )
-    ) {
-      console.log(
-        'Event webhook ignored non-event release event:',
-        {
-          stripeSessionId:
-            session?.id,
-
-          checkoutType:
-            session?.metadata
-              ?.checkoutType ||
-            null,
-        }
-      );
-
-      return {
-        handled: false,
-        reason:
-          'not_event_checkout',
-      };
-    }
-
-    const holdToken =
-      session.metadata
-        ?.holdToken;
-
-    if (!holdToken) {
-      console.warn(
-        'Event Checkout Session could not release inventory because holdToken is missing:',
-        {
-          stripeSessionId:
-            session.id,
-        }
-      );
-
-      return {
-        handled: false,
-        reason:
-          'missing_hold_token',
-      };
-    }
-
-    await releaseEventCheckoutHold(
-      holdToken,
-      'released'
-    );
-
-    console.log(
-      'Event checkout inventory released:',
-      {
-        stripeSessionId:
-          session.id,
-
-        holdToken,
-      }
-    );
-
-    return {
-      handled: true,
-    };
-  };
-
-/**
- * Handle a succeeded event cancellation refund and send
- * one email per unique purchaser.
- *
- * Multiple reservation rows sharing a PaymentIntent are
- * grouped by email so the purchaser receives only one
- * notification for the refund.
- *
- * @param {object} refund
- * @returns {Promise<object>}
- */
-const processSucceededEventRefund =
+const processEventRefund =
   async (
     refund
   ) => {
@@ -1171,17 +1161,6 @@ const processSucceededEventRefund =
       };
     }
 
-    if (
-      refund.status !==
-      'succeeded'
-    ) {
-      return {
-        handled: false,
-        reason:
-          `refund_${refund.status || 'unknown'}`,
-      };
-    }
-
     const eventId =
       getRefundEventId(
         refund
@@ -1192,16 +1171,26 @@ const processSucceededEventRefund =
         refund
       );
 
-    if (!eventId) {
-      throw new Error(
-        `Event refund ${refund.id} is missing eventId metadata.`
+    if (
+      !eventId ||
+      !paymentIntentId
+    ) {
+      console.warn(
+        'Event refund is missing identifiers:',
+        {
+          refundId:
+            refund?.id ||
+            null,
+          eventId,
+          paymentIntentId,
+        }
       );
-    }
 
-    if (!paymentIntentId) {
-      throw new Error(
-        `Event refund ${refund.id} is missing its PaymentIntent ID.`
-      );
+      return {
+        handled: false,
+        reason:
+          'missing_refund_identifiers',
+      };
     }
 
     const reservations =
@@ -1211,24 +1200,43 @@ const processSucceededEventRefund =
       );
 
     if (
-      reservations.length ===
-      0
+      reservations.length === 0
     ) {
-      throw new Error(
-        `No EventReservation records were found for refund ${refund.id}, event ${eventId}, and PaymentIntent ${paymentIntentId}.`
+      console.warn(
+        'No reservations found for event refund:',
+        {
+          refundId:
+            refund.id,
+          eventId,
+          paymentIntentId,
+        }
       );
+
+      return {
+        handled: false,
+        reason:
+          'reservations_not_found',
+      };
     }
 
-    /*
-     * Repair the local reservation refund status first.
-     * This makes the webhook useful even when the refund
-     * controller succeeded at Stripe but failed before
-     * updating the database.
-     */
     await updateReservationsForRefundStatus(
       reservations,
       refund
     );
+
+    if (
+      refund.status !==
+      'succeeded'
+    ) {
+      return {
+        handled: true,
+        reason:
+          `refund_${
+            refund.status ||
+            'unknown'
+          }`,
+      };
+    }
 
     const event =
       await Event.findByPk(
@@ -1236,10 +1244,18 @@ const processSucceededEventRefund =
       );
 
     const eventName =
-      getEventNameForEmail(
+      getField(
         event,
-        refund
-      );
+        [
+          'name',
+          'title',
+          'eventName',
+          'event_name',
+        ]
+      ) ||
+      refund?.metadata
+        ?.eventName ||
+      'Your event';
 
     const eventDate =
       getEventDateForEmail(
@@ -1248,19 +1264,20 @@ const processSucceededEventRefund =
       );
 
     const eventStartTime =
-      getEventStartTimeForEmail(
-        event
+      getField(
+        event,
+        [
+          'startTime',
+          'start_time',
+        ]
       );
 
-    /*
-     * Group reservation rows by purchaser email.
-     */
     const reservationsByEmail =
       new Map();
 
     for (
-      const reservation
-      of reservations
+      const reservation of
+      reservations
     ) {
       const purchaserEmail =
         normalizeEmail(
@@ -1276,14 +1293,10 @@ const processSucceededEventRefund =
 
       if (!purchaserEmail) {
         console.warn(
-          'Event refund reservation is missing a purchaser email:',
+          'Refund reservation is missing purchaser email:',
           {
             refundId:
               refund.id,
-
-            eventId,
-
-            paymentIntentId,
 
             reservationId:
               getField(
@@ -1297,35 +1310,22 @@ const processSucceededEventRefund =
       }
 
       if (
-        !reservationsByEmail.has(
-          purchaserEmail
-        )
+        !reservationsByEmail
+          .has(
+            purchaserEmail
+          )
       ) {
-        reservationsByEmail.set(
-          purchaserEmail,
-          []
-        );
+        reservationsByEmail
+          .set(
+            purchaserEmail,
+            []
+          );
       }
 
       reservationsByEmail
         .get(purchaserEmail)
         .push(reservation);
     }
-
-    if (
-      reservationsByEmail.size ===
-      0
-    ) {
-      throw new Error(
-        `No purchaser email was available for event refund ${refund.id}.`
-      );
-    }
-
-    const sentNotifications =
-      [];
-
-    const skippedNotifications =
-      [];
 
     const failedNotifications =
       [];
@@ -1334,44 +1334,19 @@ const processSucceededEventRefund =
       const [
         purchaserEmail,
         purchaserReservations,
-      ]
-      of reservationsByEmail
-        .entries()
+      ] of reservationsByEmail
     ) {
-      /*
-       * Skip the email when every matching reservation
-       * already records a notification for this refund.
-       */
       const alreadyNotified =
-        purchaserReservations.every(
-          (reservation) =>
-            reservationWasNotified(
-              reservation,
-              refund.id
-            )
-        );
+        purchaserReservations
+          .every(
+            (reservation) =>
+              reservationWasNotified(
+                reservation,
+                refund.id
+              )
+          );
 
       if (alreadyNotified) {
-        skippedNotifications.push({
-          purchaserEmail,
-          reason:
-            'already_notified',
-        });
-
-        console.log(
-          'Event refund notification already sent:',
-          {
-            refundId:
-              refund.id,
-
-            eventId,
-
-            paymentIntentId,
-
-            purchaserEmail,
-          }
-        );
-
         continue;
       }
 
@@ -1387,23 +1362,24 @@ const processSucceededEventRefund =
         );
 
       const totalQuantity =
-        purchaserReservations.reduce(
-          (
-            total,
-            reservation
-          ) => {
-            return (
-              total +
-              normalizeQuantity(
-                getField(
-                  reservation,
-                  ['quantity']
+        purchaserReservations
+          .reduce(
+            (
+              total,
+              reservation
+            ) => {
+              return (
+                total +
+                normalizeQuantity(
+                  getField(
+                    reservation,
+                    ['quantity']
+                  )
                 )
-              )
-            );
-          },
-          0
-        );
+              );
+            },
+            0
+          );
 
       try {
         const emailResult =
@@ -1447,38 +1423,15 @@ const processSucceededEventRefund =
           emailResult,
         });
 
-        sentNotifications.push({
-          purchaserEmail,
-
-          emailId:
-            emailResult?.emailId ||
-            emailResult?.id ||
-            null,
-
-          reservationIds:
-            purchaserReservations.map(
-              (reservation) =>
-                getField(
-                  reservation,
-                  ['id']
-                )
-            ),
-        });
-
         console.log(
-          'Event cancellation refund notification sent:',
+          'Event refund notification sent:',
           {
             refundId:
               refund.id,
-
-            eventId,
-
-            paymentIntentId,
-
             purchaserEmail,
-
             emailId:
-              emailResult?.emailId ||
+              emailResult
+                ?.emailId ||
               emailResult?.id ||
               null,
           }
@@ -1495,256 +1448,37 @@ const processSucceededEventRefund =
 
         failedNotifications.push({
           purchaserEmail,
-
-          reservationIds:
-            purchaserReservations.map(
-              (reservation) =>
-                getField(
-                  reservation,
-                  ['id']
-                )
-            ),
-
           message:
             error.message,
         });
-
-        console.error(
-          'Event refund succeeded, but the cancellation notification failed:',
-          {
-            refundId:
-              refund.id,
-
-            eventId,
-
-            paymentIntentId,
-
-            purchaserEmail,
-
-            message:
-              error.message,
-
-            stack:
-              error.stack,
-          }
-        );
       }
     }
 
-    /*
-     * Throw when any email failed so Stripe retries the
-     * webhook. Successfully sent recipients are protected
-     * by refundNotificationSentAt and will be skipped on
-     * the next delivery.
-     */
     if (
       failedNotifications.length >
       0
     ) {
-      const notificationError =
-        new Error(
-          `${failedNotifications.length} event refund notification email(s) failed.`
-        );
+      const error = new Error(
+        `${failedNotifications.length} event refund notification email(s) failed.`
+      );
 
-      notificationError
-        .failedNotifications =
+      error.failedNotifications =
         failedNotifications;
 
-      throw notificationError;
+      throw error;
     }
 
     return {
       handled: true,
-      eventId,
-      paymentIntentId,
-      sentNotifications,
-      skippedNotifications,
     };
   };
 
-/**
- * Handle pending, failed, canceled, or action-required
- * event refund states.
- *
- * No customer completion email is sent from this path.
- *
- * @param {object} refund
- * @returns {Promise<object>}
+/*
+ * =============================
+ * Main webhook controller
+ * =============================
  */
-const processNonSucceededEventRefund =
-  async (
-    refund
-  ) => {
-    if (
-      !isEventCancellationRefund(
-        refund
-      )
-    ) {
-      return {
-        handled: false,
-        reason:
-          'not_event_cancellation_refund',
-      };
-    }
 
-    const eventId =
-      getRefundEventId(
-        refund
-      );
-
-    const paymentIntentId =
-      getRefundPaymentIntentId(
-        refund
-      );
-
-    if (
-      !eventId ||
-      !paymentIntentId
-    ) {
-      console.warn(
-        'Event refund status could not be linked to reservations:',
-        {
-          refundId:
-            refund?.id ||
-            null,
-
-          status:
-            refund?.status ||
-            null,
-
-          eventId,
-
-          paymentIntentId,
-        }
-      );
-
-      return {
-        handled: false,
-        reason:
-          'missing_refund_identifiers',
-      };
-    }
-
-    const reservations =
-      await findRefundReservations(
-        eventId,
-        paymentIntentId
-      );
-
-    if (
-      reservations.length ===
-      0
-    ) {
-      console.warn(
-        'No EventReservation records were found for event refund status update:',
-        {
-          refundId:
-            refund.id,
-
-          status:
-            refund.status,
-
-          eventId,
-
-          paymentIntentId,
-        }
-      );
-
-      return {
-        handled: false,
-        reason:
-          'reservations_not_found',
-      };
-    }
-
-    await updateReservationsForRefundStatus(
-      reservations,
-      refund
-    );
-
-    console.log(
-      'Event refund status recorded without sending a customer email:',
-      {
-        refundId:
-          refund.id,
-
-        eventId,
-
-        paymentIntentId,
-
-        status:
-          refund.status,
-
-        reservationCount:
-          reservations.length,
-      }
-    );
-
-    return {
-      handled: true,
-      reason:
-        `refund_${refund.status || 'unknown'}`,
-    };
-  };
-
-/**
- * Route a Stripe Refund event to the appropriate event
- * cancellation handler.
- *
- * @param {object} refund
- * @returns {Promise<object>}
- */
-const processEventRefund =
-  async (
-    refund
-  ) => {
-    if (
-      !isEventCancellationRefund(
-        refund
-      )
-    ) {
-      console.log(
-        'Event webhook ignored unrelated Stripe refund:',
-        {
-          refundId:
-            refund?.id ||
-            null,
-
-          source:
-            refund?.metadata
-              ?.source ||
-            null,
-
-          status:
-            refund?.status ||
-            null,
-        }
-      );
-
-      return {
-        handled: false,
-        reason:
-          'not_event_cancellation_refund',
-      };
-    }
-
-    if (
-      refund.status ===
-      'succeeded'
-    ) {
-      return processSucceededEventRefund(
-        refund
-      );
-    }
-
-    return processNonSucceededEventRefund(
-      refund
-    );
-  };
-
-/**
- * Verify and process the event Stripe webhook.
- */
 const handleEventWebhook =
   async (
     req,
@@ -1757,7 +1491,7 @@ const handleEventWebhook =
 
     if (!signature) {
       console.error(
-        'Event Stripe webhook request is missing the stripe-signature header.'
+        'Event Stripe webhook request is missing the Stripe signature.'
       );
 
       return res
@@ -1771,8 +1505,13 @@ const handleEventWebhook =
 
     try {
       /*
-       * req.body must be the unmodified raw body for
-       * Stripe signature verification.
+       * req.body must be the unmodified raw Buffer.
+       *
+       * The route must use:
+       *
+       * express.raw({
+       *   type: 'application/json'
+       * })
        */
       stripeEvent =
         stripe.webhooks
@@ -1781,17 +1520,29 @@ const handleEventWebhook =
             signature,
             stripeWebhookSecret
           );
+
+      validateWebhookAccount(
+        stripeEvent
+      );
     } catch (error) {
       console.error(
-        'Event Stripe webhook signature verification failed:',
+        'Event Stripe webhook verification failed:',
         {
+          stripeMode,
+
+          expectedConnectedAccount:
+            stripeConnectedAccountId,
+
           message:
             error.message,
         }
       );
 
       return res
-        .status(400)
+        .status(
+          error.status ||
+          400
+        )
         .send(
           `Webhook Error: ${error.message}`
         );
@@ -1818,122 +1569,70 @@ const handleEventWebhook =
           stripeEvent.account ||
           null,
 
+        expectedConnectedAccount:
+          stripeConnectedAccountId,
+
         livemode:
           stripeEvent.livemode,
       }
     );
 
     try {
+      let result;
+
       if (
-        COMPLETED_EVENT_TYPES.has(
-          stripeEvent.type
-        )
+        COMPLETED_EVENT_TYPES
+          .has(
+            stripeEvent.type
+          )
       ) {
-        const result =
+        result =
           await processCompletedEventCheckout(
             stripeObject
           );
-
-        if (result.handled) {
-          console.log(
-            'Event checkout webhook completed successfully:',
-            {
-              stripeEventId:
-                stripeEvent.id,
-
-              stripeSessionId:
-                stripeObject.id,
-
-              holdToken:
-                stripeObject
-                  .metadata
-                  ?.holdToken,
-
-              emailDeliverySucceeded:
-                !result.emailError,
-            }
-          );
-        } else {
-          console.log(
-            'Event checkout completion was not processed:',
-            {
-              stripeEventId:
-                stripeEvent.id,
-
-              stripeSessionId:
-                stripeObject?.id ||
-                null,
-
-              reason:
-                result.reason,
-            }
-          );
-        }
-
-        return res
-          .status(200)
-          .json({
-            received: true,
-            handled:
-              result.handled,
-            reason:
-              result.reason ||
-              null,
-          });
-      }
-
-      if (
-        RELEASE_EVENT_TYPES.has(
-          stripeEvent.type
-        )
+      } else if (
+        RELEASE_EVENT_TYPES
+          .has(
+            stripeEvent.type
+          )
       ) {
-        const result =
+        result =
           await processReleasedEventCheckout(
             stripeObject
           );
-
-        return res
-          .status(200)
-          .json({
-            received: true,
-            handled:
-              result.handled,
-            reason:
-              result.reason ||
-              null,
-          });
-      }
-
-      if (
-        REFUND_EVENT_TYPES.has(
-          stripeEvent.type
-        )
+      } else if (
+        REFUND_EVENT_TYPES
+          .has(
+            stripeEvent.type
+          )
       ) {
-        const result =
+        result =
           await processEventRefund(
             stripeObject
           );
-
-        return res
-          .status(200)
-          .json({
-            received: true,
-            handled:
-              result.handled,
-            reason:
-              result.reason ||
-              null,
-          });
+      } else {
+        result = {
+          handled: false,
+          reason:
+            'unhandled_event_type',
+        };
       }
 
       console.log(
-        'Unhandled event Stripe webhook type:',
+        'Event Stripe webhook processed:',
         {
           stripeEventId:
             stripeEvent.id,
 
           type:
             stripeEvent.type,
+
+          handled:
+            result.handled,
+
+          reason:
+            result.reason ||
+            null,
         }
       );
 
@@ -1941,9 +1640,13 @@ const handleEventWebhook =
         .status(200)
         .json({
           received: true,
-          handled: false,
+
+          handled:
+            result.handled,
+
           reason:
-            'unhandled_event_type',
+            result.reason ||
+            null,
         });
     } catch (error) {
       console.error(
@@ -1957,6 +1660,10 @@ const handleEventWebhook =
 
           stripeObjectId:
             stripeObject?.id ||
+            null,
+
+          connectedAccount:
+            stripeEvent.account ||
             null,
 
           message:
@@ -1973,11 +1680,7 @@ const handleEventWebhook =
       );
 
       /*
-       * Returning 500 tells Stripe to retry.
-       *
-       * Refund notification sends are idempotent because
-       * successfully notified reservations are marked and
-       * skipped during later deliveries.
+       * Returning 500 tells Stripe to retry this delivery.
        */
       return res
         .status(500)
@@ -1991,4 +1694,3 @@ const handleEventWebhook =
 module.exports = {
   handleEventWebhook,
 };
-
