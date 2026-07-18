@@ -35,10 +35,10 @@ const EventRefundRequest = sequelize.define(
                 set(value) {
                     this.setDataValue(
                         'purchaserEmail',
-                        String(value|| ''
+                        String(value|| '')
                             .trim()
                             .toLowerCase()
-                        )
+                        
                     )
                 }
             },
