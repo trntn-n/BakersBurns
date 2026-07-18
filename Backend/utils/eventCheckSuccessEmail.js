@@ -1879,65 +1879,66 @@ const sendEventCheckoutEmails =
     }
 
     /*
- * Always load the finalized checkout details directly from
- * the database.
- *
- * The inventory service returns the newly created reservation
- * records, but those records do not contain the associated
- * EventOccurrence fields required by the email templates,
- * including occurrenceDate and availability information.
- */
-console.log(
-    'Loading finalized event checkout details for email:',
-    {
-      stripeSessionId: session.id,
-  
-      completionResultHasEvent: Boolean(
-        completionResult?.event
-      ),
-  
-      completionResultReservationCount:
-        Array.isArray(
-          completionResult?.reservations
-        )
-          ? completionResult.reservations.length
-          : 0,
-    }
-  );
-  
-  const databaseResult =
-    await loadCompletedEventCheckout({
-      stripeSessionId: session.id,
-    });
-  
-  const event = databaseResult.event;
-  
-  const rawReservations =
-  databaseResult.reservations;
+     * Always load the finalized checkout details directly from
+     * the database.
+     *
+     * The inventory service returns the newly created reservation
+     * records, but those records do not contain the associated
+     * EventOccurrence fields required by the email templates,
+     * including occurrenceDate and availability information.
+     */
+    console.log(
+      'Loading finalized event checkout details for email:',
+      {
+        stripeSessionId: session.id,
 
-console.log(
-  'Raw reservations before normalize:',
-  JSON.stringify(rawReservations, null, 2)
-);
+        completionResultHasEvent: Boolean(
+          completionResult?.event
+        ),
 
-const reservations =
-  rawReservations
-    .map((reservation) =>
-      normalizeReservation(
-        reservation,
-        event
-      )
-    )
-    .filter(
-      (reservation) =>
-        reservation.occurrenceDate &&
-        reservation.quantity > 0
-    );
-    if (reservations.length === 0) {
-        throw new Error(
-          `No usable completed event reservations were found for Checkout Session ${session.id}.`
-        );
+        completionResultReservationCount:
+          Array.isArray(
+            completionResult?.reservations
+          )
+            ? completionResult.reservations.length
+            : 0,
       }
+    );
+
+    const databaseResult =
+      await loadCompletedEventCheckout({
+        stripeSessionId: session.id,
+      });
+
+    const event = databaseResult.event;
+
+    const rawReservations =
+      databaseResult.reservations;
+
+    console.log(
+      'Raw reservations before normalize:',
+      JSON.stringify(rawReservations, null, 2)
+    );
+
+    const reservations =
+      rawReservations
+        .map((reservation) =>
+          normalizeReservation(
+            reservation,
+            event
+          )
+        )
+        .filter(
+          (reservation) =>
+            reservation.occurrenceDate &&
+            reservation.quantity > 0
+        );
+
+    if (reservations.length === 0) {
+      throw new Error(
+        `No usable completed event reservations were found for Checkout Session ${session.id}.`
+      );
+    }
 
     const purchaserEmail =
       getSessionCustomerEmail(
@@ -2013,6 +2014,14 @@ const reservations =
       );
     }
 
+    /*
+     * Send the admin notification to each recipient
+     * independently. sendResendEmail sends one Resend
+     * request per recipient here, so a single invalid or
+     * rejected admin address cannot fail delivery to the
+     * other admins, and cannot fail the Stripe webhook
+     * just because one admin address is bad.
+     */
     const adminRecipients =
       await getAdminRecipients();
 
@@ -2027,52 +2036,121 @@ const reservations =
           reservations,
         });
 
-      try {
-        emailResults.admins =
-          await sendResendEmail({
-            to: adminRecipients,
+      const adminDeliveryResults =
+        await Promise.allSettled(
+          adminRecipients.map(
+            async (adminRecipient) => {
+              try {
+                const result =
+                  await sendResendEmail({
+                    to: adminRecipient,
+                    subject:
+                      adminEmail.subject,
+                    html:
+                      adminEmail.html,
+                  });
 
-            subject:
-              adminEmail.subject,
+                console.log(
+                  'Event admin notification email sent:',
+                  {
+                    stripeSessionId:
+                      session.id,
+                    adminRecipient,
+                    resendEmailId:
+                      result?.id || null,
+                  }
+                );
 
-            html:
-              adminEmail.html,
-          });
+                return {
+                  recipient:
+                    adminRecipient,
+                  success: true,
+                  resendEmailId:
+                    result?.id || null,
+                };
+              } catch (error) {
+                console.error(
+                  'Event admin notification email failed for recipient:',
+                  {
+                    stripeSessionId:
+                      session.id,
+                    adminRecipient,
+                    message:
+                      error.message,
+                    stack:
+                      error.stack,
+                  }
+                );
 
-        console.log(
-          'Event admin notification email sent:',
-          {
-            stripeSessionId:
-              session.id,
+                return {
+                  recipient:
+                    adminRecipient,
+                  success: false,
+                  error:
+                    error.message,
+                };
+              }
+            }
+          )
+        );
 
-            recipientCount:
-              adminRecipients.length,
+      const normalizedAdminResults =
+        adminDeliveryResults.map(
+          (result) => {
+            if (
+              result.status ===
+              'fulfilled'
+            ) {
+              return result.value;
+            }
 
-            resendEmailId:
-              emailResults
-                .admins?.id ||
-              null,
+            return {
+              recipient: null,
+              success: false,
+              error:
+                result.reason?.message ||
+                String(result.reason),
+            };
           }
         );
-      } catch (error) {
-        console.error(
-          'Event admin notification email failed:',
-          {
-            stripeSessionId:
-              session.id,
 
-            adminRecipients,
-
-            message:
-              error.message,
-
-            stack:
-              error.stack,
-          }
+      const successfulAdminEmails =
+        normalizedAdminResults.filter(
+          (result) =>
+            result.success
         );
 
-        throw error;
-      }
+      const failedAdminEmails =
+        normalizedAdminResults.filter(
+          (result) =>
+            !result.success
+        );
+
+      emailResults.admins = {
+        successful:
+          successfulAdminEmails,
+        failed:
+          failedAdminEmails,
+      };
+
+      console.log(
+        'Event admin notification delivery completed:',
+        {
+          stripeSessionId:
+            session.id,
+          attemptedCount:
+            adminRecipients.length,
+          successfulCount:
+            successfulAdminEmails.length,
+          failedCount:
+            failedAdminEmails.length,
+          failedRecipients:
+            failedAdminEmails.map(
+              (result) =>
+                result.recipient
+            ),
+        }
+      );
     } else {
       console.warn(
         'No event admin email recipients are configured.'
@@ -2104,10 +2182,13 @@ const reservations =
             .customer?.id ||
           null,
 
-        adminEmailId:
-          emailResults
-            .admins?.id ||
-          null,
+        adminEmailSuccessCount:
+          emailResults.admins
+            ?.successful?.length || 0,
+
+        adminEmailFailureCount:
+          emailResults.admins
+            ?.failed?.length || 0,
       }
     );
 
