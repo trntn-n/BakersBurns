@@ -30,7 +30,7 @@ const stripeSecretKey =
 
 const stripeConnectedAccountId =
   stripeModeIsTest
-    ? process.env.BAKERS_BURNS_ACCOUNT_ID
+    ? process.env.BAKERS_BURNS_TEST_ACCOUNT_ID
     : process.env.BAKERS_BURNS_LIVE_ACCOUNT_ID;
 
 if (!stripeSecretKey) {

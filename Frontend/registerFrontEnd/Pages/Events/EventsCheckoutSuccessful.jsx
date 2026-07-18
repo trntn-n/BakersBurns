@@ -37,7 +37,7 @@ import React, {
   
   const DEFAULT_EVENT_TIMEZONE =
     "America/Denver";
-  
+  const EVENT_REFUND_REQUEST_ENDPOINT = "/register-events/refund-request";
   const DETAILS_RETRY_ATTEMPTS = 5;
   const DETAILS_RETRY_DELAY_MS = 1200;
   
@@ -704,6 +704,13 @@ import React, {
       reminderConfirmation,
       setReminderConfirmation,
     ] = useState(null);
+
+    const [refundModalOpen, setRefundModalOpen] = useState(false);
+    const [refundReason, setRefundReason,] = useState("I can no longer attend");
+    const [refundDetails, setRefundDetails] = useState("");
+    const [refundLoading, setRefundLoading] = useState(false);
+    const [refundError, setRefundError] = useState("");
+    const [refundConfirmation, setRefundConfirmation] = useState(null);
   
     useEffect(() => {
       let isMounted = true;
@@ -813,35 +820,31 @@ import React, {
      * Closes the confirmation modal on Escape.
      */
     useEffect(() => {
-      if (!reminderConfirmation) {
-        return undefined;
-      }
-  
-      const handleKeyDown = (
-        keyboardEvent
-      ) => {
-        if (
-          keyboardEvent.key ===
-          "Escape"
-        ) {
-          setReminderConfirmation(
-            null
-          );
+        const modalIsOpen = Boolean(reminderConfirmation || refundModalOpen || refundConfirmation);
+        if (!modalIsOpen) {
+            return undefined;
         }
-      };
-  
-      document.addEventListener(
-        "keydown",
-        handleKeyDown
-      );
-  
-      return () => {
-        document.removeEventListener(
-          "keydown",
-          handleKeyDown
-        );
-      };
-    }, [reminderConfirmation]);
+        const previousOverflow = document.body.style.overflow;
+        const handleKeyDown = ( keyboardEvent ) => {
+            if(keyboardEvent.key === "Escape") {
+                setReminderConfirmation(null);
+                setRefundModalOpen(false);
+                setRefundConfirmation(null);
+                setRefundError("");
+            }
+        };
+        document.body.style.overflow = "hidden";
+        document.addEventListener("keydown", handleKeyDown);
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            document.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [
+        reminderConfirmation, 
+        refundModalOpen, 
+        refundConfirmation,
+    ]);
+    
   
     const event =
       checkoutDetails?.event || {};
@@ -928,7 +931,40 @@ import React, {
     const currency =
       checkoutDetails
         ?.currency || "usd";
-  
+
+    const customerEmail =
+      checkoutDetails   
+        ?.customerEmail ||
+      checkoutDetails
+        ?.purchaserEmail ||
+    "";
+    const normalizedPurchaseStatus =
+        String(
+            checkoutDetails?.status ||
+            checkoutDetails
+                ?.paymentStatus ||
+            "paid"
+        )
+            .trim()
+            .toLowerCase()
+            .replaceAll("-", "_");
+
+        const refundAlreadyRequested =
+        Boolean(
+            checkoutDetails
+            ?.refundRequested ||
+            checkoutDetails
+                ?.refundRequest
+        );
+
+        const refundUnavailable = [
+        "refunded",
+        "partially_refunded",
+        "canceled",
+        "cancelled",
+        ].includes(
+        normalizedPurchaseStatus
+    );
     const toggleReminderFrequency = (
       frequencyKey
     ) => {
@@ -1048,7 +1084,78 @@ import React, {
           );
         }
       };
-  
+    const openRefundModal = () => {
+        setRefundError("");
+        setRefundModalOpen(true);
+    };
+    const closeRefundModal = () => {
+        if(refundLoading) {
+            return;
+        }
+        setRefundModalOpen(false);
+        setRefundError("");
+    };
+    const submitRefundRequest = 
+        async (submitEvent) => {
+            submitEvent.preventDefault();
+            const normalizedEmail = customerEmail .trim() .toLowerCase();
+            const normalizedReason = refundReason .trim();
+            const normalizedDetails = refundDetails .trim();
+            setRefundError("");
+            if(!sessionId) {
+                setRefundError("The checkout session ID is missing.");
+                return;
+            }
+            if(!EMAIL_PATTERN.test(normalizedEmail)) {
+                setRefundError("We could not verify the email address for this purchase.");
+                return;
+            }
+            if(!normalizedReason) {
+                setRefundError("Select a reason for the refund request.");
+                return;
+            }
+            try {
+                setRefundLoading(true);
+                const response = await registerApi.post(
+                    EVENT_REFUND_REQUEST_ENDPOINT,{
+                        sessionId,
+                        email: normalizedEmail,
+                        reason: normalizedReason,
+                        details: normalizedDetails,
+                    }
+                );
+            setRefundModalOpen(false);
+            setRefundConfirmation({
+                message: response.data?.message || "Your refund request has been received. We will email you after it has been reviewed."
+            });
+            setCheckoutDetails(
+                (previousDetails) => ({
+                    ...previousDetails,
+                    refundRequested: true,
+                    refundRequest:
+                        response.data   
+                            ?.refundRequest ||
+                        previousDetails 
+                            ?.refundRequest ||
+                        {
+                            status: "requested",
+                        },
+
+                })
+            );
+            setRefundDetails("");
+            } catch (error) {
+                console.error("Failed to submit event refund request:", error);
+                setRefundError(
+                    error.response?.data
+                        ?.message ||
+                        "We could not submit your refund request. Please reach out to bakersburns@gmail.com to request a refund. Or try again later. Sorry for any inconvenience."
+                );
+            } finally {
+                setRefundLoading(false);
+            }
+        };
+
     if (loading) {
       return (
         <main className="event-success-page">
@@ -1437,7 +1544,56 @@ import React, {
               </form>
             )}
           </section>
-  
+          <section className="event-success-updates">
+            <div>
+                <span className="event-success-eyebrow">
+                    Ticket management
+                </span>
+                <h2>
+                    Manage this purchase
+                </h2>
+                <p> 
+                    This page is your private 
+                    ticket-management portal. 
+                    Keep the link from your confirmation email
+                    so you can return without creating an account
+                </p>
+            </div>
+
+            <div className="event-success-updates__form">
+                <div className="event-success-location">
+                    <span>
+                        Purchase email
+                    </span>
+                    <strong>
+                        {customerEmail || "Unavailable" }
+                    </strong>
+                </div>
+
+                {refundAlreadyRequested ? (
+                    <p className="event-success-form-message">
+                        A refund request has already been submitted for this purchase. Watch your email for updates.
+                    </p>
+                ): refundUnavailable ? (
+                    <p className="event-success-form-message">
+                        This purchase is already{" "}
+                        {normalizedPurchaseStatus.replaceAll(
+                            "_",
+                            " "
+                        )}
+                        .
+                    </p>
+                ) : (
+                    <button 
+                    type="button"
+                    className="event-success-button event-success-button--secondary"
+                    onClick={openRefundModal}
+                    >
+                        Request a refund
+                    </button>
+                )}
+            </div>
+          </section >
           <footer className="event-success-footer">
             <Link
               className="event-success-button event-success-button--secondary"
@@ -1455,6 +1611,205 @@ import React, {
           </footer>
         </section>
   
+        {refundModalOpen && (
+            <div
+            className="event-reminder-confirm-backdrop"
+            role="presentation"
+            onMouseDown={(mouseEvent) => {
+                if(mouseEvent.target === mouseEvent.currentTarget) {
+                    closeRefundModal();
+                }
+            }}
+            >
+                <section
+                className="event-reminder-confirm-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="event-refund-request-title"
+                >
+                    <header className="event-reminder-confirm-modal__header">
+                        <h2 id="event-refund-request-title">
+                            Request a refund
+                        </h2>
+                        <button
+                        type="button"
+                        className="event-reminder-confirm-modal__close"
+                        aria-label="Close refund request"
+                        onClick={closeRefundModal}
+                        disabled={refundLoading}>
+                            x
+                        </button>
+                    </header>
+                    <form
+                    className="event-reminder-confirm-modal__body"
+                    onSubmit={submitRefundRequest}
+                >
+                    <p>
+                    Submit this request for{" "}
+                    <strong>
+                        {event.name ||
+                        "this event"}
+                    </strong>
+                    . A request does not guarantee
+                    approval. No refund is issued
+                    until it has been reviewed and
+                    processed.
+                    </p>
+
+                    <label htmlFor="eventRefundReason">
+                    Reason
+                    </label>
+
+                    <select
+                    id="eventRefundReason"
+                    value={refundReason}
+                    onChange={(changeEvent) => {
+                        setRefundReason(
+                        changeEvent.target.value
+                        );
+
+                        setRefundError("");
+                    }}
+                    disabled={refundLoading}
+                    >
+                    <option value="I can no longer attend">
+                        I can no longer attend
+                    </option>
+
+                    <option value="I purchased the wrong date or quantity">
+                        I purchased the wrong date
+                        or quantity
+                    </option>
+
+                    <option value="The event details changed">
+                        The event details changed
+                    </option>
+
+                    <option value="Other">
+                        Other
+                    </option>
+                    </select>
+
+                    <label htmlFor="eventRefundDetails">
+                    Additional details
+                    (optional)
+                    </label>
+
+                    <textarea
+                    id="eventRefundDetails"
+                    value={refundDetails}
+                    onChange={(changeEvent) => {
+                        setRefundDetails(
+                        changeEvent.target.value
+                        );
+
+                        setRefundError("");
+                    }}
+                    rows="5"
+                    maxLength="1000"
+                    placeholder="Tell us anything that may help us review the request."
+                    disabled={refundLoading}
+                    />
+
+                    <p>
+                    Refund updates will be sent
+                    to{" "}
+                    <strong>
+                        {customerEmail}
+                    </strong>
+                    .
+                    </p>
+
+                    {refundError && (
+                    <p
+                        className="event-success-form-message event-success-form-message--error"
+                        role="alert"
+                    >
+                        {refundError}
+                    </p>
+                    )}
+
+                    <div className="event-reminder-confirm-modal__footer">
+                    <button
+                        type="button"
+                        className="event-success-button event-success-button--secondary"
+                        onClick={closeRefundModal}
+                        disabled={refundLoading}
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        className="event-reminder-confirm-modal__done"
+                        disabled={refundLoading}
+                    >
+                        {refundLoading
+                        ? "Submitting..."
+                        : "Submit request"}
+                    </button>
+                    </div>
+                </form>
+
+                </section>
+            </div>
+        )}
+        {refundConfirmation && (
+            <div
+                className="event-reminder-confirm-backdrop"
+                role="presentation"
+                onMouseDown={(mouseEvent) => {
+                if (
+                    mouseEvent.target ===
+                    mouseEvent.currentTarget
+                ) {
+                    setRefundConfirmation(null);
+                }
+                }}
+            >
+                <section
+                className="event-reminder-confirm-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="event-refund-confirmation-title"
+                >
+                <header className="event-reminder-confirm-modal__header">
+                    <h2 id="event-refund-confirmation-title">
+                    Request received
+                    </h2>
+
+                    <button
+                    type="button"
+                    className="event-reminder-confirm-modal__close"
+                    aria-label="Close refund confirmation"
+                    onClick={() =>
+                        setRefundConfirmation(null)
+                    }
+                    >
+                    ×
+                    </button>
+                </header>
+
+                <div className="event-reminder-confirm-modal__body">
+                    <p>
+                    {refundConfirmation.message}
+                    </p>
+                </div>
+
+                <div className="event-reminder-confirm-modal__footer">
+                    <button
+                    type="button"
+                    className="event-reminder-confirm-modal__done"
+                    onClick={() =>
+                        setRefundConfirmation(null)
+                    }
+                    >
+                    Done
+                    </button>
+                </div>
+                </section>
+            </div>
+        )}
         {reminderConfirmation && (
           <div
             className="event-reminder-confirm-backdrop"

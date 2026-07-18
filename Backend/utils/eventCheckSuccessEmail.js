@@ -31,6 +31,7 @@ const escapeHtml = (value) => {
     .replaceAll("'", '&#039;');
 };
 
+
 const normalizeDateOnly = (value) => {
   if (!value) {
     return '';
@@ -329,6 +330,8 @@ const getPaymentIntentId = (
   );
 };
 
+
+
 const getEventName = (event) => {
   return (
     event?.name ||
@@ -337,6 +340,15 @@ const getEventName = (event) => {
     event?.event_name ||
     'BakersBurns Event'
   );
+};
+const getTicketManagementUrl = (session) => {
+    const frontendBaseUrl = process.env.REGISTER_FRONTEND_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://bakersburns.com';
+    if(!frontendBaseUrl || !session?.id) {return'';}
+    const normalizedBaseUrl = String(frontendBaseUrl) .trim() .replace(/\/+$/, '');
+
+    return (
+        `${normalizedBaseUrl}` + `/event-checkout-success` + `?session_id=${encodeURIComponent(session.id)}` + `manage=1`
+     );
 };
 
 const getEventDescription = (
@@ -1311,259 +1323,342 @@ const createReservationCard = ({
   `;
 };
 
-const createSummaryRow = (
-  label,
-  value
-) => {
-  if (
-    value === undefined ||
-    value === null ||
-    value === ''
-  ) {
-    return '';
-  }
-
-  return `
+const  createSummaryRow = (label, value, {nowrap = false,} = {}) => {
+    if(value === undefined || value === null || value === '') {
+        return '';
+    }
+    return `
     <tr>
       <td
         class="event-email-summary-label"
+        width="48%"
+        valign="top"
         style="
           width: 48%;
-          padding: 8px 0;
+          max-width: 48%;
+          padding: 8px 10px 8px 0;
           color: #6c695c;
           font-size: 14px;
+          line-height: 1.45;
           vertical-align: top;
+          box-sizing: border-box;
         "
       >
         ${escapeHtml(label)}
       </td>
 
       <td
-        class="event-email-summary-value"
+        class="
+          event-email-summary-value
+          ${
+            nowrap
+              ? 'event-email-price-cell'
+              : ''
+          }
+        "
+        width="52%"
+        valign="top"
         align="right"
         style="
           width: 52%;
-          padding: 8px 0;
+          max-width: 52%;
+          padding: 8px 0 8px 10px;
           color: #27271f;
           font-size: 14px;
           font-weight: 800;
+          line-height: 1.45;
           overflow-wrap: anywhere;
+          word-break: break-word;
           vertical-align: top;
+          box-sizing: border-box;
+          ${
+            nowrap
+              ? 'white-space: nowrap;'
+              : ''
+          }
         "
       >
         ${escapeHtml(value)}
       </td>
     </tr>
   `;
-};
+} 
 
 const createCustomerEmail = ({
-  session,
-  event,
-  reservations,
-}) => {
-  const eventName =
-    getEventName(event);
-
-  const customerName =
-    getSessionCustomerName(
-      session
-    );
-
-  const totalTickets =
-    reservations.reduce(
-      (
-        total,
-        reservation
-      ) => {
-        return (
-          total +
-          reservation.quantity
-        );
-      },
-      0
-    );
-
-  const totalPaid =
-    formatMoney(
-      session.amount_total,
-      session.currency
-    );
-
-  const reservationCards =
-    reservations
-      .map((reservation) =>
-        createReservationCard({
-          reservation,
-          event,
-        })
-      )
-      .join('');
-
-  const content = `
-    <div
-      style="
-        color: #7c4734;
-        font-size: 12px;
-        font-weight: 800;
-        letter-spacing: 1.4px;
-        text-transform: uppercase;
-      "
-    >
-      Payment successful
-    </div>
-
-    <h1
-      class="event-email-heading"
-      style="
-        margin: 8px 0 12px;
-        color: #27271f;
-        font-family:
-          'Carnivalee Freakshow',
-          Georgia,
-          serif;
-        font-size: 48px;
-        font-weight: normal;
-        line-height: 1;
-      "
-    >
-      Your tickets are confirmed
-    </h1>
-
-    <p
-      style="
-        margin: 0;
-        color: #5d5a4e;
-        font-size: 15px;
-        line-height: 1.7;
-      "
-    >
-      ${
-        customerName
-          ? `Thank you, ${escapeHtml(
-              customerName
-            )}.`
-          : 'Thank you for your purchase.'
-      }
-
-      Your tickets for
-
-      <strong
+    session,
+    event,
+    reservations,
+  }) => {
+    const eventName =
+      getEventName(event);
+  
+    const customerName =
+      getSessionCustomerName(
+        session
+      );
+  
+    const totalTickets =
+      reservations.reduce(
+        (
+          total,
+          reservation
+        ) => {
+          return (
+            total +
+            Number(
+              reservation.quantity ||
+                0
+            )
+          );
+        },
+        0
+      );
+  
+    const totalPaid =
+      formatMoney(
+        session.amount_total,
+        session.currency
+      );
+  
+    const ticketManagementUrl =
+      getTicketManagementUrl(
+        session
+      );
+  
+    const reservationCards =
+      reservations
+        .map((reservation) =>
+          createReservationCard({
+            reservation,
+            event,
+          })
+        )
+        .join('');
+  
+    const content = `
+      <div
         style="
-          color: #27271f;
+          color: #7c4734;
+          font-size: 12px;
+          font-weight: 800;
+          letter-spacing: 1.4px;
+          text-transform: uppercase;
         "
       >
-        ${escapeHtml(
-          eventName
+        Payment successful
+      </div>
+  
+      <h1
+        class="event-email-heading"
+        style="
+          margin: 8px 0 12px;
+          color: #27271f;
+          font-family:
+            'Carnivalee Freakshow',
+            Georgia,
+            serif;
+          font-size: 48px;
+          font-weight: normal;
+          line-height: 1;
+        "
+      >
+        Your tickets are confirmed
+      </h1>
+  
+      <p
+        style="
+          margin: 0;
+          color: #5d5a4e;
+          font-size: 15px;
+          line-height: 1.7;
+        "
+      >
+        ${
+          customerName
+            ? `Thank you, ${escapeHtml(
+                customerName
+              )}.`
+            : 'Thank you for your purchase.'
+        }
+  
+        Your tickets for
+  
+        <strong
+          style="
+            color: #27271f;
+          "
+        >
+          ${escapeHtml(eventName)}
+        </strong>
+  
+        have been reserved successfully.
+      </p>
+  
+      ${
+        getEventDescription(event)
+          ? `
+            <p
+              style="
+                margin: 16px 0 0;
+                color: #5d5a4e;
+                font-size: 14px;
+                line-height: 1.7;
+              "
+            >
+              ${escapeHtml(
+                getEventDescription(
+                  event
+                )
+              )}
+            </p>
+          `
+          : ''
+      }
+  
+      <div
+        style="
+          margin-top: 26px;
+          color: #7c4734;
+          font-size: 12px;
+          font-weight: 800;
+          letter-spacing: 1.2px;
+          text-transform: uppercase;
+        "
+      >
+        Your scheduled dates
+      </div>
+  
+      ${reservationCards}
+  
+      <table
+        role="presentation"
+        width="100%"
+        cellpadding="0"
+        cellspacing="0"
+        border="0"
+        style="
+          width: 100%;
+          table-layout: fixed;
+          margin-top: 24px;
+          border-top:
+            1px solid
+            #aaa38d;
+        "
+      >
+        ${createSummaryRow(
+          'Total tickets',
+          totalTickets
         )}
-      </strong>
-
-      have been reserved successfully.
-    </p>
-
-    ${
-      getEventDescription(event)
-        ? `
-          <p
-            style="
-              margin: 16px 0 0;
-              color: #5d5a4e;
-              font-size: 14px;
-              line-height: 1.7;
-            "
-          >
-            ${escapeHtml(
-              getEventDescription(
-                event
-              )
-            )}
-          </p>
-        `
-        : ''
-    }
-
-    <div
-      style="
-        margin-top: 26px;
-        color: #7c4734;
-        font-size: 12px;
-        font-weight: 800;
-        letter-spacing: 1.2px;
-        text-transform: uppercase;
-      "
-    >
-      Your scheduled dates
-    </div>
-
-    ${reservationCards}
-
-    <table
-      role="presentation"
-      width="100%"
-      cellpadding="0"
-      cellspacing="0"
-      border="0"
-      style="
-        width: 100%;
-        margin-top: 24px;
-        border-top:
-          1px solid
-          #aaa38d;
-      "
-    >
-      ${createSummaryRow(
-        'Total tickets',
-        totalTickets
-      )}
-
-      ${createSummaryRow(
-        'Total paid',
-        totalPaid
-      )}
-
-      ${createSummaryRow(
-        'Confirmation email',
-        getSessionCustomerEmail(
-          session
-        )
-      )}
-
-      ${createSummaryRow(
-        'Checkout reference',
-        session.id
-      )}
-    </table>
-
-    <p
-      style="
-        margin: 24px 0 0;
-        color: #5d5a4e;
-        font-size: 13px;
-        line-height: 1.7;
-      "
-    >
-      Keep this email for your records.
-      Your event purchase is recorded
-      under the email address used at
-      checkout.
-    </p>
-  `;
-
-  return {
-    subject:
-      `Ticket confirmation — ${eventName}`,
-
-    html: createEmailLayout({
-      previewText:
-        `Your tickets for ${eventName} are confirmed.`,
-
-      title:
+  
+        ${createSummaryRow(
+          'Total paid',
+          totalPaid,
+          {
+            nowrap: true,
+          }
+        )}
+  
+        ${createSummaryRow(
+          'Confirmation email',
+          getSessionCustomerEmail(
+            session
+          )
+        )}
+  
+        ${createSummaryRow(
+          'Checkout reference',
+          session.id
+        )}
+      </table>
+  
+      ${
+        ticketManagementUrl
+          ? `
+            <table
+              role="presentation"
+              width="100%"
+              cellpadding="0"
+              cellspacing="0"
+              border="0"
+              style="
+                width: 100%;
+                margin-top: 26px;
+              "
+            >
+              <tr>
+                <td align="center">
+                  <a
+                    href="${escapeHtml(
+                      ticketManagementUrl
+                    )}"
+                    style="
+                      display: inline-block;
+                      max-width: 100%;
+                      padding: 14px 22px;
+                      border-radius: 999px;
+                      background-color: #7c4734;
+                      color: #ffffff;
+                      font-size: 14px;
+                      font-weight: 800;
+                      line-height: 1.2;
+                      text-align: center;
+                      text-decoration: none;
+                      box-sizing: border-box;
+                    "
+                  >
+                    Manage tickets or request a refund
+                  </a>
+                </td>
+              </tr>
+            </table>
+  
+            <p
+              style="
+                margin: 14px 0 0;
+                color: #6c695c;
+                font-size: 12px;
+                line-height: 1.6;
+                text-align: center;
+              "
+            >
+              This private link opens your
+              purchase details. Please do
+              not forward it.
+            </p>
+          `
+          : ''
+      }
+  
+      <p
+        style="
+          margin: 24px 0 0;
+          color: #5d5a4e;
+          font-size: 13px;
+          line-height: 1.7;
+        "
+      >
+        Keep this email for your records.
+        Your event purchase is recorded
+        under the email address used at
+        checkout.
+      </p>
+    `;
+  
+    return {
+      subject:
         `Ticket confirmation — ${eventName}`,
-
-      content,
-    }),
+  
+      html: createEmailLayout({
+        previewText:
+          `Your tickets for ${eventName} are confirmed.`,
+  
+        title:
+          `Ticket confirmation — ${eventName}`,
+  
+        content,
+      }),
+    };
   };
-};
 
 const createAdminEmail = ({
   session,

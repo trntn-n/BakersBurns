@@ -1596,7 +1596,7 @@ const Events = () => {
             uniquePaymentsToRefund,
             totalTickets,
           },
-      })
+      });
     } catch (previewError) {
       console.error('Error checking event refunds:', previewError);
       setValidationError(previewError.response?.data?.message || 'Unable to check if this event has tickets that must be refunded'); 

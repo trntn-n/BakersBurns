@@ -17,6 +17,7 @@ const EventReservation = require('./eventReservation');
 const EventRegistration = require('./eventsRegistration');
 const EventCheckoutHold = require('./eventCheckoutHold');
 const Event = require('./events');
+const EventRefundRequest = require('./eventRefundRequest');
 
 
 
@@ -37,7 +38,8 @@ const db = {
   EventOccurrence,
   EventReservation,
   EventRegistration,
-  EventCheckoutHold
+  EventCheckoutHold,
+  EventRefundRequest
 };
 
 // Manually define associations within each model

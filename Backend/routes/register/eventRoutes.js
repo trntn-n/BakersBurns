@@ -5,89 +5,40 @@ const express = require('express');
 
 const router = express.Router();
 
-/*
- * Event controllers
- */
-const {
-  getAllUserEvents,
-  getUpcomingEvent,
-  getAllEvents,
-} = require(
-  '../../controllers/register/eventController'
-);
 
-/*
- * Event checkout controllers
- */
-const {
-  createEventCheckoutSession,
-  getEventCheckoutSuccess,
-} = require(
-  '../../controllers/register/eventCheckout'
-);
-
-/*
- * Event notification controllers
- */
-const {
-  createEventNotificationSubscriptions,
-  getAllEventNotificationSubscriptions,
-  getEventNotificationSubscriptionById,
-  updateEventNotificationSubscription,
-  markEventNotificationSent,
-  deleteEventNotificationSubscription,
-} = require(
-  '../../controllers/register/eventNotificationController'
-);
-
-/*
- * =========================
- * Event routes
- * =========================
- */
-
-/*
- * Get the events available to users.
- */
+// Event controllers
+const { getAllUserEvents, getUpcomingEvent, getAllEvents } = require('../../controllers/register/eventController');
+//Event checkout controllers
+const {createEventCheckoutSession, getEventCheckoutSuccess} = require('../../controllers/register/eventCheckout');
+//Event notification controllers
+const {createEventNotificationSubscriptions, getAllEventNotificationSubscriptions, getEventNotificationSubscriptionById, updateEventNotificationSubscription, markEventNotificationSent, deleteEventNotificationSubscription,} = require('../../controllers/register/eventNotificationController');
+//Refund controller functions
+const {createEventRefundRequest} = require('../../controllers/register/eventRefundController')
+//Get the events available to users.
 router.get(
   '/get-events',
   getAllUserEvents
 );
 
-/*
- * Get the nearest upcoming event.
- */
+// Get the nearest upcoming event.
 router.get(
   '/upcoming',
   getUpcomingEvent
 );
 
-/*
- * Get all events.
- */
+// Get all events.
 router.get(
   '/all',
   getAllEvents
 );
 
-/*
- * =========================
- * Event checkout routes
- * =========================
- */
-
-/*
- * Create a Stripe Checkout Session for an event.
- */
+//Stripe checkout
 router.post(
   '/checkout-events',
   createEventCheckoutSession
 );
 
-/*
- * Return the completed checkout details used by the
- * EventCheckoutSuccess frontend page.
- */
+
 router.get(
   '/checkout-success',
   getEventCheckoutSuccess
@@ -165,6 +116,31 @@ router.delete(
   '/event-notification-subscriptions/:id',
   deleteEventNotificationSubscription
 );
+/*
+ * =========================
+ * Event refund routes
+ * =========================
+ */
+
+/*
+ * Submit a refund request for a completed
+ * event purchase.
+ *
+ * Expected body:
+ *
+ * {
+ *   sessionId: string,
+ *   email: string,
+ *   reason: string,
+ *   details?: string
+ * }
+ */
+router.post(
+    '/refund-request',
+    createEventRefundRequest
+  );
+
+
 
 module.exports = router;
 
