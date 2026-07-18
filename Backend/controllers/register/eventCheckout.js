@@ -18,7 +18,7 @@ const stripeSecretKey = stripeModeTest
         
 const stripeConnectedAccountId = stripeModeTest
                                 ? process.env.BAKERS_BURNS_TEST_ACCOUNT_ID
-                                : process.env.BAKERS_BURNS_ACCOUNT_ID;
+                                : process.env.BAKERS_BURNS_LIVE_ACCOUNT_ID;
 
 if (!stripeSecretKey) {
   throw new Error(
@@ -35,6 +35,7 @@ if (!stripeConnectedAccountId) {
         stripeConnectedAccountEnvCheck
     );
 }
+acct_1TlfWpQ5v79JAFh6
 
 const stripe = require('stripe')(stripeSecretKey);
 const MAX_TICKETS_PER_DAY = 20;
