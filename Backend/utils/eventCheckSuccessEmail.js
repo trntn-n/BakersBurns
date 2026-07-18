@@ -1879,45 +1879,50 @@ const sendEventCheckoutEmails =
     }
 
     /*
-     * Always load the finalized checkout details directly from
-     * the database.
-     *
-     * The inventory service returns the newly created reservation
-     * records, but those records do not contain the associated
-     * EventOccurrence fields required by the email templates,
-     * including occurrenceDate and availability information.
+     * Always load finalized checkout information directly
+     * from the database because the inventory service result
+     * may not contain EventOccurrence details.
      */
     console.log(
       'Loading finalized event checkout details for email:',
       {
-        stripeSessionId: session.id,
+        stripeSessionId:
+          session.id,
 
-        completionResultHasEvent: Boolean(
-          completionResult?.event
-        ),
+        completionResultHasEvent:
+          Boolean(
+            completionResult?.event
+          ),
 
         completionResultReservationCount:
           Array.isArray(
             completionResult?.reservations
           )
-            ? completionResult.reservations.length
+            ? completionResult
+                .reservations.length
             : 0,
       }
     );
 
     const databaseResult =
       await loadCompletedEventCheckout({
-        stripeSessionId: session.id,
+        stripeSessionId:
+          session.id,
       });
 
-    const event = databaseResult.event;
+    const event =
+      databaseResult.event;
 
     const rawReservations =
       databaseResult.reservations;
 
     console.log(
       'Raw reservations before normalize:',
-      JSON.stringify(rawReservations, null, 2)
+      JSON.stringify(
+        rawReservations,
+        null,
+        2
+      )
     );
 
     const reservations =
@@ -1947,13 +1952,18 @@ const sendEventCheckoutEmails =
 
     const emailResults = {
       customer: null,
-      admins: null,
+      admins: {
+        successful: [],
+        failed: [],
+      },
     };
 
     /*
-     * Send the purchaser email and admin email
-     * independently so an admin-email failure does not
-     * hide a successful purchaser delivery.
+     * Send the purchaser confirmation first.
+     *
+     * A purchaser-email failure still throws because the
+     * customer confirmation is an important part of the
+     * completed checkout process.
      */
     if (purchaserEmail) {
       const customerEmail =
@@ -2015,20 +2025,20 @@ const sendEventCheckoutEmails =
     }
 
     /*
-     * Send the admin notification to each recipient
-     * independently. sendResendEmail sends one Resend
-     * request per recipient here, so a single invalid or
-     * rejected admin address cannot fail delivery to the
-     * other admins, and cannot fail the Stripe webhook
-     * just because one admin address is bad.
+     * Load ADMIN_EMAIL plus every user from the Users table
+     * whose role is "admin". The returned list is normalized
+     * and deduplicated.
      */
     const adminRecipients =
       await getAdminRecipients();
 
-    if (
-      adminRecipients.length >
-      0
-    ) {
+    /*
+     * Send one Resend request per admin.
+     *
+     * This prevents one invalid admin address from blocking
+     * delivery to all valid admin addresses.
+     */
+    if (adminRecipients.length > 0) {
       const adminEmail =
         createAdminEmail({
           session,
@@ -2036,119 +2046,116 @@ const sendEventCheckoutEmails =
           reservations,
         });
 
-      const adminDeliveryResults =
-        await Promise.allSettled(
-          adminRecipients.map(
-            async (adminRecipient) => {
-              try {
-                const result =
-                  await sendResendEmail({
-                    to: adminRecipient,
-                    subject:
-                      adminEmail.subject,
-                    html:
-                      adminEmail.html,
-                  });
+      for (
+        const adminRecipient of
+        adminRecipients
+      ) {
+        try {
+          const result =
+            await sendResendEmail({
+              to: adminRecipient,
 
-                console.log(
-                  'Event admin notification email sent:',
-                  {
-                    stripeSessionId:
-                      session.id,
-                    adminRecipient,
-                    resendEmailId:
-                      result?.id || null,
-                  }
-                );
+              subject:
+                adminEmail.subject,
 
-                return {
-                  recipient:
-                    adminRecipient,
-                  success: true,
-                  resendEmailId:
-                    result?.id || null,
-                };
-              } catch (error) {
-                console.error(
-                  'Event admin notification email failed for recipient:',
-                  {
-                    stripeSessionId:
-                      session.id,
-                    adminRecipient,
-                    message:
-                      error.message,
-                    stack:
-                      error.stack,
-                  }
-                );
+              html:
+                adminEmail.html,
+            });
 
-                return {
-                  recipient:
-                    adminRecipient,
-                  success: false,
-                  error:
-                    error.message,
-                };
-              }
+          emailResults.admins
+            .successful
+            .push({
+              recipient:
+                adminRecipient,
+
+              success: true,
+
+              resendEmailId:
+                result?.id ||
+                null,
+            });
+
+          console.log(
+            'Event admin notification email sent:',
+            {
+              stripeSessionId:
+                session.id,
+
+              adminRecipient,
+
+              resendEmailId:
+                result?.id ||
+                null,
             }
-          )
-        );
+          );
+        } catch (error) {
+          emailResults.admins
+            .failed
+            .push({
+              recipient:
+                adminRecipient,
 
-      const normalizedAdminResults =
-        adminDeliveryResults.map(
-          (result) => {
-            if (
-              result.status ===
-              'fulfilled'
-            ) {
-              return result.value;
-            }
-
-            return {
-              recipient: null,
               success: false,
+
               error:
-                result.reason?.message ||
-                String(result.reason),
-            };
+                error.message,
+            });
+
+          console.error(
+            'Event admin notification email failed for recipient:',
+            {
+              stripeSessionId:
+                session.id,
+
+              adminRecipient,
+
+              message:
+                error.message,
+
+              stack:
+                error.stack,
+            }
+          );
+        }
+
+        /*
+         * Send sequentially with a small delay so several
+         * admin notifications do not hit Resend at once.
+         */
+        await new Promise(
+          (resolve) => {
+            setTimeout(
+              resolve,
+              300
+            );
           }
         );
-
-      const successfulAdminEmails =
-        normalizedAdminResults.filter(
-          (result) =>
-            result.success
-        );
-
-      const failedAdminEmails =
-        normalizedAdminResults.filter(
-          (result) =>
-            !result.success
-        );
-
-      emailResults.admins = {
-        successful:
-          successfulAdminEmails,
-        failed:
-          failedAdminEmails,
-      };
+      }
 
       console.log(
         'Event admin notification delivery completed:',
         {
           stripeSessionId:
             session.id,
+
           attemptedCount:
             adminRecipients.length,
+
           successfulCount:
-            successfulAdminEmails.length,
+            emailResults.admins
+              .successful.length,
+
           failedCount:
-            failedAdminEmails.length,
+            emailResults.admins
+              .failed.length,
+
           failedRecipients:
-            failedAdminEmails.map(
-              (result) =>
-                result.recipient
-            ),
+            emailResults.admins
+              .failed
+              .map(
+                (result) =>
+                  result.recipient
+              ),
         }
       );
     } else {
@@ -2184,11 +2191,11 @@ const sendEventCheckoutEmails =
 
         adminEmailSuccessCount:
           emailResults.admins
-            ?.successful?.length || 0,
+            .successful.length,
 
         adminEmailFailureCount:
           emailResults.admins
-            ?.failed?.length || 0,
+            .failed.length,
       }
     );
 
