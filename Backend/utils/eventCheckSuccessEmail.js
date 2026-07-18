@@ -1878,80 +1878,66 @@ const sendEventCheckoutEmails =
       );
     }
 
-    let event =
-      completionResult?.event ||
-      null;
-
-    let rawReservations =
-      Array.isArray(
-        completionResult
-          ?.reservations
-      )
-        ? completionResult
-            .reservations
-        : [];
-
     /*
-     * The inventory service may return only a success
-     * status. Load the finalized records directly when
-     * the email data was not returned.
-     */
-    if (
-      !event ||
-      rawReservations.length ===
-        0
-    ) {
-      console.log(
-        'Loading finalized event checkout details for email:',
-        {
-          stripeSessionId:
-            session.id,
-
-          completionResultHasEvent:
-            Boolean(event),
-
-          completionResultReservationCount:
-            rawReservations.length,
-        }
-      );
-
-      const databaseResult =
-        await loadCompletedEventCheckout({
-          stripeSessionId:
-            session.id,
-        });
-
-      event =
-        databaseResult.event;
-
-      rawReservations =
-        databaseResult
-          .reservations;
-    }
-
-    const reservations =
-      rawReservations
-        .map((reservation) =>
-          normalizeReservation(
-            reservation,
-            event
-          )
+ * Always load the finalized checkout details directly from
+ * the database.
+ *
+ * The inventory service returns the newly created reservation
+ * records, but those records do not contain the associated
+ * EventOccurrence fields required by the email templates,
+ * including occurrenceDate and availability information.
+ */
+console.log(
+    'Loading finalized event checkout details for email:',
+    {
+      stripeSessionId: session.id,
+  
+      completionResultHasEvent: Boolean(
+        completionResult?.event
+      ),
+  
+      completionResultReservationCount:
+        Array.isArray(
+          completionResult?.reservations
         )
-        .filter(
-          (reservation) =>
-            reservation
-              .occurrenceDate &&
-            reservation.quantity >
-              0
-        );
-
-    if (
-      reservations.length === 0
-    ) {
-      throw new Error(
-        `No usable completed event reservations were found for Checkout Session ${session.id}.`
-      );
+          ? completionResult.reservations.length
+          : 0,
     }
+  );
+  
+  const databaseResult =
+    await loadCompletedEventCheckout({
+      stripeSessionId: session.id,
+    });
+  
+  const event = databaseResult.event;
+  
+  const rawReservations =
+  databaseResult.reservations;
+
+console.log(
+  'Raw reservations before normalize:',
+  JSON.stringify(rawReservations, null, 2)
+);
+
+const reservations =
+  rawReservations
+    .map((reservation) =>
+      normalizeReservation(
+        reservation,
+        event
+      )
+    )
+    .filter(
+      (reservation) =>
+        reservation.occurrenceDate &&
+        reservation.quantity > 0
+    );
+    if (reservations.length === 0) {
+        throw new Error(
+          `No usable completed event reservations were found for Checkout Session ${session.id}.`
+        );
+      }
 
     const purchaserEmail =
       getSessionCustomerEmail(
