@@ -347,8 +347,11 @@ const getTicketManagementUrl = (session) => {
     const normalizedBaseUrl = String(frontendBaseUrl) .trim() .replace(/\/+$/, '');
 
     return (
-        `${normalizedBaseUrl}` + `/event-checkout-success` + `?session_id=${encodeURIComponent(session.id)}` + `manage=1`
-     );
+        `${normalizedBaseUrl}` +
+        `/event-checkout-success` +
+        `?session_id=${encodeURIComponent(session.id)}` +
+        `&manage=1`
+    );
 };
 
 const getEventDescription = (
