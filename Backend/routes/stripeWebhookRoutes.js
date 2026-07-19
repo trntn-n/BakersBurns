@@ -6,12 +6,13 @@ const router = express.Router();
 
 const {
   handleCartWebhook,
-} = require('../../controllers/hybrid/stripeCartWebhookController');
+} = require('../controllers/hybrid/stripeCartWebhookController');
 
 const {
   handleEventWebhook,
-} = require('../../controllers/hybrid/stripeEventWebhookController');
+} = require('../controllers/hybrid/stripeEventWebhookController');
 
+const {handleAdminEventWebhook,} = require('../controllers/hybrid/stripeAdminEventWebhookController');
 /*
  * Product Checkout Webhook
  *
@@ -27,7 +28,15 @@ router.post(
   },
   handleCartWebhook
 );
-
+router.post(
+  '/admin-refund',
+  express.raw({ type: 'application/json' }),
+  (req, res, next) => {
+    console.log('Stripe Admin-Event webhook route accessed.');
+    next();
+  },
+  handleAdminEventWebhook
+)
 /*
  * Event Checkout Webhook
  *
