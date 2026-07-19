@@ -1,233 +1,802 @@
-/* General Navbar Styling */
-.navbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  background-color: var(--navbar-bg);
-  box-shadow: var(--navbar-shadow);
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 1% 2%;
-  font-family: Arial, Helvetica, sans-serif;
-}
+/* ==========================================
+   BakersBurns Register Navbar
+   Prefix: bb-register-nav
+   ========================================== */
 
-/* Navbar Top Section */
-.navbar-top {
-  z-index: 9999;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-/* Navbar Title */
-.navbar-title {
-  color: var(--navbar-text);
-  font-size: 1rem;
-  font-weight: bold;
-  cursor: pointer;
-  padding: 10px;
-  z-index: 10;
-  border-radius: 10px;
-  background-color: var(--hero-bg-overlay);
-}
-
-/* Hamburger Menu (Mobile) */
-.hamburger-menu {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-
-  width: 40px;
-  height: 35px;
-
-  padding: 0;
-  margin: 0;
-  border: none;
-  background: transparent;
-
-  appearance: none;
-  -webkit-appearance: none;
-
-  cursor: pointer;
-  z-index: 1100;
-}
-.hamburger-menu .bar1,
-.hamburger-menu .bar2,
-.hamburger-menu .bar3 {
-  width: 100%;
-  height: 5px;
-  background-color: var(--hamburger-bar);
-  transition: transform 0.4s ease, opacity 0.4s ease;
-}
-.hamburger-menu.open .bar1 {
-  transform: rotate(45deg) translate(6px, 11px);
-}
-.hamburger-menu.open .bar2 {
-  opacity: 0;
-}
-.hamburger-menu.open .bar3 {
-  transform: rotate(-45deg) translate(5px, -10px);
-}
-
-/* Auth Buttons Container (Desktop) */
-.navbar-auth-buttons {
-  display: flex;
-  gap: 10px;
-  z-index: 1000;
-}
-
-/* Desktop nav list */
-.nav-list.desktop {
-  list-style: none;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  margin: 0;
-  padding: 0;
+   .bb-register-nav {
+    --bb-register-nav-background:
+      var(--navbar-bg, #f3e5d4);
   
-}
-.nav-list.desktop .nav-item {
-  margin: 0 2vw;
-}
-.nav-list.desktop .nav-item a {
-  text-decoration: none;
-  color: var(--navbar-text);
-  padding: 1vw;
-  font-size: 1.5vw;
-}
-.nav-list.desktop .nav-item a:hover {
-  background-color: var(--navbar-hover);
-  border-radius: 10px;
-}
-.nav-item-tiny-desk {
-  margin: 10px;
-  font-size: .7rem;
-  bottom: 0;
-  padding: 5px;
+    --bb-register-nav-surface:
+      var(--card-bg, #ffffff);
   
-  border-radius: 10px;
-  background-color: var(--hero-bg-overlay);
-  /* Additional styling for mobile items */
-}
-
-
-
-/* Mobile nav overlay */
-.nav-list.mobile {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: var(--nav-list-bg);
-  margin: 0;
-  padding: 0;
-  display: none; /* Hidden by default */
-  z-index: -1;
-  transition: all 0.3s ease-in-out;
-}
-.nav-list.mobile.show {
-  display: flex;
-  z-index: 1;
-}
-
-/* Mobile nav item styling */
-.nav-list.mobile .nav-item {
-  margin: 10px 0;
-  /* Additional styling for mobile items */
-}
-.nav-list.mobile .nav-item-tiny {
-  margin: 10px 0;
-  font-size: .7rem;
-  bottom: 0;
-  padding: 5px;
-  border-radius: 10px;
-  background-color: var(--hero-bg-overlay);
-  /* Additional styling for mobile items */
-}
-.nav-list.mobile .nav-item a {
-  color: var(--navbar-text);
-  text-decoration: none;
-  padding: 8px 12px;
-  font-size: 2rem;
-  transition: background-color 0.3s;
-}
-.nav-list.mobile .nav-item a:hover {
-  background-color: var(--button-bg);
-  border-bottom: 5px solid var(--navbar-text);
-  border-radius: 0px;
-}
-
-/* Social Links (Mobile) */
-.social-links-nav {
-  z-index: 1000;
-  transform: translateY(50px);
-  transition: transform 0.3s ease;
-}
-
-/* Desktop adjustments */
-@media (min-width: 1000px) {
-  .navbar {
-    flex-direction: row;
-    justify-content: space-between;
-    height: 10vh;
-    padding: 1%;
-  }
+    --bb-register-nav-surface-soft:
+      color-mix(
+        in srgb,
+        var(--bb-register-nav-background) 72%,
+        var(--bb-register-nav-surface)
+      );
   
-  .navbar-top {
+    --bb-register-nav-text:
+      var(--navbar-text, #251e19);
+  
+    --bb-register-nav-text-soft:
+      color-mix(
+        in srgb,
+        var(--bb-register-nav-text) 62%,
+        transparent
+      );
+  
+    --bb-register-nav-border:
+      color-mix(
+        in srgb,
+        var(--bb-register-nav-text) 14%,
+        transparent
+      );
+  
+    --bb-register-nav-accent:
+      var(--btn-bg, #84240c);
+  
+    --bb-register-nav-accent-hover:
+      var(--btn-hover, #a83c20);
+  
+    --bb-register-nav-accent-soft:
+      color-mix(
+        in srgb,
+        var(--bb-register-nav-accent) 12%,
+        transparent
+      );
+  
+    position: sticky;
+    top: 0;
+    z-index: 1100;
     width: 100%;
+    border-bottom:
+      1px solid transparent;
+    color: var(--bb-register-nav-text);
+    background:
+      color-mix(
+        in srgb,
+        var(--bb-register-nav-background) 94%,
+        transparent
+      );
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      background-color 180ms ease;
   }
-  .hamburger-menu {
-    display: none;
+  
+  .bb-register-nav--elevated,
+  .bb-register-nav--open {
+    border-bottom-color:
+      var(--bb-register-nav-border);
+    box-shadow:
+      0 12px 32px rgba(26, 21, 17, 0.11);
   }
-  .nav-item-tiny {
-    margin: 10px 0;
-    font-size: .7rem;
-    bottom: 0;
-    padding: 5px;
+  
+  .bb-register-nav *,
+  .bb-register-nav *::before,
+  .bb-register-nav *::after {
+    box-sizing: border-box;
+  }
+  
+  .bb-register-nav__inner {
+    display: flex;
+    width: min(100%, 1480px);
+    min-height: 76px;
+    align-items: center;
+    gap: 28px;
+    margin: 0 auto;
+    padding: 10px clamp(18px, 3.5vw, 52px);
+  }
+  
+  .bb-register-nav__brand {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 12px;
+    min-width: 190px;
+    color: var(--bb-register-nav-text);
+    text-decoration: none;
+  }
+  
+  .bb-register-nav__brand-mark {
+    display: inline-flex;
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid
+      var(--bb-register-nav-border);
+    border-radius: 13px;
+    color: #ffffff;
+    background:
+      linear-gradient(
+        145deg,
+        var(--bb-register-nav-accent),
+        color-mix(
+          in srgb,
+          var(--bb-register-nav-accent) 70%,
+          #271810
+        )
+      );
+    box-shadow:
+      0 8px 20px
+        color-mix(
+          in srgb,
+          var(--bb-register-nav-accent) 22%,
+          transparent
+        );
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+  }
+  
+  .bb-register-nav__brand-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+  }
+  
+  .bb-register-nav__brand-name {
+    color: var(--bb-register-nav-text);
+    font-size: 1rem;
+    font-weight: 760;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+  }
+  
+  .bb-register-nav__page-title {
+    overflow: hidden;
+    color: var(--bb-register-nav-text-soft);
+    font-size: 0.69rem;
+    font-weight: 600;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .bb-register-nav__desktop {
+    min-width: 0;
+    flex: 1;
+  }
+  
+  .bb-register-nav__desktop-list {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  
+  .bb-register-nav__desktop-link {
+    position: relative;
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px 13px;
+    border-radius: 9px;
+    color: var(--bb-register-nav-text-soft);
+    font-size: 0.82rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition:
+      color 160ms ease,
+      background-color 160ms ease,
+      transform 160ms ease;
+  }
+  
+  .bb-register-nav__desktop-link:hover {
+    color: var(--bb-register-nav-text);
+    background: var(--bb-register-nav-accent-soft);
+  }
+  
+  .bb-register-nav__desktop-link--active {
+    color: var(--bb-register-nav-accent);
+    background: var(--bb-register-nav-accent-soft);
+  }
+  
+  .bb-register-nav__desktop-link--active::after {
+    position: absolute;
+    right: 12px;
+    bottom: 4px;
+    left: 12px;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--bb-register-nav-accent);
+    content: "";
+  }
+  
+  .bb-register-nav__cart-link {
+    position: relative;
+  }
+  
+  .bb-register-nav__cart-badge {
+    display: inline-flex;
+    min-width: 19px;
+    height: 19px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    border: 2px solid
+      var(--bb-register-nav-background);
+    border-radius: 999px;
+    color: #ffffff;
+    background: var(--bb-register-nav-accent);
+    font-size: 0.61rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  
+  .bb-register-nav__desktop-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .bb-register-nav__theme-control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 42px;
+  }
+  
+  .bb-register-nav__action-link {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 15px;
+    border: 1px solid transparent;
     border-radius: 10px;
-    background-color: var(--hero-bg-overlay);
-    /* Additional styling for mobile items */
+    font-size: 0.79rem;
+    font-weight: 720;
+    line-height: 1;
+    text-decoration: none;
+    transition:
+      border-color 160ms ease,
+      color 160ms ease,
+      background-color 160ms ease,
+      box-shadow 160ms ease,
+      transform 160ms ease;
   }
-}
-
-.cart-nav-link {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.cart-count-badge {
-  position: absolute;
-  top: -10px;
-  right: -16px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-
-  border-radius: 999px;
-
-  background: #d62828;
-  color: #ffffff;
-
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-
-  box-sizing: border-box;
-  pointer-events: none;
-}
+  
+  .bb-register-nav__action-link:hover {
+    transform: translateY(-1px);
+  }
+  
+  .bb-register-nav__action-link--secondary {
+    border-color:
+      var(--bb-register-nav-border);
+    color: var(--bb-register-nav-text);
+    background:
+      var(--bb-register-nav-surface-soft);
+  }
+  
+  .bb-register-nav__action-link--secondary:hover {
+    border-color:
+      var(--bb-register-nav-accent);
+    color: var(--bb-register-nav-accent);
+    background:
+      var(--bb-register-nav-accent-soft);
+  }
+  
+  .bb-register-nav__action-link--primary {
+    color: #ffffff;
+    background:
+      var(--bb-register-nav-accent);
+    box-shadow:
+      0 8px 20px
+        color-mix(
+          in srgb,
+          var(--bb-register-nav-accent) 24%,
+          transparent
+        );
+  }
+  
+  .bb-register-nav__action-link--primary:hover {
+    background:
+      var(--bb-register-nav-accent-hover);
+  }
+  
+  .bb-register-nav__mobile-actions {
+    display: none;
+    align-items: center;
+    gap: 7px;
+    margin-left: auto;
+  }
+  
+  .bb-register-nav__mobile-cart {
+    position: relative;
+    display: inline-flex;
+    width: 43px;
+    height: 43px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid
+      var(--bb-register-nav-border);
+    border-radius: 11px;
+    color: var(--bb-register-nav-text);
+    background:
+      var(--bb-register-nav-surface-soft);
+    text-decoration: none;
+  }
+  
+  .bb-register-nav__mobile-cart
+    .bb-register-nav__cart-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+  }
+  
+  .bb-register-nav__cart-icon {
+    display: inline-flex;
+    width: 21px;
+    height: 21px;
+  }
+  
+  .bb-register-nav__cart-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+  
+  .bb-register-nav__menu-button {
+    display: inline-flex;
+    width: 43px;
+    height: 43px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 0;
+    border: 1px solid
+      var(--bb-register-nav-border);
+    border-radius: 11px;
+    color: var(--bb-register-nav-text);
+    background:
+      var(--bb-register-nav-surface-soft);
+    cursor: pointer;
+  }
+  
+  .bb-register-nav__menu-button span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+    transition:
+      transform 180ms ease,
+      opacity 180ms ease;
+  }
+  
+  .bb-register-nav__menu-button--open
+    span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+  }
+  
+  .bb-register-nav__menu-button--open
+    span:nth-child(2) {
+    opacity: 0;
+  }
+  
+  .bb-register-nav__menu-button--open
+    span:nth-child(3) {
+    transform: translateY(-7px)
+      rotate(-45deg);
+  }
+  
+  /* ==========================================
+     Mobile menu
+     ========================================== */
+  
+  .bb-register-nav__mobile-menu {
+    position: relative;
+    z-index: 2;
+    overflow: hidden;
+    border-top: 1px solid
+      var(--bb-register-nav-border);
+    background:
+      var(--bb-register-nav-background);
+  }
+  
+  .bb-register-nav__mobile-content {
+    width: min(100%, 720px);
+    max-height:
+      calc(100vh - 76px);
+    max-height:
+      calc(100dvh - 76px);
+    margin: 0 auto;
+    padding:
+      25px
+      20px
+      calc(28px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  
+  .bb-register-nav__mobile-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .bb-register-nav__mobile-eyebrow {
+    color: var(--bb-register-nav-accent);
+    font-size: 0.67rem;
+    font-weight: 780;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+  }
+  
+  .bb-register-nav__mobile-current {
+    color: var(--bb-register-nav-text-soft);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .bb-register-nav__mobile-list {
+    display: grid;
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  
+  .bb-register-nav__mobile-link {
+    display: flex;
+    min-height: 58px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 13px 15px;
+    border: 1px solid
+      var(--bb-register-nav-border);
+    border-radius: 13px;
+    color: var(--bb-register-nav-text);
+    background:
+      var(--bb-register-nav-surface-soft);
+    font-size: 0.87rem;
+    font-weight: 680;
+    text-decoration: none;
+    transition:
+      border-color 160ms ease,
+      color 160ms ease,
+      background-color 160ms ease;
+  }
+  
+  .bb-register-nav__mobile-link:hover,
+  .bb-register-nav__mobile-link--active {
+    border-color:
+      color-mix(
+        in srgb,
+        var(--bb-register-nav-accent) 42%,
+        transparent
+      );
+    color: var(--bb-register-nav-accent);
+    background:
+      var(--bb-register-nav-accent-soft);
+  }
+  
+  .bb-register-nav__mobile-link-arrow {
+    color: var(--bb-register-nav-text-soft);
+    transition: transform 160ms ease;
+  }
+  
+  .bb-register-nav__mobile-link:hover
+    .bb-register-nav__mobile-link-arrow {
+    transform: translateX(3px);
+  }
+  
+  .bb-register-nav__mobile-cart-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .bb-register-nav__mobile-auth {
+    display: grid;
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    margin-top: 20px;
+  }
+  
+  .bb-register-nav__mobile-auth-link {
+    display: inline-flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    padding: 11px 16px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    font-size: 0.82rem;
+    font-weight: 720;
+    text-align: center;
+    text-decoration: none;
+  }
+  
+  .bb-register-nav__mobile-auth-link--secondary {
+    border-color:
+      var(--bb-register-nav-border);
+    color: var(--bb-register-nav-text);
+    background:
+      var(--bb-register-nav-surface-soft);
+  }
+  
+  .bb-register-nav__mobile-auth-link--primary {
+    color: #ffffff;
+    background:
+      var(--bb-register-nav-accent);
+  }
+  
+  .bb-register-nav__mobile-footer {
+    display: grid;
+    gap: 19px;
+    margin-top: 21px;
+    padding-top: 20px;
+    border-top: 1px solid
+      var(--bb-register-nav-border);
+  }
+  
+  .bb-register-nav__mobile-theme {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 22px;
+    padding: 14px 15px;
+    border: 1px solid
+      var(--bb-register-nav-border);
+    border-radius: 13px;
+    background:
+      var(--bb-register-nav-surface-soft);
+  }
+  
+  .bb-register-nav__mobile-footer-label,
+  .bb-register-nav__mobile-footer-description {
+    display: block;
+  }
+  
+  .bb-register-nav__mobile-footer-label {
+    color: var(--bb-register-nav-text);
+    font-size: 0.81rem;
+    font-weight: 700;
+  }
+  
+  .bb-register-nav__mobile-footer-description {
+    margin-top: 3px;
+    color:
+      var(--bb-register-nav-text-soft);
+    font-size: 0.68rem;
+  }
+  
+  .bb-register-nav__legal-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px 18px;
+  }
+  
+  .bb-register-nav__legal-links a {
+    color:
+      var(--bb-register-nav-text-soft);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  
+  .bb-register-nav__legal-links a:hover {
+    color: var(--bb-register-nav-accent);
+  }
+  
+  .bb-register-nav__social-links {
+    display: flex;
+    justify-content: flex-start;
+  }
+  
+  .bb-register-nav__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: rgba(8, 10, 12, 0.48);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    cursor: default;
+  }
+  
+  /* ==========================================
+     Dark mode
+     ========================================== */
+  
+  html[data-theme="dark"]
+    .bb-register-nav,
+  body[data-theme="dark"]
+    .bb-register-nav,
+  [data-theme="dark"]
+    .bb-register-nav,
+  html.dark
+    .bb-register-nav,
+  body.dark
+    .bb-register-nav,
+  .dark
+    .bb-register-nav,
+  html.dark-mode
+    .bb-register-nav,
+  body.dark-mode
+    .bb-register-nav,
+  .dark-mode
+    .bb-register-nav {
+    --bb-register-nav-background: #18200f;
+    --bb-register-nav-surface: #20271a;
+    --bb-register-nav-surface-soft: #222b1b;
+    --bb-register-nav-text: #f3f5ef;
+    --bb-register-nav-text-soft: #aeb6a7;
+    --bb-register-nav-border:
+      rgba(255, 255, 255, 0.13);
+    --bb-register-nav-accent:
+      var(--btn-hover, #98a653);
+    --bb-register-nav-accent-hover:
+      #abb965;
+    --bb-register-nav-accent-soft:
+      rgba(152, 166, 83, 0.15);
+  
+    background:
+      rgba(24, 32, 15, 0.95);
+  }
+  
+  html[data-theme="dark"]
+    .bb-register-nav__mobile-menu,
+  body[data-theme="dark"]
+    .bb-register-nav__mobile-menu,
+  [data-theme="dark"]
+    .bb-register-nav__mobile-menu,
+  html.dark
+    .bb-register-nav__mobile-menu,
+  body.dark
+    .bb-register-nav__mobile-menu,
+  .dark
+    .bb-register-nav__mobile-menu,
+  html.dark-mode
+    .bb-register-nav__mobile-menu,
+  body.dark-mode
+    .bb-register-nav__mobile-menu,
+  .dark-mode
+    .bb-register-nav__mobile-menu {
+    background:
+      var(--bb-register-nav-background);
+  }
+  
+  /* ==========================================
+     Responsive
+     ========================================== */
+  
+  @media (max-width: 1180px) {
+    .bb-register-nav__inner {
+      gap: 18px;
+    }
+  
+    .bb-register-nav__brand {
+      min-width: 160px;
+    }
+  
+    .bb-register-nav__desktop-link {
+      padding-inline: 10px;
+    }
+  
+    .bb-register-nav__action-link {
+      padding-inline: 12px;
+    }
+  }
+  
+  @media (max-width: 999px) {
+    .bb-register-nav__inner {
+      min-height: 70px;
+      padding:
+        9px
+        max(16px, env(safe-area-inset-right))
+        9px
+        max(16px, env(safe-area-inset-left));
+    }
+  
+    .bb-register-nav__desktop,
+    .bb-register-nav__desktop-actions {
+      display: none;
+    }
+  
+    .bb-register-nav__mobile-actions {
+      display: flex;
+    }
+  
+    .bb-register-nav__brand {
+      min-width: 0;
+      flex: 1;
+    }
+  
+    .bb-register-nav__brand-mark {
+      width: 42px;
+      height: 42px;
+    }
+  
+    .bb-register-nav__mobile-content {
+      max-height:
+        calc(100vh - 70px);
+      max-height:
+        calc(100dvh - 70px);
+    }
+  }
+  
+  @media (max-width: 540px) {
+    .bb-register-nav__brand-name {
+      font-size: 0.94rem;
+    }
+  
+    .bb-register-nav__page-title {
+      max-width: 130px;
+    }
+  
+    .bb-register-nav__mobile-list {
+      grid-template-columns: 1fr;
+    }
+  
+    .bb-register-nav__mobile-heading {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 5px;
+    }
+  }
+  
+  @media (max-width: 380px) {
+    .bb-register-nav__brand-copy {
+      max-width: 125px;
+    }
+  
+    .bb-register-nav__mobile-auth {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  /* ==========================================
+     Touch behavior
+     ========================================== */
+  
+  @media (hover: none) {
+    .bb-register-nav__action-link:hover {
+      transform: none;
+    }
+  
+    .bb-register-nav__desktop-link:hover,
+    .bb-register-nav__mobile-link:hover {
+      color: inherit;
+    }
+  }
+  
+  /* ==========================================
+     Reduced motion
+     ========================================== */
+  
+  @media (prefers-reduced-motion: reduce) {
+    .bb-register-nav *,
+    .bb-register-nav *::before,
+    .bb-register-nav *::after {
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }

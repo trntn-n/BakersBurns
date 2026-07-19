@@ -19,16 +19,39 @@
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
 body {
-  font-family: 'Montserrat', sans-serif;
-  /* If you want a solid color fallback plus the image: */
-  background-image: url('./assets/tree.webp'); 
-  background-size: cover; /* Ensures the image covers the entire viewport */
+  min-width: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+
+  background-color: var(--wood-bg-dark);
+  background-image: url("./assets/tree.webp");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
+
   color: var(--text-color);
-  width: 100vw;
-  height: 100vh;
-  z-index: 1000;
-  font-family: var(--font);
+  font-family: "Montserrat", Arial, Helvetica, sans-serif;
+}
+
+#root {
+  min-width: 0;
+  overflow-x: clip;
 }
 
 

@@ -1,6 +1,18 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import {
+  Link,
+  NavLink,
+  useLocation,
+} from "react-router-dom";
+import {
+  AnimatePresence,
+  motion,
+} from "framer-motion";
 
 import { registerApi } from "../../config/axios";
 import SocialLinks from "./socialLinks";
@@ -8,101 +20,146 @@ import ThemeToggle from "../themetoggle/Dark-Light";
 
 import "./navbar.css";
 
+const DESKTOP_BREAKPOINT = 1000;
+
+const NAVIGATION_ITEMS = [
+  {
+    label: "Home",
+    shortLabel: "Home",
+    path: "/",
+    exact: true,
+  },
+  {
+    label: "Store",
+    shortLabel: "Store",
+    path: "/store",
+  },
+  {
+    label: "Events",
+    shortLabel: "Events",
+    path: "/events",
+  },
+  {
+    label: "About",
+    shortLabel: "About",
+    path: "/about",
+  },
+  {
+    label: "Gallery",
+    shortLabel: "Gallery",
+    path: "/gallery",
+  },
+];
+
+const LEGAL_ITEMS = [
+  {
+    label: "Privacy Policy",
+    path: "/privacy-policy",
+  },
+  {
+    label: "Terms of Service",
+    path: "/terms-of-service",
+  },
+];
+
+const PAGE_TITLES = {
+  "/": "Home",
+  "/sign-up": "Create Account",
+  "/login": "Login",
+  "/store": "Store",
+  "/cart": "Shopping Cart",
+  "/events": "Events",
+  "/about": "About",
+  "/gallery": "Gallery",
+  "/privacy-policy": "Privacy Policy",
+  "/terms-of-service": "Terms of Service",
+};
+
 const Navbar = () => {
-  const [menuOpen, setMenuOpen] = useState(
-    () => window.innerWidth >= 1000
-  );
-
-  const [isLargeScreen, setIsLargeScreen] = useState(
-    () => window.innerWidth >= 1000
-  );
-
-  const [cartItemCount, setCartItemCount] = useState(0);
-
   const location = useLocation();
 
-  const pageTitles = {
-    "/": "Home",
-    "/sign-up": "Sign Up",
-    "/login": "Login",
-    "/store": "Store",
-    "/cart": "Cart",
-    "/events" : "Events",
-    "/about": "About",
-    "/gallery": "Gallery",
-    "/privacy-policy": "Privacy Policy",
-    "/terms-of-service": "Terms of Service",
-  };
+  const [isLargeScreen, setIsLargeScreen] =
+    useState(() => {
+      if (typeof window === "undefined") {
+        return true;
+      }
 
-  const currentPageTitle =
-    pageTitles[location.pathname] || "";
+      return (
+        window.innerWidth >= DESKTOP_BREAKPOINT
+      );
+    });
 
-  /*
-   * Use the existing guest session ID.
-   *
-   * The navbar should generally not create a new session just
-   * to check the cart, so this returns null when one does not exist.
-   */
+  const [menuOpen, setMenuOpen] =
+    useState(false);
+
+  const [cartItemCount, setCartItemCount] =
+    useState(0);
+
+  const [navbarElevated, setNavbarElevated] =
+    useState(false);
+
+  const currentPageTitle = useMemo(() => {
+    return (
+      PAGE_TITLES[location.pathname] ||
+      "BakersBurns"
+    );
+  }, [location.pathname]);
+
   const getSessionId = () => {
     return localStorage.getItem("sessionId");
   };
 
-  /*
-   * Fetch the cart and add together all quantities.
-   *
-   * Example:
-   * Hat quantity 2 + Backpack quantity 1 = badge count 3
-   */
-  const fetchCartItemCount = useCallback(async () => {
-    const sessionId = getSessionId();
+  const fetchCartItemCount =
+    useCallback(async () => {
+      const sessionId = getSessionId();
 
-    if (!sessionId) {
-      setCartItemCount(0);
-      return;
-    }
+      if (!sessionId) {
+        setCartItemCount(0);
+        return;
+      }
 
-    try {
-      const response = await registerApi.post(
-        "/register-cart/items",
-        {
-          sessionId,
-        }
-      );
+      try {
+        const response = await registerApi.post(
+          "/register-cart/items",
+          {
+            sessionId,
+          }
+        );
 
-      const cartItems =
-        response.data.cartDetails || [];
+        const cartItems = Array.isArray(
+          response.data?.cartDetails
+        )
+          ? response.data.cartDetails
+          : [];
 
-      const totalQuantity = cartItems.reduce(
-        (total, item) => {
-          const quantity = Number(item.quantity);
+        const totalQuantity =
+          cartItems.reduce(
+            (total, item) => {
+              const quantity = Number(
+                item.quantity
+              );
 
-          return total + (
-            Number.isFinite(quantity)
-              ? quantity
-              : 0
+              return (
+                total +
+                (Number.isFinite(quantity)
+                  ? quantity
+                  : 0)
+              );
+            },
+            0
           );
-        },
-        0
-      );
 
-      setCartItemCount(totalQuantity);
-    } catch (error) {
-      console.error(
-        "Error fetching navbar cart count:",
-        error
-      );
+        setCartItemCount(totalQuantity);
+      } catch (error) {
+        console.error(
+          "Error fetching navbar cart count:",
+          error.response?.data || error
+        );
 
-      setCartItemCount(0);
-    }
-  }, []);
+        setCartItemCount(0);
+      }
+    }, []);
 
-  /*
-   * Refresh the cart count when:
-   *
-   * 1. The navbar first mounts.
-   * 2. The user navigates to another route.
-   * 3. Another component dispatches a cartUpdated event.
-   */
   useEffect(() => {
     fetchCartItemCount();
 
@@ -121,18 +178,30 @@ const Navbar = () => {
         handleCartUpdated
       );
     };
-  }, [location.pathname, fetchCartItemCount]);
+  }, [
+    location.pathname,
+    fetchCartItemCount,
+  ]);
 
-  // Keep desktop navigation open and control mobile state.
   useEffect(() => {
     const handleResize = () => {
-      const isWide = window.innerWidth >= 1000;
+      const isWide =
+        window.innerWidth >=
+        DESKTOP_BREAKPOINT;
 
       setIsLargeScreen(isWide);
-      setMenuOpen(isWide);
+
+      if (isWide) {
+        setMenuOpen(false);
+      }
     };
 
-    window.addEventListener("resize", handleResize);
+    handleResize();
+
+    window.addEventListener(
+      "resize",
+      handleResize
+    );
 
     return () => {
       window.removeEventListener(
@@ -142,298 +211,534 @@ const Navbar = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setNavbarElevated(
+        window.scrollY > 12
+      );
+    };
+
+    handleScroll();
+
+    window.addEventListener(
+      "scroll",
+      handleScroll,
+      {
+        passive: true,
+      }
+    );
+
+    return () => {
+      window.removeEventListener(
+        "scroll",
+        handleScroll
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isLargeScreen) {
+      return undefined;
+    }
+
+    document.body.style.overflow =
+      menuOpen ? "hidden" : "";
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen, isLargeScreen]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (
+        event.key === "Escape" &&
+        menuOpen
+      ) {
+        setMenuOpen(false);
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
   const toggleMenu = () => {
     if (!isLargeScreen) {
-      setMenuOpen((previous) => !previous);
+      setMenuOpen(
+        (previousOpenState) =>
+          !previousOpenState
+      );
     }
   };
 
   const closeMenu = () => {
-    if (!isLargeScreen) {
-      setMenuOpen(false);
-    }
+    setMenuOpen(false);
   };
 
-  /*
-   * Reusable Cart link so the desktop and mobile versions
-   * always show the same badge.
-   */
-  const CartLink = () => (
-    <Link to="/cart" className="cart-nav-link">
-      <span>Cart</span>
+  const renderCartBadge = () => {
+    if (cartItemCount <= 0) {
+      return null;
+    }
 
-      {cartItemCount > 0 && (
-        <span
-          className="cart-count-badge"
-          aria-label={`${cartItemCount} items in cart`}
-        >
-          {cartItemCount > 99
-            ? "99+"
-            : cartItemCount}
-        </span>
-      )}
-    </Link>
-  );
+    return (
+      <span
+        className="bb-register-nav__cart-badge"
+        aria-label={`${cartItemCount} item${
+          cartItemCount === 1 ? "" : "s"
+        } in cart`}
+      >
+        {cartItemCount > 99
+          ? "99+"
+          : cartItemCount}
+      </span>
+    );
+  };
 
   return (
-    <nav className="navbar">
-      <div className="navbar-top">
-        <AnimatePresence mode="wait">
-          <motion.div
-            className="navbar-title"
-            key={location.pathname}
-            initial={{
-              opacity: 0,
-              y: -20,
-            }}
-            animate={{
-              opacity: 1,
-              y: 0,
-            }}
-            exit={{
-              opacity: 0,
-              y: 20,
-            }}
-            transition={{
-              duration: 0.5,
-            }}
-            onClick={toggleMenu}
-          >
-            {currentPageTitle}
-          </motion.div>
-        </AnimatePresence>
-
-        {!isLargeScreen && !menuOpen && (
+    <>
+      <header
+        className={[
+          "bb-register-nav",
+          navbarElevated
+            ? "bb-register-nav--elevated"
+            : "",
+          menuOpen
+            ? "bb-register-nav--open"
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        <div className="bb-register-nav__inner">
           <Link
             to="/"
-            className="hero-title mobile-logo-link"
+            className="bb-register-nav__brand"
+            aria-label="BakersBurns home"
+            onClick={closeMenu}
           >
-            BakersBurns
+            <span
+              className="bb-register-nav__brand-mark"
+              aria-hidden="true"
+            >
+              BB
+            </span>
+
+            <span className="bb-register-nav__brand-copy">
+              <strong className="bb-register-nav__brand-name">
+                BakersBurns
+              </strong>
+
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={currentPageTitle}
+                  className="bb-register-nav__page-title"
+                  initial={{
+                    opacity: 0,
+                    y: -5,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                  }}
+                  exit={{
+                    opacity: 0,
+                    y: 5,
+                  }}
+                  transition={{
+                    duration: 0.2,
+                  }}
+                >
+                  {currentPageTitle}
+                </motion.span>
+              </AnimatePresence>
+            </span>
           </Link>
-        )}
 
-        {isLargeScreen ? (
-          <ul className="nav-list desktop">
-            <li
-              className="nav-item"
-              onClick={closeMenu}
-            >
-              <Link to="/">Home</Link>
-            </li>
+          <nav
+            className="bb-register-nav__desktop"
+            aria-label="Primary navigation"
+          >
+            <ul className="bb-register-nav__desktop-list">
+              {NAVIGATION_ITEMS.map(
+                (item) => (
+                  <li key={item.path}>
+                    <NavLink
+                      to={item.path}
+                      end={item.exact}
+                      className={({
+                        isActive,
+                      }) =>
+                        [
+                          "bb-register-nav__desktop-link",
+                          isActive
+                            ? "bb-register-nav__desktop-link--active"
+                            : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")
+                      }
+                    >
+                      {item.label}
+                    </NavLink>
+                  </li>
+                )
+              )}
 
-            <li
-              className="nav-item"
-              onClick={closeMenu}
-            >
-              <Link to="/store">Store</Link>
-            </li>
+              <li>
+                <NavLink
+                  to="/cart"
+                  className={({
+                    isActive,
+                  }) =>
+                    [
+                      "bb-register-nav__desktop-link",
+                      "bb-register-nav__cart-link",
+                      isActive
+                        ? "bb-register-nav__desktop-link--active"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")
+                  }
+                >
+                  <span>Cart</span>
+                  {renderCartBadge()}
+                </NavLink>
+              </li>
+            </ul>
+          </nav>
 
-            <li
-              className="nav-item"
-              onClick={closeMenu}
-            >
-              <CartLink />
-            </li>
-            <li
-              className="nav-item"
-              onClick={closeMenu}
-            >
-              <Link to="/events">Events</Link>
-            </li>
-
-            <li
-              className="nav-item"
-              onClick={closeMenu}
-            >
-              <Link to="/about">About</Link>
-            </li>
-
-            <li
-              className="nav-item"
-              onClick={closeMenu}
-            >
-              <Link to="/gallery">Gallery</Link>
-            </li>
-
-            <li className="nav-item-tiny-desk-box">
-              <div
-                className="nav-item-tiny-desk"
-                onClick={closeMenu}
-              >
-                <Link to="/privacy-policy">
-                  Privacy Policy
-                </Link>
-              </div>
-
-              <div
-                className="nav-item-tiny-desk"
-                onClick={closeMenu}
-              >
-                <Link to="/terms-of-service">
-                  Terms of Service
-                </Link>
-              </div>
-            </li>
-
-            <li className="nav-item">
+          <div className="bb-register-nav__desktop-actions">
+            <div className="bb-register-nav__theme-control">
               <ThemeToggle />
-            </li>
+            </div>
 
-            <li className="navbar-auth-list-item">
-              <div className="navbar-auth-buttons">
-                <button
-                  type="button"
-                  className="inverted-button-container"
-                >
-                  <Link
-                    to="/sign-up"
-                    className="inverted-button"
-                  >
-                    Sign up
-                  </Link>
-                </button>
+            <Link
+              to="/login"
+              className="bb-register-nav__action-link bb-register-nav__action-link--secondary"
+            >
+              Login
+            </Link>
 
-                <button
-                  type="button"
-                  className="inverted-button-container"
-                >
-                  <Link
-                    to="/login"
-                    className="inverted-button"
-                  >
-                    Login
-                  </Link>
-                </button>
-              </div>
-            </li>
-          </ul>
-        ) : (
-          <>
-            {menuOpen && (
-              <div className="navbar-auth-buttons">
-                <button
-                  type="button"
-                  className="inverted-button-container"
-                  onClick={closeMenu}
-                >
-                  <Link
-                    to="/sign-up"
-                    className="inverted-button"
-                  >
-                    Sign up
-                  </Link>
-                </button>
+            <Link
+              to="/sign-up"
+              className="bb-register-nav__action-link bb-register-nav__action-link--primary"
+            >
+              Sign up
+            </Link>
+          </div>
 
-                <button
-                  type="button"
-                  className="inverted-button-container"
-                  onClick={closeMenu}
+          <div className="bb-register-nav__mobile-actions">
+            <Link
+              to="/cart"
+              className="bb-register-nav__mobile-cart"
+              onClick={closeMenu}
+              aria-label={`Shopping cart${
+                cartItemCount > 0
+                  ? ` with ${cartItemCount} items`
+                  : ""
+              }`}
+            >
+              <span
+                className="bb-register-nav__cart-icon"
+                aria-hidden="true"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  focusable="false"
                 >
-                  <Link
-                    to="/login"
-                    className="inverted-button"
-                  >
-                    Login
-                  </Link>
-                </button>
-              </div>
-            )}
+                  <path
+                    d="M3 4h2l2.2 9.2a2 2 0 0 0 2 1.5h7.9a2 2 0 0 0 1.9-1.4L21 7H7"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+
+                  <circle
+                    cx="10"
+                    cy="19"
+                    r="1.3"
+                    fill="currentColor"
+                  />
+
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="1.3"
+                    fill="currentColor"
+                  />
+                </svg>
+              </span>
+
+              {renderCartBadge()}
+            </Link>
 
             <button
               type="button"
-              className={`hamburger-menu ${
-                menuOpen ? "open" : ""
-              }`}
+              className={[
+                "bb-register-nav__menu-button",
+                menuOpen
+                  ? "bb-register-nav__menu-button--open"
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
               onClick={toggleMenu}
-              aria-label="Toggle navigation menu"
+              aria-label={
+                menuOpen
+                  ? "Close navigation menu"
+                  : "Open navigation menu"
+              }
               aria-expanded={menuOpen}
+              aria-controls="bb-register-mobile-menu"
             >
-              <span className="bar1" />
-              <span className="bar2" />
-              <span className="bar3" />
+              <span />
+              <span />
+              <span />
             </button>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
 
-      {!isLargeScreen && (
-        <>
-          <ul
-            className={`nav-list mobile ${
-              menuOpen ? "show" : ""
-            }`}
-          >
-            <li
-              className="nav-item"
-              onClick={closeMenu}
+        <AnimatePresence>
+          {!isLargeScreen && menuOpen && (
+            <motion.div
+              id="bb-register-mobile-menu"
+              className="bb-register-nav__mobile-menu"
+              initial={{
+                opacity: 0,
+                height: 0,
+              }}
+              animate={{
+                opacity: 1,
+                height: "auto",
+              }}
+              exit={{
+                opacity: 0,
+                height: 0,
+              }}
+              transition={{
+                duration: 0.25,
+                ease: [
+                  0.22,
+                  1,
+                  0.36,
+                  1,
+                ],
+              }}
             >
-              <Link to="/">Home</Link>
-            </li>
+              <div className="bb-register-nav__mobile-content">
+                <div className="bb-register-nav__mobile-heading">
+                  <span className="bb-register-nav__mobile-eyebrow">
+                    Navigation
+                  </span>
 
-            <li
-              className="nav-item"
-              onClick={closeMenu}
-            >
-              <Link to="/store">Store</Link>
-            </li>
+                  <span className="bb-register-nav__mobile-current">
+                    {currentPageTitle}
+                  </span>
+                </div>
 
-            <li
-              className="nav-item"
-              onClick={closeMenu}
-            >
-              <CartLink />
-            </li>
-            <li
-              className="nav-item"
-              onClick={closeMenu}
-            >
-              <Link to="/events">Events</Link>
-            </li>
-            <li
-              className="nav-item"
-              onClick={closeMenu}
-            >
-              <Link to="/about">About</Link>
-            </li>
+                <nav
+                  aria-label="Mobile navigation"
+                >
+                  <ul className="bb-register-nav__mobile-list">
+                    {NAVIGATION_ITEMS.map(
+                      (item, index) => (
+                        <motion.li
+                          key={item.path}
+                          initial={{
+                            opacity: 0,
+                            x: -12,
+                          }}
+                          animate={{
+                            opacity: 1,
+                            x: 0,
+                          }}
+                          transition={{
+                            delay:
+                              index * 0.035,
+                          }}
+                        >
+                          <NavLink
+                            to={item.path}
+                            end={item.exact}
+                            onClick={
+                              closeMenu
+                            }
+                            className={({
+                              isActive,
+                            }) =>
+                              [
+                                "bb-register-nav__mobile-link",
+                                isActive
+                                  ? "bb-register-nav__mobile-link--active"
+                                  : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")
+                            }
+                          >
+                            <span>
+                              {
+                                item.shortLabel
+                              }
+                            </span>
 
-            <li
-              className="nav-item"
-              onClick={closeMenu}
-            >
-              <Link to="/gallery">Gallery</Link>
-            </li>
+                            <span
+                              className="bb-register-nav__mobile-link-arrow"
+                              aria-hidden="true"
+                            >
+                              →
+                            </span>
+                          </NavLink>
+                        </motion.li>
+                      )
+                    )}
 
-            <li
-              className="nav-item-tiny"
-              onClick={closeMenu}
-            >
-              <Link to="/privacy-policy">
-                Privacy Policy
-              </Link>
-            </li>
-            
-            <li
-              className="nav-item-tiny"
-              onClick={closeMenu}
-            >
-              <Link to="/terms-of-service">
-                Terms of Service
-              </Link>
-            </li>
+                    <motion.li
+                      initial={{
+                        opacity: 0,
+                        x: -12,
+                      }}
+                      animate={{
+                        opacity: 1,
+                        x: 0,
+                      }}
+                      transition={{
+                        delay:
+                          NAVIGATION_ITEMS.length *
+                          0.035,
+                      }}
+                    >
+                      <NavLink
+                        to="/cart"
+                        onClick={closeMenu}
+                        className={({
+                          isActive,
+                        }) =>
+                          [
+                            "bb-register-nav__mobile-link",
+                            isActive
+                              ? "bb-register-nav__mobile-link--active"
+                              : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")
+                        }
+                      >
+                        <span className="bb-register-nav__mobile-cart-label">
+                          Cart
+                          {renderCartBadge()}
+                        </span>
 
-            <li className="nav-item">
-              <ThemeToggle />
-            </li>
-          </ul>
+                        <span
+                          className="bb-register-nav__mobile-link-arrow"
+                          aria-hidden="true"
+                        >
+                          →
+                        </span>
+                      </NavLink>
+                    </motion.li>
+                  </ul>
+                </nav>
 
-          {menuOpen && (
-            <div className="social-links-nav">
-              <SocialLinks />
-            </div>
+                <div className="bb-register-nav__mobile-auth">
+                  <Link
+                    to="/login"
+                    className="bb-register-nav__mobile-auth-link bb-register-nav__mobile-auth-link--secondary"
+                    onClick={closeMenu}
+                  >
+                    Login
+                  </Link>
+
+                  <Link
+                    to="/sign-up"
+                    className="bb-register-nav__mobile-auth-link bb-register-nav__mobile-auth-link--primary"
+                    onClick={closeMenu}
+                  >
+                    Create Account
+                  </Link>
+                </div>
+
+                <div className="bb-register-nav__mobile-footer">
+                  <div className="bb-register-nav__mobile-theme">
+                    <div>
+                      <span className="bb-register-nav__mobile-footer-label">
+                        Appearance
+                      </span>
+
+                      <span className="bb-register-nav__mobile-footer-description">
+                        Change the site theme
+                      </span>
+                    </div>
+
+                    <ThemeToggle />
+                  </div>
+
+                  <div className="bb-register-nav__legal-links">
+                    {LEGAL_ITEMS.map(
+                      (item) => (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          onClick={
+                            closeMenu
+                          }
+                        >
+                          {item.label}
+                        </Link>
+                      )
+                    )}
+                  </div>
+
+                  <div className="bb-register-nav__social-links">
+                    <SocialLinks />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           )}
-        </>
-      )}
-    </nav>
+        </AnimatePresence>
+      </header>
+
+      <AnimatePresence>
+        {!isLargeScreen && menuOpen && (
+          <motion.button
+            type="button"
+            className="bb-register-nav__backdrop"
+            aria-label="Close navigation menu"
+            onClick={closeMenu}
+            initial={{
+              opacity: 0,
+            }}
+            animate={{
+              opacity: 1,
+            }}
+            exit={{
+              opacity: 0,
+            }}
+            transition={{
+              duration: 0.2,
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 
