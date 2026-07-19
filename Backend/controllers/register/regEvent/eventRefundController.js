@@ -1,20 +1,21 @@
 'use strict';
 
 const sequelize = require(
-  '../../config/database'
+  '../../../config/database'
 );
 
 const Event = require(
-  '../../models/events'
+  '../../../models/events'
 );
 
 const EventReservation = require(
-  '../../models/eventReservation'
+  '../../../models/eventReservation'
 );
 
 const EventRefundRequest = require(
-  '../../models/eventRefundRequest'
+  '../../../models/eventRefundRequest'
 );
+const {sendRefundAdminEmailService} = require('./eventRefundAdminEmailService');
 
 /*
  * Stripe configuration
@@ -461,6 +462,7 @@ const createEventRefundRequest =
 
             return {
               refundRequest,
+              eventRecord,
               alreadyExists: false,
             };
           }
@@ -509,6 +511,39 @@ const createEventRefundRequest =
           currency,
         }
       );
+
+      /*
+      * Notify administrators only after the database
+      * transaction has completed successfully.
+      *
+      * An email failure should not undo or invalidate the
+      * refund request.
+      */
+      try {
+        await sendRefundAdminEmailService({
+          refundRequest:
+            result.refundRequest,
+          event:
+            result.eventRecord,
+        });
+      } catch (emailError) {
+        console.error(
+          'Event refund request was created, but the admin notification email could not be sent:',
+          {
+            refundRequestId:
+              result.refundRequest.id,
+            eventId:
+              result.refundRequest.eventId,
+            message:
+              emailError.message,
+            stack:
+              process.env.NODE_ENV !==
+              'production'
+                ? emailError.stack
+                : undefined,
+          }
+        );
+      }
 
       return res
         .status(201)

@@ -13,7 +13,7 @@ const {createEventCheckoutSession, getEventCheckoutSuccess} = require('../../con
 //Event notification controllers
 const {createEventNotificationSubscriptions, getAllEventNotificationSubscriptions, getEventNotificationSubscriptionById, updateEventNotificationSubscription, markEventNotificationSent, deleteEventNotificationSubscription,} = require('../../controllers/register/eventNotificationController');
 //Refund controller functions
-const {createEventRefundRequest} = require('../../controllers/register/eventRefundController')
+const {createEventRefundRequest} = require('../../controllers/register/regEvent/eventRefundController')
 //Get the events available to users.
 router.get(
   '/get-events',
