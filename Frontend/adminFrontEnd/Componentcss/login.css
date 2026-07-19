@@ -1,90 +1,846 @@
+/* ==========================================
+   BakersBurns Admin Login
+   Unique prefix: bb-admin-login
+   ========================================== */
 
-/* Container for the login form */
-/* Assuming the parent element takes up the full viewport height */
-/* Assuming the parent element takes up the full viewport width and height */
-.parent-container {
-  display: flex;
-  justify-content: center; /* Center horizontally */
-  align-items: center; /* Center vertically */
-  height: 100vh; /* Full viewport height */
-  width: 100vw; /* Full viewport width */
-  background-color: var(--body-overlay); /* Example background color */
-  margin: 0; /* Ensure no default margin */
-}
-
-.login-form-container {
-    font-family: 'Montserrat', sans-serif;
-  background:var(--bg-overlay);
-  padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-
-}
-
-
-
-/* Heading styling */
-h2 {
-    margin-bottom: 1.5rem;
-    color: var(--text-color);
-}
-
-/* Form layout */
-form {
+   .bb-admin-login {
+    --bb-admin-login-background:
+      var(--bg-color, #f3f4f6);
+  
+    --bb-admin-login-surface:
+      var(--card-bg, #ffffff);
+  
+    --bb-admin-login-surface-soft:
+      var(--secondary-bg, #f7f8fa);
+  
+    --bb-admin-login-text:
+      var(--text-color, #202124);
+  
+    --bb-admin-login-text-soft:
+      var(--secondary-text-color, #686e78);
+  
+    --bb-admin-login-border:
+      var(--border-color, #dde1e7);
+  
+    --bb-admin-login-border-strong:
+      var(--border-color-dark, #c5cad2);
+  
+    --bb-admin-login-accent:
+      var(--primary-color, #7a4f35);
+  
+    --bb-admin-login-accent-hover:
+      var(--primary-hover-color, #65402b);
+  
+    --bb-admin-login-accent-soft:
+      color-mix(
+        in srgb,
+        var(--bb-admin-login-accent) 11%,
+        transparent
+      );
+  
+    --bb-admin-login-danger:
+      var(--error-color, #c63d3d);
+  
+    --bb-admin-login-danger-soft:
+      color-mix(
+        in srgb,
+        var(--bb-admin-login-danger) 10%,
+        transparent
+      );
+  
+    position: relative;
     display: flex;
-    flex-direction: column;
     width: 100%;
-}
-
-/* Input styling */
-input {
-    margin-bottom: 1rem;
-    padding: 0.75rem;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 1rem;
-    transition: border-color 0.3s ease;
-}
-
-/* Input focus effect */
-input:focus {
-    border-color: var(--btn-bg);
+    min-height: 100vh;
+    min-height: 100dvh;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: clamp(18px, 4vw, 52px);
+    color: var(--bb-admin-login-text);
+    background: var(--bb-admin-login-background);
+    font-family:
+      Inter,
+      ui-sans-serif,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+  }
+  
+  .bb-admin-login *,
+  .bb-admin-login *::before,
+  .bb-admin-login *::after {
+    box-sizing: border-box;
+  }
+  
+  .bb-admin-login__background {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  
+  .bb-admin-login__grid-pattern {
+    position: absolute;
+    inset: 0;
+    opacity: 0.3;
+    background-image:
+      linear-gradient(
+        var(--bb-admin-login-border) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        90deg,
+        var(--bb-admin-login-border) 1px,
+        transparent 1px
+      );
+    background-size: 42px 42px;
+    mask-image:
+      linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.6),
+        transparent 80%
+      );
+  }
+  
+  .bb-admin-login__glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(1px);
+    opacity: 0.7;
+  }
+  
+  .bb-admin-login__glow--one {
+    top: -220px;
+    left: -170px;
+    width: 520px;
+    height: 520px;
+    background:
+      radial-gradient(
+        circle,
+        var(--bb-admin-login-accent-soft),
+        transparent 70%
+      );
+  }
+  
+  .bb-admin-login__glow--two {
+    right: -190px;
+    bottom: -260px;
+    width: 620px;
+    height: 620px;
+    background:
+      radial-gradient(
+        circle,
+        var(--bb-admin-login-accent-soft),
+        transparent 70%
+      );
+  }
+  
+  .bb-admin-login__layout {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns:
+      minmax(0, 1.05fr)
+      minmax(390px, 0.95fr);
+    width: min(100%, 1080px);
+    min-height: 650px;
+    overflow: hidden;
+    border: 1px solid var(--bb-admin-login-border);
+    border-radius: 28px;
+    background: var(--bb-admin-login-surface);
+    box-shadow:
+      0 32px 80px rgba(20, 24, 32, 0.13),
+      0 8px 24px rgba(20, 24, 32, 0.06);
+  }
+  
+  .bb-admin-login__brand-panel {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+    padding: clamp(38px, 5vw, 68px);
+    color: #ffffff;
+    background:
+      linear-gradient(
+        145deg,
+        color-mix(
+          in srgb,
+          var(--bb-admin-login-accent) 92%,
+          #16181c
+        ),
+        color-mix(
+          in srgb,
+          var(--bb-admin-login-accent) 62%,
+          #17191d
+        )
+      );
+  }
+  
+  .bb-admin-login__brand-panel::before {
+    position: absolute;
+    top: -120px;
+    right: -130px;
+    width: 350px;
+    height: 350px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 50%;
+    content: "";
+  }
+  
+  .bb-admin-login__brand-panel::after {
+    position: absolute;
+    top: -55px;
+    right: -65px;
+    width: 220px;
+    height: 220px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 50%;
+    content: "";
+  }
+  
+  .bb-admin-login__brand-content {
+    position: relative;
+    z-index: 1;
+    max-width: 490px;
+  }
+  
+  .bb-admin-login__brand-mark,
+  .bb-admin-login__mobile-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 15px;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    backdrop-filter: blur(8px);
+  }
+  
+  .bb-admin-login__eyebrow,
+  .bb-admin-login__form-eyebrow {
+    margin: 0 0 12px;
+    font-size: 0.74rem;
+    font-weight: 760;
+    letter-spacing: 0.13em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+  
+  .bb-admin-login__eyebrow {
+    color: rgba(255, 255, 255, 0.72);
+  }
+  
+  .bb-admin-login__brand-title {
+    margin: 0;
+    color: #ffffff;
+    font-size: clamp(2rem, 4vw, 3.25rem);
+    font-weight: 750;
+    letter-spacing: -0.045em;
+    line-height: 1.08;
+  }
+  
+  .bb-admin-login__brand-description {
+    max-width: 460px;
+    margin: 20px 0 0;
+    color: rgba(255, 255, 255, 0.73);
+    font-size: 0.98rem;
+    line-height: 1.7;
+  }
+  
+  .bb-admin-login__feature-list {
+    display: grid;
+    gap: 13px;
+    margin-top: 34px;
+  }
+  
+  .bb-admin-login__feature {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    color: rgba(255, 255, 255, 0.87);
+    font-size: 0.86rem;
+    font-weight: 580;
+  }
+  
+  .bb-admin-login__feature-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 50%;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
+    font-size: 0.7rem;
+    font-weight: 800;
+  }
+  
+  .bb-admin-login__form-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(28px, 5vw, 64px);
+    background: var(--bb-admin-login-surface);
+  }
+  
+  .bb-admin-login__card {
+    width: min(100%, 410px);
+  }
+  
+  .bb-admin-login__header {
+    margin-bottom: 30px;
+  }
+  
+  .bb-admin-login__mobile-mark {
+    display: none;
+    margin-bottom: 22px;
+    color: var(--bb-admin-login-accent);
+    background: var(--bb-admin-login-accent-soft);
+    border-color:
+      color-mix(
+        in srgb,
+        var(--bb-admin-login-accent) 24%,
+        transparent
+      );
+  }
+  
+  .bb-admin-login__form-eyebrow {
+    color: var(--bb-admin-login-accent);
+  }
+  
+  .bb-admin-login__title {
+    margin: 0;
+    color: var(--bb-admin-login-text);
+    font-size: clamp(1.8rem, 4vw, 2.45rem);
+    font-weight: 750;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+  }
+  
+  .bb-admin-login__subtitle {
+    margin: 11px 0 0;
+    color: var(--bb-admin-login-text-soft);
+    font-size: 0.93rem;
+    line-height: 1.6;
+  }
+  
+  .bb-admin-login__alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    margin-bottom: 22px;
+    padding: 13px 15px;
+    border: 1px solid
+      color-mix(
+        in srgb,
+        var(--bb-admin-login-danger) 28%,
+        transparent
+      );
+    border-radius: 11px;
+    color: var(--bb-admin-login-danger);
+    background: var(--bb-admin-login-danger-soft);
+    font-size: 0.84rem;
+    font-weight: 560;
+    line-height: 1.5;
+  }
+  
+  .bb-admin-login__alert-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    color: #ffffff;
+    background: var(--bb-admin-login-danger);
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+  
+  .bb-admin-login__form {
+    display: grid;
+    gap: 19px;
+  }
+  
+  .bb-admin-login__field {
+    min-width: 0;
+  }
+  
+  .bb-admin-login__label {
+    display: block;
+    margin: 0 0 8px;
+    color: var(--bb-admin-login-text);
+    font-size: 0.85rem;
+    font-weight: 660;
+    line-height: 1.4;
+  }
+  
+  .bb-admin-login__input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  
+  .bb-admin-login__input {
+    display: block;
+    width: 100%;
+    min-height: 50px;
+    padding: 12px 14px;
+    border: 1px solid var(--bb-admin-login-border);
+    border-radius: 11px;
     outline: none;
-}
-
-/* Button styling */
-button {
-    padding: 0.75rem;
-    background-color: var(--btn-bg);
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    font-size: 1rem;
+    color: var(--bb-admin-login-text);
+    background: var(--bb-admin-login-surface-soft);
+    font: inherit;
+    font-size: 0.92rem;
+    line-height: 1.4;
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      background-color 160ms ease;
+  }
+  
+  .bb-admin-login__input::placeholder {
+    color:
+      color-mix(
+        in srgb,
+        var(--bb-admin-login-text-soft) 70%,
+        transparent
+      );
+  }
+  
+  .bb-admin-login__input:hover {
+    border-color:
+      var(--bb-admin-login-border-strong);
+  }
+  
+  .bb-admin-login__input:focus {
+    border-color: var(--bb-admin-login-accent);
+    background: var(--bb-admin-login-surface);
+    box-shadow:
+      0 0 0 3px
+        var(--bb-admin-login-accent-soft);
+  }
+  
+  .bb-admin-login__input--with-leading-icon,
+  .bb-admin-login__input--password {
+    padding-left: 42px;
+  }
+  
+  .bb-admin-login__input--password {
+    padding-right: 52px;
+  }
+  
+  .bb-admin-login__input-icon {
+    position: absolute;
+    left: 15px;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bb-admin-login-text-soft);
+    font-size: 0.92rem;
+    font-weight: 750;
+    line-height: 1;
+    pointer-events: none;
+  }
+  
+  .bb-admin-login__visibility-button {
+    position: absolute;
+    right: 7px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
+    color: var(--bb-admin-login-text-soft);
+    background: transparent;
     cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-/* Button hover effect */
-button:hover {
-    background-color: var(--button-hover);
-}
-
-/* Error message styling */
-p {
-    margin-top: 1rem;
-    color: #e74c3c;
-}
-
-/* Make sure the form is centered vertically and horizontally */
-@media (max-width: 600px) {
-    .container {
-        width: 90%;
-        padding: 1.5rem;
+    transition:
+      background-color 160ms ease,
+      transform 160ms ease;
+  }
+  
+  .bb-admin-login__visibility-button:hover {
+    background: var(--bb-admin-login-accent-soft);
+    transform: scale(1.03);
+  }
+  
+  .bb-admin-login__visibility-button:focus-visible {
+    outline: 3px solid
+      var(--bb-admin-login-accent-soft);
+    outline-offset: 2px;
+  }
+  
+  .bb-admin-login__visibility-icon {
+    display: block;
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+  }
+  
+  .bb-admin-login__button {
+    display: inline-flex;
+    width: 100%;
+    min-height: 49px;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 11px 18px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition:
+      border-color 160ms ease,
+      color 160ms ease,
+      background-color 160ms ease,
+      box-shadow 160ms ease,
+      transform 160ms ease;
+  }
+  
+  .bb-admin-login__button:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+  
+  .bb-admin-login__button:focus-visible {
+    outline: 3px solid
+      var(--bb-admin-login-accent-soft);
+    outline-offset: 3px;
+  }
+  
+  .bb-admin-login__button:disabled {
+    opacity: 0.58;
+    cursor: not-allowed;
+  }
+  
+  .bb-admin-login__button--primary {
+    margin-top: 3px;
+    color: #ffffff;
+    background: var(--bb-admin-login-accent);
+    box-shadow:
+      0 10px 22px
+        color-mix(
+          in srgb,
+          var(--bb-admin-login-accent) 26%,
+          transparent
+        );
+  }
+  
+  .bb-admin-login__button--primary:hover:not(
+      :disabled
+    ) {
+    background:
+      var(--bb-admin-login-accent-hover);
+    box-shadow:
+      0 13px 28px
+        color-mix(
+          in srgb,
+          var(--bb-admin-login-accent) 32%,
+          transparent
+        );
+  }
+  
+  .bb-admin-login__button--secondary {
+    color: var(--bb-admin-login-text);
+    border-color: var(--bb-admin-login-border);
+    background: var(--bb-admin-login-surface-soft);
+  }
+  
+  .bb-admin-login__button--secondary:hover:not(
+      :disabled
+    ) {
+    border-color: var(--bb-admin-login-accent);
+    color: var(--bb-admin-login-accent);
+    background: var(--bb-admin-login-accent-soft);
+  }
+  
+  .bb-admin-login__button-arrow,
+  .bb-admin-login__external-icon {
+    font-size: 1rem;
+    transition: transform 160ms ease;
+  }
+  
+  .bb-admin-login__button:hover
+    .bb-admin-login__button-arrow {
+    transform: translateX(3px);
+  }
+  
+  .bb-admin-login__button:hover
+    .bb-admin-login__external-icon {
+    transform: translate(2px, -2px);
+  }
+  
+  .bb-admin-login__divider {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    margin: 23px 0;
+    color: var(--bb-admin-login-text-soft);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  
+  .bb-admin-login__divider::before,
+  .bb-admin-login__divider::after {
+    flex: 1;
+    height: 1px;
+    background: var(--bb-admin-login-border);
+    content: "";
+  }
+  
+  .bb-admin-login__security-note {
+    margin: 22px 0 0;
+    color: var(--bb-admin-login-text-soft);
+    font-size: 0.74rem;
+    line-height: 1.5;
+    text-align: center;
+  }
+  
+  .bb-admin-login__loading {
+    display: flex;
+    min-height: 380px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .bb-admin-login__loading-text {
+    margin: 15px 0 0;
+    color: var(--bb-admin-login-text-soft);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  
+  /* ==========================================
+     Explicit dark-mode support
+     ========================================== */
+  
+  html[data-theme="dark"] .bb-admin-login,
+  body[data-theme="dark"] .bb-admin-login,
+  [data-theme="dark"] .bb-admin-login,
+  html.dark .bb-admin-login,
+  body.dark .bb-admin-login,
+  .dark .bb-admin-login,
+  html.dark-mode .bb-admin-login,
+  body.dark-mode .bb-admin-login,
+  .dark-mode .bb-admin-login {
+    --bb-admin-login-background: #111317;
+    --bb-admin-login-surface: #191c21;
+    --bb-admin-login-surface-soft: #21252b;
+    --bb-admin-login-text: #f3f4f6;
+    --bb-admin-login-text-soft: #aab0ba;
+    --bb-admin-login-border: #343941;
+    --bb-admin-login-border-strong: #474d57;
+    --bb-admin-login-accent:
+      var(--primary-color, #c9956b);
+    --bb-admin-login-accent-hover:
+      var(--primary-hover-color, #d8a57b);
+    --bb-admin-login-accent-soft:
+      rgba(201, 149, 107, 0.14);
+    --bb-admin-login-danger: #f17d7d;
+    --bb-admin-login-danger-soft:
+      rgba(241, 125, 125, 0.11);
+  }
+  
+  html[data-theme="dark"]
+    .bb-admin-login__layout,
+  body[data-theme="dark"]
+    .bb-admin-login__layout,
+  [data-theme="dark"]
+    .bb-admin-login__layout,
+  html.dark
+    .bb-admin-login__layout,
+  body.dark
+    .bb-admin-login__layout,
+  .dark
+    .bb-admin-login__layout,
+  html.dark-mode
+    .bb-admin-login__layout,
+  body.dark-mode
+    .bb-admin-login__layout,
+  .dark-mode
+    .bb-admin-login__layout {
+    box-shadow:
+      0 34px 90px rgba(0, 0, 0, 0.45),
+      0 8px 28px rgba(0, 0, 0, 0.25);
+  }
+  
+  html[data-theme="dark"]
+    .bb-admin-login__grid-pattern,
+  body[data-theme="dark"]
+    .bb-admin-login__grid-pattern,
+  [data-theme="dark"]
+    .bb-admin-login__grid-pattern,
+  html.dark
+    .bb-admin-login__grid-pattern,
+  body.dark
+    .bb-admin-login__grid-pattern,
+  .dark
+    .bb-admin-login__grid-pattern,
+  html.dark-mode
+    .bb-admin-login__grid-pattern,
+  body.dark-mode
+    .bb-admin-login__grid-pattern,
+  .dark-mode
+    .bb-admin-login__grid-pattern {
+    opacity: 0.17;
+  }
+  
+  /* ==========================================
+     Tablet
+     ========================================== */
+  
+  @media (max-width: 880px) {
+    .bb-admin-login {
+      align-items: flex-start;
+      padding: 24px;
     }
-}
+  
+    .bb-admin-login__layout {
+      grid-template-columns: 1fr;
+      width: min(100%, 570px);
+      min-height: auto;
+    }
+  
+    .bb-admin-login__brand-panel {
+      display: none;
+    }
+  
+    .bb-admin-login__form-panel {
+      min-height: calc(100vh - 48px);
+      min-height: calc(100dvh - 48px);
+      padding: clamp(32px, 8vw, 62px);
+    }
+  
+    .bb-admin-login__mobile-mark {
+      display: inline-flex;
+    }
+  }
+  
+  /* ==========================================
+     Mobile
+     ========================================== */
+  
+  @media (max-width: 560px) {
+    .bb-admin-login {
+      display: block;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: 0;
+      overflow-y: auto;
+      background: var(--bb-admin-login-surface);
+    }
+  
+    .bb-admin-login__background {
+      display: none;
+    }
+  
+    .bb-admin-login__layout {
+      min-height: 100vh;
+      min-height: 100dvh;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+  
+    .bb-admin-login__form-panel {
+      min-height: 100vh;
+      min-height: 100dvh;
+      align-items: center;
+      padding:
+        calc(30px + env(safe-area-inset-top))
+        20px
+        calc(30px + env(safe-area-inset-bottom));
+    }
+  
+    .bb-admin-login__card {
+      width: 100%;
+    }
+  
+    .bb-admin-login__header {
+      margin-bottom: 26px;
+    }
+  
+    .bb-admin-login__mobile-mark {
+      width: 47px;
+      height: 47px;
+      margin-bottom: 24px;
+    }
+  
+    .bb-admin-login__title {
+      font-size: 1.9rem;
+    }
+  
+    .bb-admin-login__subtitle {
+      font-size: 0.88rem;
+    }
+  
+    .bb-admin-login__input,
+    .bb-admin-login__button {
+      min-height: 52px;
+    }
+  
+    .bb-admin-login__loading {
+      min-height: 70vh;
+    }
+  }
+  
+  /* ==========================================
+     Touch devices
+     ========================================== */
+  
+  @media (hover: none) {
+    .bb-admin-login__button:hover:not(:disabled),
+    .bb-admin-login__visibility-button:hover {
+      transform: none;
+    }
+  
+    .bb-admin-login__button--primary:hover:not(
+        :disabled
+      ) {
+      background: var(--bb-admin-login-accent);
+    }
+  
+    .bb-admin-login__button--secondary:hover:not(
+        :disabled
+      ) {
+      border-color: var(--bb-admin-login-border);
+      color: var(--bb-admin-login-text);
+      background: var(--bb-admin-login-surface-soft);
+    }
+  }
+  
+  /* ==========================================
+     Reduced motion
+     ========================================== */
+  
+  @media (prefers-reduced-motion: reduce) {
+    .bb-admin-login *,
+    .bb-admin-login *::before,
+    .bb-admin-login *::after {
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
