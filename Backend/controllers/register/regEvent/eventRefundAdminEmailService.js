@@ -4,7 +4,7 @@
 const { Resend } = require('resend');
 
 const User = require(
-  '../../models/user'
+  '../../../models/user'
 );
 
 const resendApiKey =
