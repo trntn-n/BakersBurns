@@ -12,79 +12,67 @@
 }
 
 /* ==================================================
-   Product manager page
+   Page
 ================================================== */
 
-.product-admin-body {
-  /*
-   * Product-specific aliases based on the same global
-   * application variables used by the Events page.
-   *
-   * These aliases stay inside the product manager and
-   * do not alter :root or unrelated pages.
-   */
-  --product-admin-page-bg:
+.admin-product-workspace-body {
+  --admin-product-workspace-page-bg:
     var(--wood-bg-dark);
 
-  --product-admin-surface:
+  --admin-product-workspace-surface:
     var(--container-bg);
 
-  --product-admin-surface-secondary:
+  --admin-product-workspace-surface-secondary:
     var(--bg-section);
 
-  --product-admin-surface-hover:
+  --admin-product-workspace-surface-hover:
     var(--button-hover);
 
-  --product-admin-text:
+  --admin-product-workspace-text:
     var(--text-color);
 
-  --product-admin-text-strong:
+  --admin-product-workspace-text-strong:
     var(--header-color);
 
-  --product-admin-text-muted:
+  --admin-product-workspace-text-muted:
     var(--about-text);
 
-  --product-admin-primary:
+  --admin-product-workspace-primary:
     var(--btn-bg);
 
-  --product-admin-primary-hover:
+  --admin-product-workspace-primary-hover:
     var(--btn-hover);
 
-  --product-admin-primary-text:
+  --admin-product-workspace-primary-text:
     var(--signup-button-text);
 
-  --product-admin-border:
+  --admin-product-workspace-border:
     var(--form-input-border);
 
-  --product-admin-shadow:
+  --admin-product-workspace-shadow:
     var(--container-shadow);
 
-  --product-admin-danger:
+  --admin-product-workspace-danger:
     #b42318;
 
-  --product-admin-danger-bg:
+  --admin-product-workspace-danger-bg:
     #fff1f0;
 
-  --product-admin-warning:
+  --admin-product-workspace-warning:
     #9a6700;
 
-  --product-admin-warning-bg:
+  --admin-product-workspace-warning-bg:
     #fff8c5;
 
-  --product-admin-success:
+  --admin-product-workspace-success:
     #16794a;
 
-  --product-admin-success-bg:
+  --admin-product-workspace-success-bg:
     #edfdf4;
 
   position: fixed;
   inset: 0;
   z-index: 1;
-
-  display: flex;
-  flex-direction: column;
-
-  min-width: 0;
 
   overflow-x: hidden;
   overflow-y: auto;
@@ -95,10 +83,10 @@
     48px;
 
   background:
-    var(--product-admin-page-bg);
+    var(--admin-product-workspace-page-bg);
 
   color:
-    var(--product-admin-text);
+    var(--admin-product-workspace-text);
 
   font-family:
     'Montserrat',
@@ -108,34 +96,34 @@
 }
 
 [data-theme='dark']
-.product-admin-body {
-  --product-admin-text-muted:
+.admin-product-workspace-body {
+  --admin-product-workspace-text-muted:
     #d2d7ca;
 
-  --product-admin-danger:
+  --admin-product-workspace-danger:
     #ff9b92;
 
-  --product-admin-danger-bg:
+  --admin-product-workspace-danger-bg:
     #3c1f1c;
 
-  --product-admin-warning:
+  --admin-product-workspace-warning:
     #f8d66d;
 
-  --product-admin-warning-bg:
+  --admin-product-workspace-warning-bg:
     #3d3216;
 
-  --product-admin-success:
+  --admin-product-workspace-success:
     #9ae6b4;
 
-  --product-admin-success-bg:
+  --admin-product-workspace-success-bg:
     #173c25;
 }
 
-.product-admin-page {
+.admin-product-workspace-page {
   width: 100%;
 }
 
-.product-admin-page__shell {
+.admin-product-workspace-shell {
   width:
     min(
       1400px,
@@ -151,7 +139,7 @@
    Header
 ================================================== */
 
-.product-admin-header {
+.admin-product-workspace-header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -160,17 +148,17 @@
   margin-bottom: 28px;
 }
 
-.product-admin-header__content {
+.admin-product-workspace-header__content {
   min-width: 0;
 }
 
-.product-admin-eyebrow {
+.admin-product-workspace-eyebrow {
   display: block;
 
   margin-bottom: 5px;
 
   color:
-    var(--product-admin-primary);
+    var(--admin-product-workspace-primary);
 
   font-size: 0.74rem;
   font-weight: 800;
@@ -178,14 +166,14 @@
   text-transform: uppercase;
 }
 
-.product-admin-header__title {
+.admin-product-workspace-header__title {
   margin:
     4px
     0
     8px;
 
   color:
-    var(--product-admin-text-strong);
+    var(--admin-product-workspace-text-strong);
 
   font-family:
     'Carnivalee Freakshow',
@@ -202,23 +190,22 @@
   line-height: 1;
 }
 
-.product-admin-header__description {
-  max-width: 650px;
+.admin-product-workspace-header__description {
+  max-width: 680px;
 
   margin: 0;
 
   color:
-    var(--product-admin-text-muted);
+    var(--admin-product-workspace-text-muted);
 
   font-size: 1rem;
   line-height: 1.65;
 }
 
-.product-admin-header__actions {
+.admin-product-workspace-header__actions {
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  justify-content: flex-end;
   gap: 10px;
 }
 
@@ -226,7 +213,7 @@
    Buttons
 ================================================== */
 
-.product-admin-button {
+.admin-product-workspace-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -243,17 +230,13 @@
 
   padding:
     10px
-    18px;
+    16px;
 
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 750;
-  line-height: 1.2;
-  text-align: center;
 
   cursor: pointer;
-
-  appearance: none;
 
   transition:
     background-color 160ms ease,
@@ -263,23 +246,18 @@
     box-shadow 160ms ease;
 }
 
-.product-admin-button:hover {
+.admin-product-workspace-button:hover {
   transform:
     translateY(-1px);
 }
 
-.product-admin-button:active {
-  transform:
-    translateY(0);
-}
-
-.product-admin-button:focus-visible {
+.admin-product-workspace-button:focus-visible {
   outline:
     3px
     solid
     color-mix(
       in srgb,
-      var(--product-admin-primary)
+      var(--admin-product-workspace-primary)
         35%,
       transparent
     );
@@ -287,25 +265,25 @@
   outline-offset: 2px;
 }
 
-.product-admin-button:disabled {
-  opacity: 0.58;
+.admin-product-workspace-button:disabled {
+  opacity: 0.56;
   cursor: not-allowed;
   transform: none;
 }
 
-.product-admin-button--large {
+.admin-product-workspace-button--large {
   min-height: 48px;
 
   padding-inline:
-    24px;
+    23px;
 }
 
-.product-admin-button--primary {
+.admin-product-workspace-button--primary {
   background:
-    var(--product-admin-primary);
+    var(--admin-product-workspace-primary);
 
   color:
-    var(--product-admin-primary-text);
+    var(--admin-product-workspace-primary-text);
 
   box-shadow:
     0
@@ -314,17 +292,17 @@
     rgba(0, 0, 0, 0.16);
 }
 
-.product-admin-button--primary:hover {
+.admin-product-workspace-button--primary:hover {
   background:
-    var(--product-admin-primary-hover);
+    var(--admin-product-workspace-primary-hover);
 
   color:
     var(--btn-hover-text);
 }
 
-.product-admin-button--secondary {
+.admin-product-workspace-button--secondary {
   border-color:
-    var(--product-admin-border);
+    var(--admin-product-workspace-border);
 
   background:
     var(--button-bg);
@@ -333,31 +311,47 @@
     var(--button-text);
 }
 
-.product-admin-button--secondary:hover {
+.admin-product-workspace-button--secondary:hover {
   border-color:
-    var(--product-admin-primary);
+    var(--admin-product-workspace-primary);
 
   background:
-    var(--product-admin-surface-hover);
+    var(--admin-product-workspace-surface-hover);
 }
 
-.product-admin-button__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.admin-product-workspace-button--danger {
+  border-color:
+    var(--admin-product-workspace-danger);
 
-  min-width: 18px;
+  background:
+    var(--admin-product-workspace-danger-bg);
 
-  font-size: 1.25rem;
-  font-weight: 500;
-  line-height: 1;
+  color:
+    var(--admin-product-workspace-danger);
+}
+
+.admin-product-workspace-button--danger-solid {
+  border-color:
+    var(--admin-product-workspace-danger);
+
+  background:
+    var(--admin-product-workspace-danger);
+
+  color: #ffffff;
+}
+
+.admin-product-workspace-button__icon-image {
+  width: 17px;
+  height: 17px;
+
+  object-fit: contain;
 }
 
 /* ==================================================
-   Summary cards
+   Summary
 ================================================== */
 
-.product-admin-summary {
+.admin-product-workspace-summary {
   display: grid;
   grid-template-columns:
     repeat(
@@ -370,38 +364,28 @@
   margin-bottom: 30px;
 }
 
-.product-admin-summary-card {
+.admin-product-workspace-summary__card {
   position: relative;
-
-  min-width: 0;
 
   overflow: hidden;
 
   border:
     1px
     solid
-    var(--product-admin-border);
+    var(--admin-product-workspace-border);
 
   border-radius: 14px;
 
   padding: 20px;
 
   background:
-    var(--product-admin-surface);
-
-  color:
-    var(--product-admin-text);
+    var(--admin-product-workspace-surface);
 
   box-shadow:
-    var(--product-admin-shadow);
-
-  transition:
-    border-color 160ms ease,
-    transform 160ms ease,
-    box-shadow 160ms ease;
+    var(--admin-product-workspace-shadow);
 }
 
-.product-admin-summary-card::before {
+.admin-product-workspace-summary__card::before {
   position: absolute;
   top: 0;
   right: 0;
@@ -410,46 +394,23 @@
   height: 4px;
 
   background:
-    var(--product-admin-primary);
+    var(--admin-product-workspace-primary);
 
   content: '';
 }
 
-.product-admin-summary-card:hover {
-  border-color:
-    color-mix(
-      in srgb,
-      var(--product-admin-primary)
-        55%,
-      var(--product-admin-border)
-    );
-
-  transform:
-    translateY(-2px);
-}
-
-.product-admin-summary-card--warning::before {
+.admin-product-workspace-summary__card--warning::before {
   background:
-    var(--product-admin-warning);
+    var(--admin-product-workspace-warning);
 }
 
-.product-admin-summary-card--warning {
-  background:
-    color-mix(
-      in srgb,
-      var(--product-admin-warning-bg)
-        38%,
-      var(--product-admin-surface)
-    );
-}
-
-.product-admin-summary-card__label {
+.admin-product-workspace-summary__card > span {
   display: block;
 
-  margin-bottom: 10px;
+  margin-bottom: 9px;
 
   color:
-    var(--product-admin-text-muted);
+    var(--admin-product-workspace-text-muted);
 
   font-size: 0.7rem;
   font-weight: 800;
@@ -457,63 +418,52 @@
   text-transform: uppercase;
 }
 
-.product-admin-summary-card__value {
+.admin-product-workspace-summary__card > strong {
   display: block;
 
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 
   color:
-    var(--product-admin-text-strong);
+    var(--admin-product-workspace-text-strong);
 
   font-family:
     'Carnivalee Freakshow',
     serif;
 
-  font-size:
-    clamp(
-      2.1rem,
-      4vw,
-      3rem
-    );
-
+  font-size: 2.65rem;
   font-weight: normal;
   line-height: 1;
 }
 
-.product-admin-summary-card__description {
-  display: block;
-
+.admin-product-workspace-summary__card > small {
   color:
-    var(--product-admin-text-muted);
+    var(--admin-product-workspace-text-muted);
 
-  font-size: 0.8rem;
-  line-height: 1.45;
+  font-size: 0.77rem;
 }
 
 /* ==================================================
-   Product directory
+   Directory
 ================================================== */
 
-.product-admin-directory {
-  width: 100%;
-
+.admin-product-workspace-directory {
   overflow: hidden;
 
   border:
     1px
     solid
-    var(--product-admin-border);
+    var(--admin-product-workspace-border);
 
   border-radius: 18px;
 
   background:
-    var(--product-admin-surface);
+    var(--admin-product-workspace-surface);
 
   box-shadow:
-    var(--product-admin-shadow);
+    var(--admin-product-workspace-shadow);
 }
 
-.product-admin-directory__header {
+.admin-product-workspace-directory__header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -522,24 +472,21 @@
   border-bottom:
     1px
     solid
-    var(--product-admin-border);
+    var(--admin-product-workspace-border);
 
   padding:
     22px
     24px;
-
-  background:
-    var(--product-admin-surface);
 }
 
-.product-admin-directory__title {
+.admin-product-workspace-directory__header h2 {
   margin:
     4px
     0
     5px;
 
   color:
-    var(--product-admin-text-strong);
+    var(--admin-product-workspace-text-strong);
 
   font-family:
     'Carnivalee Freakshow',
@@ -553,28 +500,24 @@
     );
 
   font-weight: normal;
-  line-height: 1.05;
 }
 
-.product-admin-directory__description {
-  max-width: 720px;
-
+.admin-product-workspace-directory__header p {
   margin: 0;
 
   color:
-    var(--product-admin-text-muted);
+    var(--admin-product-workspace-text-muted);
 
   font-size: 0.9rem;
-  line-height: 1.55;
 }
 
-.product-admin-directory__count {
+.admin-product-workspace-directory__count {
   flex-shrink: 0;
 
   border:
     1px
     solid
-    var(--product-admin-border);
+    var(--admin-product-workspace-border);
 
   border-radius: 999px;
 
@@ -583,72 +526,753 @@
     12px;
 
   background:
-    var(--product-admin-surface-secondary);
+    var(--admin-product-workspace-surface-secondary);
 
   color:
-    var(--product-admin-text-strong);
+    var(--admin-product-workspace-text-strong);
 
   font-size: 0.8rem;
   font-weight: 800;
 }
 
-.product-admin-directory__content {
+/* ==================================================
+   Search and filters
+================================================== */
+
+.admin-product-workspace-controls {
+  display: grid;
+  grid-template-columns:
+    minmax(250px, 2fr)
+    repeat(
+      3,
+      minmax(150px, 1fr)
+    );
+
+  gap: 14px;
+
+  border-bottom:
+    1px
+    solid
+    var(--admin-product-workspace-border);
+
+  padding:
+    18px
+    24px;
+
+  background:
+    var(--admin-product-workspace-surface-secondary);
+}
+
+.admin-product-workspace-control {
+  display: flex;
   min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-product-workspace-control > span {
+  color:
+    var(--admin-product-workspace-text-strong);
+
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.admin-product-workspace-control input,
+.admin-product-workspace-control select {
+  width: 100%;
+  min-height: 43px;
+
+  border:
+    2px
+    solid
+    var(--admin-product-workspace-border);
+
+  border-radius: 9px;
+
+  padding:
+    9px
+    11px;
+
+  background:
+    var(--button-bg);
+
+  color:
+    var(--admin-product-workspace-text);
+
+  font: inherit;
+}
+
+.admin-product-workspace-control input:focus,
+.admin-product-workspace-control select:focus {
+  border-color:
+    var(--admin-product-workspace-primary);
+
+  outline: none;
+
+  box-shadow:
+    0
+    0
+    0
+    3px
+    color-mix(
+      in srgb,
+      var(--admin-product-workspace-primary)
+        18%,
+      transparent
+    );
+}
+
+.admin-product-workspace-refreshing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  border-bottom:
+    1px
+    solid
+    var(--admin-product-workspace-border);
+
+  padding:
+    12px
+    20px;
+
+  color:
+    var(--admin-product-workspace-text-muted);
+
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+/* ==================================================
+   Product list
+================================================== */
+
+.admin-product-workspace-list {
+  display: grid;
+  gap: 14px;
 
   padding: 20px;
 
   background:
-    var(--product-admin-surface-secondary);
+    var(--admin-product-workspace-surface-secondary);
 }
 
-.product-admin-list-wrapper {
-  min-width: 0;
+.admin-product-workspace-card {
+  display: grid;
+  grid-template-columns:
+    180px
+    minmax(0, 1fr)
+    170px;
+
+  gap: 22px;
+
+  overflow: hidden;
+
+  border:
+    1px
+    solid
+    var(--admin-product-workspace-border);
+
+  border-radius: 14px;
+
+  padding: 20px;
+
+  background:
+    var(--admin-product-workspace-surface);
+
+  color:
+    var(--admin-product-workspace-text);
+
+  box-shadow:
+    var(--admin-product-workspace-shadow);
+}
+
+.admin-product-workspace-card__thumbnail {
   width: 100%;
+  min-height: 180px;
+  aspect-ratio: 1 / 1;
+
+  overflow: hidden;
+
+  border:
+    1px
+    solid
+    var(--admin-product-workspace-border);
+
+  border-radius: 11px;
+
+  background:
+    var(--admin-product-workspace-surface-secondary);
 }
 
-/*
- * Keep the existing ProductList component constrained
- * to this page without depending on its internal class
- * names.
- */
-.product-admin-list-wrapper > * {
+.admin-product-workspace-card__thumbnail img {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+.admin-product-workspace-card__thumbnail-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 7px;
+
+  width: 100%;
+  height: 100%;
+
+  color:
+    var(--admin-product-workspace-text-muted);
+
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.admin-product-workspace-card__thumbnail-placeholder span {
+  font-size: 2rem;
+}
+
+.admin-product-workspace-card__content {
   min-width: 0;
-  max-width: 100%;
+}
+
+.admin-product-workspace-card__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-product-workspace-card__type {
+  display: block;
+
+  margin-bottom: 4px;
+
+  color:
+    var(--admin-product-workspace-primary);
+
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-product-workspace-card__heading h3 {
+  margin: 0;
+
+  color:
+    var(--admin-product-workspace-text-strong);
+
+  font-family:
+    'Carnivalee Freakshow',
+    serif;
+
+  font-size:
+    clamp(
+      1.8rem,
+      3vw,
+      2.35rem
+    );
+
+  font-weight: normal;
+  line-height: 1.05;
+}
+
+.admin-product-workspace-card__status-group {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.admin-product-workspace-card__stock,
+.admin-product-workspace-card__discount-status {
+  border-radius: 999px;
+
+  padding:
+    6px
+    10px;
+
+  background:
+    var(--admin-product-workspace-surface-secondary);
+
+  color:
+    var(--admin-product-workspace-text-muted);
+
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.admin-product-workspace-card__stock--available {
+  background:
+    var(--admin-product-workspace-success-bg);
+
+  color:
+    var(--admin-product-workspace-success);
+}
+
+.admin-product-workspace-card__stock--empty {
+  background:
+    var(--admin-product-workspace-danger-bg);
+
+  color:
+    var(--admin-product-workspace-danger);
+}
+
+.admin-product-workspace-card__discount-status--active {
+  background:
+    color-mix(
+      in srgb,
+      var(--admin-product-workspace-primary)
+        14%,
+      var(--admin-product-workspace-surface)
+    );
+
+  color:
+    var(--admin-product-workspace-text-strong);
+}
+
+.admin-product-workspace-card__description {
+  display: -webkit-box;
+
+  max-width: 820px;
+
+  overflow: hidden;
+
+  margin:
+    10px
+    0
+    17px;
+
+  color:
+    var(--admin-product-workspace-text-muted);
+
+  font-size: 0.88rem;
+  line-height: 1.6;
+
+  -webkit-box-orient:
+    vertical;
+
+  -webkit-line-clamp:
+    3;
+}
+
+.admin-product-workspace-card__details {
+  display: flex;
+  flex-wrap: wrap;
+  gap:
+    14px
+    30px;
+}
+
+.admin-product-workspace-card__detail {
+  display: flex;
+  min-width: 105px;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.admin-product-workspace-card__detail span {
+  color:
+    var(--admin-product-workspace-text-muted);
+
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-product-workspace-card__detail strong {
+  color:
+    var(--admin-product-workspace-text-strong);
+
+  font-size: 0.84rem;
+}
+
+.admin-product-workspace-card__discount {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+
+  margin-top: 16px;
+
+  border:
+    1px
+    solid
+    color-mix(
+      in srgb,
+      var(--admin-product-workspace-primary)
+        34%,
+      var(--admin-product-workspace-border)
+    );
+
+  border-radius: 9px;
+
+  padding:
+    10px
+    12px;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--admin-product-workspace-primary)
+        9%,
+      var(--admin-product-workspace-surface)
+    );
+}
+
+.admin-product-workspace-card__discount > img {
+  width: 34px;
+  height: 34px;
+
+  object-fit: contain;
+}
+
+.admin-product-workspace-card__discount > div:nth-child(2) {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-product-workspace-card__discount > div:nth-child(2) span {
+  color:
+    var(--admin-product-workspace-text-muted);
+
+  font-size: 0.67rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-product-workspace-card__discount > div:nth-child(2) strong {
+  color:
+    var(--admin-product-workspace-text-strong);
+
+  font-size: 0.85rem;
+}
+
+.admin-product-workspace-card__discount-dates {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  margin-left: auto;
+
+  color:
+    var(--admin-product-workspace-text-muted);
+
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.admin-product-workspace-card__media {
+  display: flex;
+  gap: 7px;
+
+  margin-top: 15px;
+}
+
+.admin-product-workspace-card__media-item,
+.admin-product-workspace-card__media-more {
+  width: 48px;
+  height: 48px;
+
+  overflow: hidden;
+
+  border:
+    1px
+    solid
+    var(--admin-product-workspace-border);
+
+  border-radius: 7px;
+
+  background:
+    var(--admin-product-workspace-surface-secondary);
+}
+
+.admin-product-workspace-card__media-item img,
+.admin-product-workspace-card__media-item video {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+.admin-product-workspace-card__media-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color:
+    var(--admin-product-workspace-text-strong);
+
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.admin-product-workspace-card__actions {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  flex-direction: column;
+  gap: 9px;
+
+  border-left:
+    1px
+    solid
+    var(--admin-product-workspace-border);
+
+  padding-left: 20px;
+}
+
+.admin-product-workspace-card__actions
+.admin-product-workspace-button {
+  width: 100%;
 }
 
 /* ==================================================
    Empty state
 ================================================== */
 
-.product-admin-empty-state {
+.admin-product-workspace-empty {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
 
-  min-height: 320px;
+  min-height: 340px;
 
   border:
     1px
     dashed
-    var(--product-admin-border);
+    var(--admin-product-workspace-border);
 
   border-radius: 14px;
 
   padding:
-    48px
+    46px
     24px;
 
   background:
-    var(--product-admin-surface);
-
-  color:
-    var(--product-admin-text-muted);
+    var(--admin-product-workspace-surface);
 
   text-align: center;
 }
 
-.product-admin-empty-state__icon {
+.admin-product-workspace-empty__icon {
+  margin-bottom: 15px;
+
+  color:
+    var(--admin-product-workspace-primary);
+
+  font-size: 2.3rem;
+}
+
+.admin-product-workspace-empty h3 {
+  margin:
+    0
+    0
+    8px;
+
+  color:
+    var(--admin-product-workspace-text-strong);
+
+  font-family:
+    'Carnivalee Freakshow',
+    serif;
+
+  font-size: 2.1rem;
+  font-weight: normal;
+}
+
+.admin-product-workspace-empty p {
+  margin:
+    0
+    0
+    20px;
+
+  color:
+    var(--admin-product-workspace-text-muted);
+}
+
+.admin-product-workspace-empty__actions {
+  display: flex;
+  gap: 9px;
+}
+
+/* ==================================================
+   Forms
+================================================== */
+
+.admin-product-workspace-form-overlay,
+.admin-product-workspace-delete-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+
+  display: grid;
+  place-items: center;
+
+  overflow-y: auto;
+
+  padding: 22px;
+
+  background:
+    rgba(0, 0, 0, 0.58);
+
+  backdrop-filter:
+    blur(5px);
+}
+
+.admin-product-workspace-form-dialog {
+  width:
+    min(
+      900px,
+      100%
+    );
+
+  max-height:
+    calc(
+      100vh -
+      44px
+    );
+
+  overflow: hidden;
+
+  border:
+    1px
+    solid
+    var(--admin-product-workspace-border);
+
+  border-radius: 18px;
+
+  background:
+    var(--admin-product-workspace-surface);
+
+  box-shadow:
+    0
+    30px
+    80px
+    rgba(0, 0, 0, 0.34);
+}
+
+.admin-product-workspace-form-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+
+  border-bottom:
+    1px
+    solid
+    var(--admin-product-workspace-border);
+
+  padding:
+    19px
+    22px;
+}
+
+.admin-product-workspace-form-dialog__header h2 {
+  margin: 0;
+
+  color:
+    var(--admin-product-workspace-text-strong);
+
+  font-family:
+    'Carnivalee Freakshow',
+    serif;
+
+  font-size: 2.25rem;
+  font-weight: normal;
+}
+
+.admin-product-workspace-form-dialog__close {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+
+  width: 40px;
+  height: 40px;
+
+  border:
+    1px
+    solid
+    var(--admin-product-workspace-border);
+
+  border-radius: 9px;
+
+  padding: 0;
+
+  background:
+    var(--button-bg);
+
+  color:
+    var(--button-text);
+
+  font-size: 1.55rem;
+
+  cursor: pointer;
+}
+
+.admin-product-workspace-form-dialog__content {
+  max-height:
+    calc(
+      100vh -
+      150px
+    );
+
+  overflow-y: auto;
+
+  padding: 22px;
+}
+
+/* ==================================================
+   Delete modal
+================================================== */
+
+.admin-product-workspace-delete-modal__dialog {
+  width:
+    min(
+      470px,
+      100%
+    );
+
+  border:
+    1px
+    solid
+    var(--admin-product-workspace-border);
+
+  border-radius: 16px;
+
+  padding:
+    26px;
+
+  background:
+    var(--admin-product-workspace-surface);
+
+  color:
+    var(--admin-product-workspace-text);
+
+  box-shadow:
+    0
+    30px
+    80px
+    rgba(0, 0, 0, 0.34);
+
+  text-align: center;
+}
+
+.admin-product-workspace-delete-modal__icon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -656,714 +1280,328 @@
   width: 58px;
   height: 58px;
 
-  margin-bottom: 18px;
+  margin:
+    0
+    auto
+    15px;
 
   border:
     1px
     solid
-    var(--product-admin-border);
+    var(--admin-product-workspace-danger);
 
   border-radius: 50%;
 
   background:
-    color-mix(
-      in srgb,
-      var(--product-admin-primary)
-        13%,
-      var(--product-admin-surface)
-    );
-
-  color:
-    var(--product-admin-primary);
-
-  font-size: 2rem;
-  font-weight: 400;
-  line-height: 1;
+    var(--admin-product-workspace-danger-bg);
 }
 
-.product-admin-empty-state h3 {
-  margin:
-    0
-    0
-    8px;
+.admin-product-workspace-delete-modal__icon img {
+  width: 27px;
+  height: 27px;
+
+  object-fit: contain;
+}
+
+.admin-product-workspace-delete-modal__eyebrow {
+  display: block;
 
   color:
-    var(--product-admin-text-strong);
+    var(--admin-product-workspace-danger);
+
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.admin-product-workspace-delete-modal__dialog h2 {
+  margin:
+    5px
+    0
+    10px;
+
+  color:
+    var(--admin-product-workspace-text-strong);
 
   font-family:
     'Carnivalee Freakshow',
     serif;
 
-  font-size: 2rem;
+  font-size: 2.1rem;
   font-weight: normal;
 }
 
-.product-admin-empty-state p {
-  max-width: 460px;
-
-  margin:
-    0
-    0
-    22px;
+.admin-product-workspace-delete-modal__dialog p {
+  margin: 0;
 
   color:
-    var(--product-admin-text-muted);
+    var(--admin-product-workspace-text-muted);
 
+  font-size: 0.88rem;
   line-height: 1.6;
 }
 
-/* ==================================================
-   Existing product form and discount form host
-================================================== */
+.admin-product-workspace-delete-modal__actions {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
 
-/*
- * This host does not impose modal styling because the
- * existing ProductForm and DiscountForm components may
- * already render their own backdrops and dialogs.
- *
- * It only establishes a predictable stacking context.
- */
-.product-admin-overlay-host {
-  position: relative;
-  z-index: 1100;
+  gap: 10px;
+
+  margin-top: 22px;
 }
 
 /* ==================================================
-   Accessibility and motion
+   Spinner
 ================================================== */
+
+.admin-product-workspace-spinner {
+  display: inline-block;
+
+  width: 24px;
+  height: 24px;
+
+  border:
+    3px
+    solid
+    color-mix(
+      in srgb,
+      var(--admin-product-workspace-primary)
+        20%,
+      transparent
+    );
+
+  border-top-color:
+    var(--admin-product-workspace-primary);
+
+  border-radius: 50%;
+
+  animation:
+    admin-product-workspace-spin
+    700ms
+    linear
+    infinite;
+}
+
+.admin-product-workspace-spinner--small {
+  width: 18px;
+  height: 18px;
+
+  border-width: 2px;
+}
+
+@keyframes admin-product-workspace-spin {
+  to {
+    transform:
+      rotate(360deg);
+  }
+}
+
+/* ==================================================
+   Responsive
+================================================== */
+
+@media (
+  max-width: 1100px
+) {
+  .admin-product-workspace-summary {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+
+  .admin-product-workspace-controls {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+
+  .admin-product-workspace-card {
+    grid-template-columns:
+      150px
+      minmax(0, 1fr);
+  }
+
+  .admin-product-workspace-card__actions {
+    grid-column:
+      1
+      / -1;
+
+    display: grid;
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+
+    border-top:
+      1px
+      solid
+      var(--admin-product-workspace-border);
+
+    border-left: 0;
+
+    padding:
+      16px
+      0
+      0;
+  }
+}
+
+@media (
+  max-width: 760px
+) {
+  .admin-product-workspace-body {
+    padding:
+      100px
+      14px
+      32px;
+  }
+
+  .admin-product-workspace-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-product-workspace-header__actions {
+    display: grid;
+    grid-template-columns:
+      1fr;
+  }
+
+  .admin-product-workspace-header__actions
+  .admin-product-workspace-button {
+    width: 100%;
+  }
+
+  .admin-product-workspace-directory__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-product-workspace-controls {
+    grid-template-columns:
+      1fr;
+  }
+
+  .admin-product-workspace-card {
+    grid-template-columns:
+      1fr;
+  }
+
+  .admin-product-workspace-card__thumbnail {
+    min-height: 220px;
+    max-height: 320px;
+  }
+
+  .admin-product-workspace-card__heading {
+    flex-direction: column;
+  }
+
+  .admin-product-workspace-card__status-group {
+    justify-content: flex-start;
+  }
+
+  .admin-product-workspace-card__discount {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .admin-product-workspace-card__discount-dates {
+    width: 100%;
+
+    margin-left: 45px;
+  }
+
+  .admin-product-workspace-card__actions {
+    grid-template-columns:
+      1fr;
+  }
+}
+
+@media (
+  max-width: 480px
+) {
+  .admin-product-workspace-summary {
+    grid-template-columns:
+      1fr;
+  }
+
+  .admin-product-workspace-list {
+    padding: 11px;
+  }
+
+  .admin-product-workspace-card {
+    gap: 16px;
+
+    padding: 14px;
+  }
+
+  .admin-product-workspace-card__details {
+    display: grid;
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+
+  .admin-product-workspace-card__media {
+    overflow-x: auto;
+
+    padding-bottom: 4px;
+  }
+
+  .admin-product-workspace-form-overlay,
+  .admin-product-workspace-delete-modal {
+    padding: 10px;
+  }
+
+  .admin-product-workspace-form-dialog__header,
+  .admin-product-workspace-form-dialog__content {
+    padding:
+      16px;
+  }
+
+  .admin-product-workspace-delete-modal__actions {
+    grid-template-columns:
+      1fr;
+  }
+
+  .admin-product-workspace-empty__actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .admin-product-workspace-empty__actions
+  .admin-product-workspace-button {
+    width: 100%;
+  }
+}
 
 @media (
   prefers-reduced-motion:
     reduce
 ) {
-  .product-admin-button,
-  .product-admin-summary-card {
+  .admin-product-workspace-button {
     transition: none;
   }
 
-  .product-admin-button:hover,
-  .product-admin-summary-card:hover {
+  .admin-product-workspace-button:hover {
     transform: none;
   }
-}
 
-/* ==================================================
-   Tablet
-================================================== */
-
-@media (
-  max-width: 1050px
-) {
-  .product-admin-summary {
-    grid-template-columns:
-      repeat(
-        2,
-        minmax(0, 1fr)
-      );
+  .admin-product-workspace-spinner {
+    animation-duration:
+      1400ms;
   }
 }
 
-@media (
-  max-width: 900px
-) {
-  .product-admin-header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .product-admin-header__actions {
-    justify-content: flex-start;
-  }
-
-  .product-admin-directory__header {
-    align-items: flex-start;
-  }
-}
-
-/* ==================================================
-   Mobile
-================================================== */
-
-@media (
-  max-width: 680px
-) {
-  .product-admin-body {
-    padding:
-      100px
-      14px
-      30px;
-  }
-
-  .product-admin-header {
-    gap: 20px;
-
-    margin-bottom: 22px;
-  }
-
-  .product-admin-header__title {
-    font-size:
-      clamp(
-        2.55rem,
-        15vw,
-        3.6rem
-      );
-  }
-
-  .product-admin-header__description {
-    font-size: 0.93rem;
-  }
-
-  .product-admin-header__actions {
-    display: grid;
-    grid-template-columns: 1fr;
-    width: 100%;
-  }
-
-  .product-admin-header__actions
-  .product-admin-button {
-    width: 100%;
-  }
-
-  .product-admin-summary {
-    grid-template-columns:
-      repeat(
-        2,
-        minmax(0, 1fr)
-      );
-
-    gap: 10px;
-
-    margin-bottom: 22px;
-  }
-
-  .product-admin-summary-card {
-    padding:
-      17px
-      14px;
-  }
-
-  .product-admin-summary-card__value {
-    font-size: 2rem;
-  }
-
-  .product-admin-summary-card__description {
-    font-size: 0.74rem;
-  }
-
-  .product-admin-directory {
-    border-radius: 14px;
-  }
-
-  .product-admin-directory__header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 14px;
-
-    padding: 19px;
-  }
-
-  .product-admin-directory__title {
-    font-size: 2.15rem;
-  }
-
-  .product-admin-directory__count {
-    align-self: flex-start;
-  }
-
-  .product-admin-directory__content {
-    padding: 12px;
-  }
-
-  .product-admin-empty-state {
-    min-height: 280px;
-
-    padding:
-      38px
-      18px;
-  }
-}
-
-/* ==================================================
-   Small mobile
-================================================== */
-
-@media (
-  max-width: 430px
-) {
-  .product-admin-body {
-    padding-right: 10px;
-    padding-left: 10px;
-  }
-
-  .product-admin-summary {
-    grid-template-columns: 1fr;
-  }
-
-  .product-admin-summary-card {
-    display: grid;
-    grid-template-columns:
-      minmax(0, 1fr)
-      auto;
-
-    align-items: center;
-    gap:
-      4px
-      14px;
-  }
-
-  .product-admin-summary-card__label {
-    margin: 0;
-
-    grid-column: 1;
-  }
-
-  .product-admin-summary-card__value {
-    margin: 0;
-
-    grid-column: 2;
-    grid-row:
-      1
-      / span 2;
-  }
-
-  .product-admin-summary-card__description {
-    grid-column: 1;
-  }
-
-  .product-admin-directory__header,
-  .product-admin-directory__content {
-    padding-right: 14px;
-    padding-left: 14px;
-  }
-}
-
-
-/***********************************************/
-/* 1. Page Header                              */
-/***********************************************/
-.page-header {
-  font-size: 5rem;
-  margin-top: 10%;
-  color: var(--text-color); /* Reuse your theme's text color */
-}
-@media (max-width: 768px) {
-  .page-header {
-    margin-top: 15%;
-    font-size: 3rem;
-  }
-}
-.back-to-top {
-  position: fixed;
-  bottom: 40px;
-  right: 40px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  z-index: 10;
-  transition: opacity 0.3s ease;
-}
-
-.back-to-top:hover {
-  background-color: #0056b3;
-}
-
-
-/***********************************************/
-/* 2. Main Content Container (Scrollable)      */
-/***********************************************/
-.product-manager-container {
-  max-width: 100vw;
-  margin: 0 auto;
-  padding: 20px;
-  height: 100vh;            /* Occupies full viewport height */
-  overflow-y: auto;         /* Enable vertical scrolling */
-  background: var(--bg-overlay); /* Semi-transparent white from your theme (#ffffff8b) */
-  box-shadow: var(--container-shadow); /* e.g. 0 4px 6px rgba(0, 0, 0, 0.1) from your theme */
-  border-radius: 10px;
-  color: var(--header-color); /* Replaces #333 with a darker text variable, e.g. #333 in light mode */
-}
-
-/***********************************************/
-/* 3. Add Forms / Add Buttons Section          */
-/***********************************************/
-.add-forms {
-  display: flex;
-  justify-content: center;
-}
-
-.add-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-top: 20px;
-}
-
-.add-prdct-button {
-  background-color: var(--btn-bg);
- color: var(--inverted-button-text);
-}
-/* Reuse the 'blue-button' or 'btn-bg' from your theme for these buttons */
-.add-buttons button {
-  padding: 12px 20px;
-  background-color: var(--blue-button-bg); /* #007bff */
-  color: var(--button-text); /* black in light mode, white in dark mode, or pick another if you want white */
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-.add-buttons button:hover {
-  background-color: var(--blue-button-hover-bg); /* #e53e3e in your theme, note this is red */
-  transform: translateY(-2px);
-}
-
-/***********************************************/
-/* 4. Form Sections                            */
-/***********************************************/
-.form-section {
-  border: 5px solid var(--header-color); /* Replaces #333 with your darker text var */
-  border-radius: 30px;
-  padding: 20px;
-  color:var(--text-color);
-  background: var(--signup-form-section-bg); /* e.g. linear-gradient(145deg, #ffffff, #d3d3d3) */
-  box-shadow: var(--signup-form-section-shadow); 
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  margin: 10px;
-}
-
-/* Animated glow effect (unchanged) */
-@keyframes glow {
-  0% {
-    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.2),
-                0 0 10px rgba(255, 255, 255, 0.3);
-  }
-  50% {
-    box-shadow: 0px 15px 25px rgba(0, 0, 0, 0.3),
-                0 0 20px rgba(255, 255, 255, 0.6);
-  }
-  100% {
-    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.2),
-                0 0 10px rgba(255, 255, 255, 0.3);
-  }
-}
-.form-section.glow {
-  animation: glow 1.5s infinite alternate;
-}
-
-/* Input fields */
-.form-section input {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 15px;
-  border: 2px solid var(--form-input-border); /* #ccc in light mode */
-  border-radius: 8px;
-  font-size: 16px;
-  width: 90%;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.form-section input:focus {
-  border-color: var(--blue-button-bg); /* #007bff */
-  box-shadow: 0 0 8px rgba(0, 123, 255, 0.6);
-  outline: none;
-}
-
-/* Form section button */
-.form-section {
-  border: 5px solid var(--signup-form-section-border);
-  border-radius: 30px;
-  padding: 20px;
-  background: var(--section-bg);
-  box-shadow: var(--signupform-section-shadow);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  margin: 10px;
-}
-
-
-.form-section button:hover {
-  background: var(--blue-button-hover-bg); /* #e53e3e in your theme (red) */
-  transform: translateY(-2px);
-}
-.form-section button:active {
-  transform: translateY(2px);
-}
-
-/***********************************************/
-/* 5. Product & Discount Form Input/Labels     */
-/***********************************************/
-.product-form-section input,
-.discount-form-section input,
-.product-edit-form input,
-.discount-edit-form input {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid var(--form-input-border);
-  border-radius: 5px;
-  margin-bottom: 15px;
-  font-size: 14px;
-  transition: border-color 0.3s ease;
-}
-.product-form-section input:focus,
-.discount-form-section input:focus,
-.product-edit-form input:focus,
-.discount-edit-form input:focus {
-  border-color: var(--blue-button-bg);
-  outline: none;
-}
-
-/* Labels */
-.product-form-section label,
-.discount-form-section label,
-.product-edit-form label,
-.discount-edit-form label {
-  margin-bottom: 5px;
-  font-size: 14px;
-  color: var(--header-color); /* Replaces #333 with something from your theme */
-}
-
-/* Form section titles */
-.product-form-section h2,
-.discount-form-section h2 {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 20px;
-  color: var(--header-color);
-}
-
-/* Form action buttons */
-.product-form-section button,
-.discount-form-section button,
-.product-edit-form button,
-.discount-edit-form button {
-  padding: 10px 20px;
-  background-color: var(--button-bg); /* white or black depending on theme */
-  color: var(--button-text);
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  margin-right: 10px;
-}
-.product-form-section button:hover,
-.discount-form-section button:hover,
-.product-edit-form button:hover,
-.discount-edit-form button:hover {
-  background-color: var(--button-hover); /* #f0f0f0 in light theme */
-}
-
-/***********************************************/
-/* 6. Special Buttons (Delete, etc.)           */
-/***********************************************/
-.delete-button {
-  background-color: var(--discount-tag-bg); /* #ff4d4d from theme (red) */
-}
-.delete-button:hover {
-  background-color: var(--nav-list-item-bg-hover); /* #ddd or #444 in dark mode, or pick a better red if you want */
-}
-
-/***********************************************/
-/* 7. Image Cropping Modal                     */
-/***********************************************/
-.cropper-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1000;
-  background-color: var(--product-card-bg); /* #fff from theme */
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: var(--container-shadow);
-}
-
-/* Cropper container */
-.cropper-container {
-  width: 300px;
-  height: 300px;
-  position: relative;
-}
-
-.crop-button {
-  margin-top: 15px;
-  padding: 10px 15px;
-  background-color: var(--blue-button-bg);
-  color: var(--button-text);
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-.crop-button:hover {
-  background-color: var(--blue-button-hover-bg);
-}
-
-/***********************************************/
-/* 8. Discount Banner, Price, Savings          */
-/***********************************************/
-.discount-banner {
-  position: absolute;
-  top: 10px;
-  left: -30px;
-  background-color: var(--discount-tag-bg); /* #ff4d4d */
-  color: var(--inverted-button-text);        /* e.g. #f9f9f9 or white */
-  font-weight: bold;
-  transform: rotate(-45deg);
-  width: 120px;
-  text-align: center;
-  padding: 5px 0;
-  font-size: 12px;
-  z-index: 1;
-}
-
-/* Original and discounted price styling */
-.price {
-  font-size: 16px;
-  margin: 5px 0;
-  color: var(--header-color);
-}
-.price.original-price {
-  color: var(--price-original-color); /* #ccc in your theme */
-  text-decoration: line-through;
-  font-size: 14px;
-}
-.price.discounted-price {
-  color: var(--blue-button-bg); /* #007bff for highlight */
-  font-size: 18px;
-  font-weight: bold;
-}
-.price-difference {
-  font-size: 14px;
-  color: var(--about-text); /* e.g. #333 or #ddd in dark mode */
-  font-weight: bold;
-}
-
-/***********************************************/
-/* 9. Product Card Buttons                     */
-/***********************************************/
-.product-card button {
-  padding: 10px;
-  background-color: var(--blue-button-bg);
-  color: var(--button-text);
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin-top: 10px;
-}
-.product-card button:hover {
-  background-color: var(--blue-button-hover-bg);
-  transform: translateY(-2px);
-}
-
-/* Checkbox inside product card */
-.product-card input[type="checkbox"] {
-  margin-top: 10px;
-}
-
-/***********************************************/
-/* 10. Action Buttons (Edit/Delete)            */
-/***********************************************/
-.action-button {
-  background-color: var(--blue-button-bg);
-  color: var(--button-text);
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-.action-button:hover {
-  background-color: var(--blue-button-hover-bg);
-  transform: translateY(-2px);
-}
-.action-button.edit {
-  background-color: var(--signup-button-bg); /* #28a745 => greenish */
-}
-.action-button.edit:hover {
-  background-color: var(--btn-hover); /* #ffad65 => an orange, not exact match but we reuse existing */
-}
-.action-button.delete {
-  background-color: var(--discount-tag-bg); /* #ff4d4d => red */
-}
-.action-button.delete:hover {
-  background-color: var(--nav-list-item-bg-hover); /* #ddd in light or #444 in dark */
-}
-
-/***********************************************/
-/* 11. Responsive Product Card Layout          */
-/***********************************************/
-.product-card {
-  width: calc(33.33% - 20px);
-  margin: 10px;
-  padding: 15px;
-  border: 1px solid var(--form-input-border);
-  border-radius: 10px;
-  background-color: var(--product-card-bg); /* #fff */
-  display: inline-block;
-  position: relative;
-  vertical-align: top;
-  font-size: large;
-  overflow: hidden;
-  font-family: 'Courier New'; /* or var(--font) if you like */
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
-}
-
-/* 2 columns at max-width 1200px */
-@media (max-width: 1200px) {
-  .product-card {
-    width: calc(50% - 20px);
-  }
-}
-/* 1 column on smaller screens */
-@media (max-width: 768px) {
-  .product-card {
-    width: calc(100% - 20px);
-  }
-}
-
-/***********************************************/
-/* 12. Product Image Styling                   */
-/***********************************************/
-.product-image img {
-  max-width: 100px;
-  max-height: 100px;
-  object-fit: cover;
-  margin-bottom: 10px;
-  border-radius: 10px;
-}
-
-.price {
-  margin: 5px 0;
-  color: var(--header-color);
-  font-size: 20px;
-}
-.price.original-price {
-  color: var(--price-original-color);
-  text-decoration: line-through;
-  font-size: 20px;
-}
-.price.discounted-price {
-  color: var(--blue-button-bg);
-  font-size: 20px;
-  font-weight: bold;
-}
-.price-difference {
-  font-size: 12px;
-  color: var(--header-color);
-}
-
-.product-title {
-  font-family: 'Dancing Script', cursive;
-  font-size: 3rem;
-}
-
-.btn {
-  background-color: var(--btn-bg);
-  color: var(--inverted-button-text);
-}
