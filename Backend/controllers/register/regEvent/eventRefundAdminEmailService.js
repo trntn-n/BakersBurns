@@ -1,3 +1,4 @@
+
 // services/email/eventRefundAdminEmailService.js
 'use strict';
 
@@ -11,8 +12,10 @@ const resendApiKey =
   process.env.RESEND_API_KEY;
 
 const resendFromEmail =
+  process.env.EVENT_EMAIL_FROM ||
   process.env.RESEND_FROM_EMAIL ||
-  process.env.EMAIL_FROM;
+  process.env.EMAIL_FROM ||
+  'Bakers Burns <events@bakersburns.com>';
 
 const adminFrontendUrl = String(
   process.env.ADMIN_FRONTEND_URL ||
@@ -202,6 +205,10 @@ const buildAdminRefundUrl = (
  * Emails are sent separately so administrators do not
  * see one another's addresses.
  *
+ * Each email is attempted independently. One invalid
+ * or unused admin address will not prevent emails from
+ * being sent to the remaining administrators.
+ *
  * @param {object} data
  * @param {object} data.refundRequest
  * @param {object|null} data.event
@@ -224,12 +231,6 @@ const sendRefundAdminEmailService =
       );
     }
 
-    if (!resendFromEmail) {
-      throw new Error(
-        'Missing RESEND_FROM_EMAIL or EMAIL_FROM environment variable.'
-      );
-    }
-
     const recipients =
       await getAdminEmailAddresses();
 
@@ -243,9 +244,13 @@ const sendRefundAdminEmailService =
       );
 
       return {
+        success: false,
+        complete: false,
         sent: 0,
         failed: 0,
         recipients: [],
+        successful: [],
+        failures: [],
       };
     }
 
@@ -321,11 +326,15 @@ const sendRefundAdminEmailService =
       <html lang="en">
         <head>
           <meta charset="utf-8">
+
           <meta
             name="viewport"
             content="width=device-width, initial-scale=1"
           >
-          <title>${escapeHtml(subject)}</title>
+
+          <title>
+            ${escapeHtml(subject)}
+          </title>
         </head>
 
         <body
@@ -391,7 +400,8 @@ const sendRefundAdminEmailService =
                           color: #e5e5e5;
                         "
                       >
-                        An event purchase refund is waiting for administrator review.
+                        An event purchase refund is waiting
+                        for administrator review.
                       </p>
                     </td>
                   </tr>
@@ -530,28 +540,48 @@ const sendRefundAdminEmailService =
       </html>
     `;
 
+    /*
+     * Attempt every admin email independently and
+     * concurrently.
+     *
+     * Promise.allSettled ensures an invalid address does
+     * not stop the remaining addresses from being sent.
+     */
     const sendResults =
       await Promise.allSettled(
         recipients.map(
           async (recipient) => {
             const response =
               await resend.emails.send({
-                from: resendFromEmail,
-                to: recipient,
+                from:
+                  resendFromEmail,
+                to: [
+                  recipient,
+                ],
                 subject,
                 text,
                 html,
               });
 
             /*
-             * Recent Resend SDK versions can return
-             * an error object without rejecting.
+             * Some Resend SDK versions return an error
+             * object rather than rejecting the promise.
              */
             if (response?.error) {
-              throw new Error(
-                response.error.message ||
-                  'Resend returned an unknown error.'
-              );
+              const resendError =
+                new Error(
+                  response.error.message ||
+                    'Resend returned an unknown error.'
+                );
+
+              resendError.code =
+                response.error.name ||
+                'resend_email_error';
+
+              resendError.details =
+                response.error;
+
+              throw resendError;
             }
 
             return {
@@ -569,7 +599,10 @@ const sendRefundAdminEmailService =
     const failed = [];
 
     sendResults.forEach(
-      (result, index) => {
+      (
+        result,
+        index
+      ) => {
         const recipient =
           recipients[index];
 
@@ -588,7 +621,12 @@ const sendRefundAdminEmailService =
           recipient,
           error:
             result.reason?.message ||
-            String(result.reason),
+            String(
+              result.reason
+            ),
+          code:
+            result.reason?.code ||
+            null,
         });
       }
     );
@@ -629,13 +667,32 @@ const sendRefundAdminEmailService =
     }
 
     return {
+      /*
+       * success means at least one administrator received
+       * the notification.
+       */
+      success:
+        successful.length > 0,
+
+      /*
+       * complete means every configured administrator
+       * received the notification.
+       */
+      complete:
+        failed.length === 0,
+
       sent:
         successful.length,
+
       failed:
         failed.length,
+
       recipients,
+
       successful,
-      failures: failed,
+
+      failures:
+        failed,
     };
   };
 
@@ -682,5 +739,6 @@ function createDetailRow(
 }
 
 module.exports = {
-    sendRefundAdminEmailService,
+  sendRefundAdminEmailService,
 };
+
