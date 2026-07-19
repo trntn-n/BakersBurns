@@ -234,6 +234,12 @@ const Navbar = () => {
             >
               <CartLink />
             </li>
+            <li
+              className="nav-item"
+              onClick={closeMenu}
+            >
+              <Link to="/events">Events</Link>
+            </li>
 
             <li
               className="nav-item"
