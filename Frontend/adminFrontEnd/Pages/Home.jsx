@@ -52,6 +52,17 @@ const Home = () => {
               </div>
             </Link>
           </li>
+          <li className="home-tile">
+            <Link style={{textDecoration: 'none'}} to="/event-manager">
+              <div className="tile-content">
+                <h3>Events</h3>
+                <img 
+                style={{width: '100%', height: 'auto'}}
+                src={MessageGif}/>
+                <p className='home-tile-description'>Contact users using in app messaging</p>
+              </div>
+            </Link>
+          </li>
           
           <li className="home-tile">
             <Link  style={{textDecoration: 'none'}} to="/gallery">
