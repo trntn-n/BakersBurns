@@ -13,86 +13,96 @@
      Main page
      ========================= */
   
-  .event-success-page {
+  /* =========================
+   Event success page
+   ========================= */
+
+.event-success-page {
     --event-success-bg:
-      var(--wood-bg-dark);
+      var(--wood-bg-dark, #f4f2ef);
   
     --event-success-surface:
-      var(--container-bg);
+      var(--container-bg, #ffffff);
   
     --event-success-secondary:
-      var(--bg-section);
+      var(--bg-section, #f8f6f3);
   
     --event-success-text:
-      var(--text-color);
+      var(--text-color, #24211f);
   
     --event-success-heading:
-      var(--header-color);
+      var(--header-color, #24211f);
   
     --event-success-muted:
-      var(--about-text);
+      var(--about-text, #6d6863);
   
     --event-success-primary:
-      var(--btn-bg);
+      var(--btn-bg, #84240c);
   
     --event-success-primary-hover:
-      var(--btn-hover);
+      var(--btn-hover, #a83c20);
   
     --event-success-primary-hover-text:
-      var(--btn-hover-text);
+      var(--btn-hover-text, #ffffff);
   
     --event-success-border:
-      var(--form-input-border);
+      var(--form-input-border, #ddd6cf);
   
     --event-success-shadow:
-      var(--container-shadow);
+      0 18px 55px rgba(31, 25, 21, 0.08);
+  
+    position: relative;
+  
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   
     min-height: 100vh;
-    width: 100%;
+    min-height: 100dvh;
   
+    margin: 0;
     padding:
-      132px
-      24px
-      64px;
+      clamp(104px, 10vw, 132px)
+      clamp(14px, 3vw, 30px)
+      clamp(42px, 7vw, 72px);
+  
+    overflow-x: clip;
+  
+    color: var(--event-success-text);
   
     background:
       linear-gradient(
-        var(--bg-overlay),
-        var(--bg-overlay)
+        var(--bg-overlay, transparent),
+        var(--bg-overlay, transparent)
       ),
       var(--event-success-bg);
   
-    color:
-      var(--event-success-text);
-  
     font-family:
-      'Montserrat',
+      "Montserrat",
+      Arial,
+      Helvetica,
       sans-serif;
+  
+    box-sizing: border-box;
   }
   
-  [data-theme='dark']
-    .event-success-page {
-    --event-success-muted:
-      #d5dacd;
-  
-    --event-success-border:
-      #66705f;
+  .event-success-page *,
+  .event-success-page *::before,
+  .event-success-page *::after {
+    box-sizing: border-box;
   }
-  
-  /* =========================
-     Main shell
-     ========================= */
   
   .event-success-shell {
-    width:
-      min(
-        1180px,
-        100%
-      );
+    position: relative;
   
-    margin:
-      0
-      auto;
+    width: min(1180px, 100%);
+    max-width: 100%;
+    min-width: 0;
+  
+    margin: 0 auto;
+    padding: 0;
+  
+    overflow: visible;
   }
   
   /* =========================
