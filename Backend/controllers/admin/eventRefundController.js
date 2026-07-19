@@ -20,8 +20,23 @@ const EventReservation = require(
  * STRIPE_SECRET_KEY=sk_live_...
  * BAKERS_BURNS_LIVE_ACCOUNT_ID=acct_...
  */
+const stripeMode = String(
+  process.env.STRIPE_MODE || 'live'
+)
+  .trim()
+  .toLowerCase();
+
+if (
+  stripeMode !== 'test' &&
+  stripeMode !== 'live'
+) {
+  throw new Error(
+    'STRIPE_MODE must be either "test" or "live".'
+  );
+}
+
 const stripeModeIsTest =
-  process.env.STRIPE_MODE === 'test';
+  stripeMode === 'test';
 
 const stripeSecretKey =
   stripeModeIsTest
@@ -41,16 +56,34 @@ if (!stripeSecretKey) {
   );
 }
 
-if (!stripeConnectedAccountId) {
+if (
+  !stripeConnectedAccountId ||
+  !String(
+    stripeConnectedAccountId
+  ).startsWith('acct_')
+) {
   throw new Error(
     stripeModeIsTest
-      ? 'Missing BAKERS_BURNS_ACCOUNT_ID environment variable.'
-      : 'Missing BAKERS_BURNS_LIVE_ACCOUNT_ID environment variable.'
+      ? 'Missing or invalid BAKERS_BURNS_TEST_ACCOUNT_ID environment variable.'
+      : 'Missing or invalid BAKERS_BURNS_LIVE_ACCOUNT_ID environment variable.'
   );
 }
 
 const stripe = require('stripe')(
   stripeSecretKey
+);
+
+console.log(
+  'Admin event refund controller configuration loaded:',
+  {
+    stripeMode,
+
+    connectedAccountId:
+      stripeConnectedAccountId,
+
+    secretKeyConfigured:
+      Boolean(stripeSecretKey),
+  }
 );
 
 /*
@@ -194,7 +227,8 @@ const buildReservationUpdate = (
 const updateReservationSafely =
   async (
     reservation,
-    values
+    values,
+    options = {}
   ) => {
     if (
       !reservation ||
@@ -216,7 +250,8 @@ const updateReservationSafely =
     }
 
     await reservation.update(
-      updateValues
+      updateValues,
+      options
     );
 
     return true;
@@ -299,7 +334,18 @@ const reservationIsRefundable = (
 };
 
 /**
- * Mark a reservation as successfully refunded.
+ * Record that Stripe accepted a refund request.
+ *
+ * IMPORTANT:
+ * This controller initiates refunds, but it does not finalize
+ * reservation status, release sold inventory, or delete events.
+ *
+ * The signed admin refund webhook is the source of truth for
+ * those actions. This prevents the HTTP request and Stripe
+ * webhook from racing and decrementing inventory twice.
+ *
+ * This function is monotonic: it will never downgrade a
+ * reservation that the webhook has already marked refunded.
  *
  * @param {object} options
  * @param {object} options.reservation
@@ -308,83 +354,55 @@ const reservationIsRefundable = (
  * @param {number|string|null} options.adminUserId
  * @returns {Promise<boolean>}
  */
-const markReservationRefunded =
+const markReservationRefundAccepted =
   async ({
     reservation,
     refund,
     reason,
     adminUserId,
   }) => {
-    const refundedAt =
+    if (
+      !reservation ||
+      typeof reservation.reload !==
+        'function'
+    ) {
+      return false;
+    }
+
+    /*
+     * The webhook can arrive before Stripe's API response is
+     * returned to this controller. Reload first so we do not
+     * overwrite a completed webhook transition with
+     * refund_pending.
+     */
+    await reservation.reload();
+
+    const currentStatus =
+      String(
+        getField(
+          reservation,
+          ['status']
+        ) || ''
+      )
+        .trim()
+        .toLowerCase();
+
+    if (
+      currentStatus === 'refunded'
+    ) {
+      return true;
+    }
+
+    const stripeRefundStatus =
+      String(
+        refund?.status || 'pending'
+      )
+        .trim()
+        .toLowerCase();
+
+    const requestedAt =
       new Date();
 
-    return updateReservationSafely(
-      reservation,
-      {
-        status:
-          'refunded',
-
-        stripe_refund_id:
-          refund?.id || null,
-
-        stripeRefundId:
-          refund?.id || null,
-
-        refund_status:
-          refund?.status ||
-          'succeeded',
-
-        refundStatus:
-          refund?.status ||
-          'succeeded',
-
-        refund_reason:
-          reason || null,
-
-        refundReason:
-          reason || null,
-
-        refund_failure_reason:
-          null,
-
-        refundFailureReason:
-          null,
-
-        refunded_at:
-          refundedAt,
-
-        refundedAt:
-          refundedAt,
-
-        refunded_by:
-          adminUserId || null,
-
-        refundedBy:
-          adminUserId || null,
-      }
-    );
-  };
-
-/**
- * Mark a reservation as having a pending refund.
- *
- * Do not populate refunded_at until Stripe confirms
- * that the refund succeeded.
- *
- * @param {object} options
- * @param {object} options.reservation
- * @param {object} options.refund
- * @param {string|null} options.reason
- * @param {number|string|null} options.adminUserId
- * @returns {Promise<boolean>}
- */
-const markReservationRefundPending =
-  async ({
-    reservation,
-    refund,
-    reason,
-    adminUserId,
-  }) => {
     return updateReservationSafely(
       reservation,
       {
@@ -398,12 +416,10 @@ const markReservationRefundPending =
           refund?.id || null,
 
         refund_status:
-          refund?.status ||
-          'pending',
+          stripeRefundStatus,
 
         refundStatus:
-          refund?.status ||
-          'pending',
+          stripeRefundStatus,
 
         refund_reason:
           reason || null,
@@ -417,6 +433,12 @@ const markReservationRefundPending =
         refundFailureReason:
           null,
 
+        refund_requested_at:
+          requestedAt,
+
+        refundRequestedAt:
+          requestedAt,
+
         refunded_by:
           adminUserId || null,
 
@@ -429,8 +451,8 @@ const markReservationRefundPending =
 /**
  * Save information about a failed refund attempt.
  *
- * The reservation status remains refundable so an
- * administrator may retry later.
+ * A failed Stripe API request remains retryable. Do not set
+ * refunded_at and do not mark the reservation refunded.
  *
  * @param {object} options
  * @param {object} options.reservation
@@ -442,6 +464,33 @@ const markReservationRefundFailed =
     reservation,
     error,
   }) => {
+    if (
+      reservation &&
+      typeof reservation.reload ===
+        'function'
+    ) {
+      await reservation.reload();
+    }
+
+    const currentStatus =
+      String(
+        getField(
+          reservation,
+          ['status']
+        ) || ''
+      )
+        .trim()
+        .toLowerCase();
+
+    /*
+     * Never overwrite a successful webhook result.
+     */
+    if (
+      currentStatus === 'refunded'
+    ) {
+      return true;
+    }
+
     const failureMessage =
       error?.raw?.message ||
       error?.message ||
@@ -450,6 +499,17 @@ const markReservationRefundFailed =
     return updateReservationSafely(
       reservation,
       {
+        /*
+         * Restore a retryable paid state if this controller had
+         * previously placed the reservation into refund_pending.
+         */
+        status:
+          currentStatus ===
+          'refund_pending'
+            ? 'paid'
+            : currentStatus ||
+              'paid',
+
         refund_status:
           'failed',
 
@@ -466,7 +526,14 @@ const markReservationRefundFailed =
   };
 
 /**
- * Apply the correct local status for a Stripe refund.
+ * Record that Stripe accepted a refund for all reservation rows
+ * associated with one PaymentIntent.
+ *
+ * Even when Stripe immediately returns status "succeeded", this
+ * controller records refund_pending locally. The signed webhook
+ * performs the authoritative transition to refunded, releases
+ * EventOccurrence.soldCount, and deletes the event when every
+ * refund has completed.
  *
  * @param {object} options
  * @param {object[]} options.reservations
@@ -482,33 +549,16 @@ const updateReservationsForRefund =
     reason,
     adminUserId,
   }) => {
-    const refundStatus =
-      String(
-        refund?.status || ''
-      ).toLowerCase();
-
     for (
       const reservation
       of reservations
     ) {
-      if (
-        refundStatus ===
-        'succeeded'
-      ) {
-        await markReservationRefunded({
-          reservation,
-          refund,
-          reason,
-          adminUserId,
-        });
-      } else {
-        await markReservationRefundPending({
-          reservation,
-          refund,
-          reason,
-          adminUserId,
-        });
-      }
+      await markReservationRefundAccepted({
+        reservation,
+        refund,
+        reason,
+        adminUserId,
+      });
     }
   };
 
@@ -1368,8 +1418,11 @@ const refundAllEventReservations =
             );
 
           /*
-           * Store either refunded or refund_pending
-           * according to Stripe's returned status.
+           * Record that Stripe accepted the request.
+           *
+           * The signed admin refund webhook performs final
+           * reservation updates, inventory release, email
+           * notification, and event deletion.
            */
           await updateReservationsForRefund({
             reservations:
@@ -1590,7 +1643,11 @@ const refundAllEventReservations =
       }
 
       /*
-       * Event deletion remains a separate operation.
+       * Event deletion is asynchronous.
+       *
+       * After Stripe confirms each successful refund, the signed
+       * admin refund webhook releases occurrence inventory and
+       * deletes the event after the final refund completes.
        */
       return res
         .status(responseStatus)
@@ -1603,6 +1660,12 @@ const refundAllEventReservations =
 
           pending:
             pendingRefunds.length > 0,
+
+          awaitingWebhookFinalization:
+            someRefundsAccepted,
+
+          eventDeletionPending:
+            someRefundsAccepted,
 
           partiallySuccessful:
             someRefundsAccepted &&

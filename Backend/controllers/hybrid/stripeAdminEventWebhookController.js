@@ -9,6 +9,14 @@ const EventReservation = require(
   '../../models/eventReservation.js'
 );
 
+const EventOccurrence = require(
+  '../../models/eventOccurrence.js'
+);
+
+const sequelize = require(
+  '../../config/database'
+);
+
 const {
   sendEventRefundNotificationEmail,
 } = require(
@@ -261,7 +269,8 @@ const buildReservationUpdate = (
 const updateReservationSafely =
   async (
     reservation,
-    values
+    values,
+    options = {}
   ) => {
     if (
       !reservation ||
@@ -285,7 +294,8 @@ const updateReservationSafely =
     }
 
     await reservation.update(
-      updateValues
+      updateValues,
+      options
     );
 
     return true;
@@ -498,9 +508,168 @@ const findRefundReservations =
 
 /*
  * ============================================================
- * Reservation refund status updates
+ * Reservation refund status and event cleanup
  * ============================================================
  */
+
+const getOccurrenceFieldNames = () => {
+  return {
+    eventId:
+      getExistingModelField(
+        EventOccurrence,
+        [
+          'event_id',
+          'eventId',
+        ]
+      ),
+
+    soldCount:
+      getExistingModelField(
+        EventOccurrence,
+        [
+          'sold_count',
+          'soldCount',
+        ]
+      ),
+
+    reservedCount:
+      getExistingModelField(
+        EventOccurrence,
+        [
+          'reserved_count',
+          'reservedCount',
+        ]
+      ),
+  };
+};
+
+const releaseReservationInventory =
+  async ({
+    reservation,
+    transaction,
+  }) => {
+    const occurrenceId =
+      getField(
+        reservation,
+        [
+          'occurrenceId',
+          'occurrence_id',
+        ]
+      );
+
+    if (!occurrenceId) {
+      console.warn(
+        'Refunded reservation has no occurrence ID:',
+        {
+          reservationId:
+            getField(
+              reservation,
+              ['id']
+            ),
+        }
+      );
+
+      return false;
+    }
+
+    const occurrence =
+      await EventOccurrence.findByPk(
+        occurrenceId,
+        {
+          transaction,
+          lock:
+            transaction.LOCK.UPDATE,
+        }
+      );
+
+    if (!occurrence) {
+      console.warn(
+        'Event occurrence was not found while releasing refunded inventory:',
+        {
+          reservationId:
+            getField(
+              reservation,
+              ['id']
+            ),
+
+          occurrenceId,
+        }
+      );
+
+      return false;
+    }
+
+    const {
+      soldCount,
+    } = getOccurrenceFieldNames();
+
+    if (!soldCount) {
+      throw new Error(
+        'EventOccurrence does not define sold_count or soldCount.'
+      );
+    }
+
+    const quantity =
+      normalizeQuantity(
+        getField(
+          reservation,
+          ['quantity']
+        )
+      );
+
+    const currentSoldCount =
+      Math.max(
+        0,
+        Number(
+          getField(
+            occurrence,
+            [
+              'soldCount',
+              'sold_count',
+            ]
+          ) || 0
+        )
+      );
+
+    const nextSoldCount =
+      Math.max(
+        0,
+        currentSoldCount -
+          quantity
+      );
+
+    await occurrence.update(
+      {
+        [soldCount]:
+          nextSoldCount,
+      },
+      {
+        transaction,
+      }
+    );
+
+    console.log(
+      'Released refunded event inventory:',
+      {
+        reservationId:
+          getField(
+            reservation,
+            ['id']
+          ),
+
+        occurrenceId,
+
+        quantity,
+
+        previousSoldCount:
+          currentSoldCount,
+
+        nextSoldCount,
+      }
+    );
+
+    return true;
+  };
 
 const updateReservationsForRefundStatus =
   async (
@@ -510,7 +679,9 @@ const updateReservationsForRefundStatus =
     const refundStatus =
       String(
         refund?.status || ''
-      ).toLowerCase();
+      )
+        .trim()
+        .toLowerCase();
 
     let reservationStatus =
       null;
@@ -531,7 +702,7 @@ const updateReservationsForRefundStatus =
         'refund_pending';
     } else if (
       refundStatus ===
-      'failed'
+        'failed'
     ) {
       reservationStatus =
         'refund_failed';
@@ -542,65 +713,420 @@ const updateReservationsForRefundStatus =
       refund?.failureReason ||
       null;
 
-    for (
-      const reservation of
+    const reservationIds =
       reservations
+        .map(
+          (reservation) =>
+            getField(
+              reservation,
+              ['id']
+            )
+        )
+        .filter(Boolean);
+
+    if (
+      reservationIds.length === 0
     ) {
-      const updateValues = {
-        stripe_refund_id:
-          refund.id ||
-          null,
-
-        stripeRefundId:
-          refund.id ||
-          null,
-
-        refund_status:
-          refundStatus ||
-          null,
-
-        refundStatus:
-          refundStatus ||
-          null,
-
-        refund_failure_reason:
-          failureReason,
-
-        refundFailureReason:
-          failureReason,
+      return {
+        updatedCount: 0,
+        releasedInventoryCount: 0,
       };
+    }
 
-      if (reservationStatus) {
-        updateValues.status =
-          reservationStatus;
-      }
+    return sequelize.transaction(
+      async (transaction) => {
+        const lockedReservations =
+          await EventReservation
+            .findAll({
+              where: {
+                id:
+                  reservationIds,
+              },
 
-      if (
-        refundStatus ===
-        'succeeded'
-      ) {
-        const refundedAt =
-          getField(
+              transaction,
+
+              lock:
+                transaction.LOCK.UPDATE,
+
+              order: [
+                [
+                  'createdAt',
+                  'ASC',
+                ],
+              ],
+            });
+
+        let updatedCount = 0;
+        let releasedInventoryCount =
+          0;
+
+        for (
+          const reservation of
+          lockedReservations
+        ) {
+          const previousStatus =
+            String(
+              getField(
+                reservation,
+                ['status']
+              ) || ''
+            )
+              .trim()
+              .toLowerCase();
+
+          const alreadyRefunded =
+            previousStatus ===
+            'refunded';
+
+          const updateValues = {
+            stripe_refund_id:
+              refund.id ||
+              null,
+
+            stripeRefundId:
+              refund.id ||
+              null,
+
+            refund_status:
+              refundStatus ||
+              null,
+
+            refundStatus:
+              refundStatus ||
+              null,
+
+            refund_failure_reason:
+              failureReason,
+
+            refundFailureReason:
+              failureReason,
+          };
+
+          if (reservationStatus) {
+            updateValues.status =
+              reservationStatus;
+          }
+
+          if (
+            refundStatus ===
+            'succeeded'
+          ) {
+            const refundedAt =
+              getField(
+                reservation,
+                [
+                  'refundedAt',
+                  'refunded_at',
+                ]
+              ) ||
+              new Date();
+
+            updateValues.refunded_at =
+              refundedAt;
+
+            updateValues.refundedAt =
+              refundedAt;
+          }
+
+          await updateReservationSafely(
             reservation,
-            [
-              'refundedAt',
-              'refunded_at',
-            ]
-          ) ||
-          new Date();
+            updateValues,
+            {
+              transaction,
+            }
+          );
 
-        updateValues.refunded_at =
-          refundedAt;
+          updatedCount += 1;
 
-        updateValues.refundedAt =
-          refundedAt;
+          /*
+           * Only release inventory during the first successful
+           * transition to "refunded". Stripe can deliver both
+           * refund.created and refund.updated for the same refund.
+           */
+          if (
+            refundStatus ===
+              'succeeded' &&
+            !alreadyRefunded
+          ) {
+            const inventoryReleased =
+              await releaseReservationInventory({
+                reservation,
+                transaction,
+              });
+
+            if (inventoryReleased) {
+              releasedInventoryCount +=
+                1;
+            }
+          }
+        }
+
+        return {
+          updatedCount,
+          releasedInventoryCount,
+        };
       }
+    );
+  };
 
-      await updateReservationSafely(
-        reservation,
-        updateValues
+const eventIsReadyForDeletion =
+  async (
+    eventId,
+    transaction
+  ) => {
+    const reservationEventIdField =
+      getExistingModelField(
+        EventReservation,
+        [
+          'event_id',
+          'eventId',
+        ]
+      );
+
+    if (!reservationEventIdField) {
+      throw new Error(
+        'EventReservation does not define event_id or eventId.'
       );
     }
+
+    const reservations =
+      await EventReservation
+        .findAll({
+          where: {
+            [reservationEventIdField]:
+              eventId,
+          },
+
+          transaction,
+
+          lock:
+            transaction.LOCK.UPDATE,
+        });
+
+    const blockingReservations =
+      reservations.filter(
+        (reservation) => {
+          const status =
+            String(
+              getField(
+                reservation,
+                ['status']
+              ) || ''
+            )
+              .trim()
+              .toLowerCase();
+
+          return ![
+            'refunded',
+            'cancelled',
+            'canceled',
+            'expired',
+          ].includes(status);
+        }
+      );
+
+    const {
+      eventId:
+        occurrenceEventIdField,
+      soldCount,
+      reservedCount,
+    } = getOccurrenceFieldNames();
+
+    if (
+      !occurrenceEventIdField
+    ) {
+      throw new Error(
+        'EventOccurrence does not define event_id or eventId.'
+      );
+    }
+
+    const occurrences =
+      await EventOccurrence
+        .findAll({
+          where: {
+            [occurrenceEventIdField]:
+              eventId,
+          },
+
+          transaction,
+
+          lock:
+            transaction.LOCK.UPDATE,
+        });
+
+    const blockingOccurrences =
+      occurrences.filter(
+        (occurrence) => {
+          const sold =
+            soldCount
+              ? Number(
+                  getField(
+                    occurrence,
+                    [
+                      'soldCount',
+                      'sold_count',
+                    ]
+                  ) || 0
+                )
+              : 0;
+
+          const reserved =
+            reservedCount
+              ? Number(
+                  getField(
+                    occurrence,
+                    [
+                      'reservedCount',
+                      'reserved_count',
+                    ]
+                  ) || 0
+                )
+              : 0;
+
+          return (
+            sold > 0 ||
+            reserved > 0
+          );
+        }
+      );
+
+    return {
+      ready:
+        blockingReservations
+          .length === 0 &&
+        blockingOccurrences
+          .length === 0,
+
+      reservations,
+
+      occurrences,
+
+      blockingReservationCount:
+        blockingReservations.length,
+
+      blockingOccurrenceCount:
+        blockingOccurrences.length,
+    };
+  };
+
+const deleteEventAfterSuccessfulRefunds =
+  async (
+    eventId
+  ) => {
+    return sequelize.transaction(
+      async (transaction) => {
+        const event =
+          await Event.findByPk(
+            eventId,
+            {
+              transaction,
+              lock:
+                transaction.LOCK.UPDATE,
+            }
+          );
+
+        if (!event) {
+          return {
+            deleted: false,
+            reason:
+              'event_already_deleted',
+          };
+        }
+
+        const deletionState =
+          await eventIsReadyForDeletion(
+            eventId,
+            transaction
+          );
+
+        if (!deletionState.ready) {
+          console.log(
+            'Event is waiting for remaining refunds before deletion:',
+            {
+              eventId,
+
+              blockingReservationCount:
+                deletionState
+                  .blockingReservationCount,
+
+              blockingOccurrenceCount:
+                deletionState
+                  .blockingOccurrenceCount,
+            }
+          );
+
+          return {
+            deleted: false,
+            reason:
+              'refunds_or_inventory_remaining',
+            ...deletionState,
+          };
+        }
+
+        /*
+         * Remove occurrence rows before deleting the event.
+         * Refunded reservation rows are intentionally retained
+         * as payment/refund audit records.
+         *
+         * Your EventReservation.event_id foreign key must therefore
+         * use ON DELETE SET NULL or no restrictive foreign key.
+         * If it uses RESTRICT, move this block into the same shared
+         * deletion service used by adminEventController.
+         */
+        const {
+          eventId:
+            occurrenceEventIdField,
+        } = getOccurrenceFieldNames();
+
+        if (
+          occurrenceEventIdField
+        ) {
+          await EventOccurrence.destroy({
+            where: {
+              [occurrenceEventIdField]:
+                eventId,
+            },
+
+            transaction,
+          });
+        }
+
+        const deletedCount =
+          await Event.destroy({
+            where: {
+              id:
+                eventId,
+            },
+
+            transaction,
+          });
+
+        if (
+          deletedCount !== 1
+        ) {
+          throw new Error(
+            `Expected to delete event ${eventId}, but deleted ${deletedCount} rows.`
+          );
+        }
+
+        console.log(
+          'Event deleted after all refunds completed:',
+          {
+            eventId,
+
+            refundedReservationCount:
+              deletionState
+                .reservations
+                .length,
+          }
+        );
+
+        return {
+          deleted: true,
+          reason: null,
+        };
+      }
+    );
   };
 
 /*
@@ -1155,8 +1681,25 @@ const processAdminEventRefund =
       throw error;
     }
 
+    /*
+     * Every successful refund webhook checks whether this was the
+     * final refund for the event. The final successful delivery
+     * releases the last sold inventory and deletes the event.
+     */
+    const deletionResult =
+      await deleteEventAfterSuccessfulRefunds(
+        eventId
+      );
+
     return {
       handled: true,
+
+      eventDeleted:
+        deletionResult.deleted,
+
+      deletionReason:
+        deletionResult.reason ||
+        null,
     };
   };
 
@@ -1304,6 +1847,14 @@ const handleAdminEventWebhook =
           reason:
             result.reason ||
             null,
+
+          eventDeleted:
+            result.eventDeleted ??
+            null,
+
+          deletionReason:
+            result.deletionReason ||
+            null,
         }
       );
 
@@ -1317,6 +1868,14 @@ const handleAdminEventWebhook =
 
           reason:
             result.reason ||
+            null,
+
+          eventDeleted:
+            result.eventDeleted ??
+            null,
+
+          deletionReason:
+            result.deletionReason ||
             null,
         });
     } catch (error) {
