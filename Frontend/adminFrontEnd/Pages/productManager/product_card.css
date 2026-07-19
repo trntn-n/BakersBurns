@@ -1,3 +1,1404 @@
+
+/* product_card.css */
+
+/* ==================================================
+   Product card root
+================================================== */
+
+.product-card-admin {
+  --product-card-admin-surface:
+    var(--container-bg);
+
+  --product-card-admin-surface-secondary:
+    var(--bg-section);
+
+  --product-card-admin-surface-hover:
+    var(--button-hover);
+
+  --product-card-admin-text:
+    var(--text-color);
+
+  --product-card-admin-text-strong:
+    var(--header-color);
+
+  --product-card-admin-text-muted:
+    var(--about-text);
+
+  --product-card-admin-primary:
+    var(--btn-bg);
+
+  --product-card-admin-primary-hover:
+    var(--btn-hover);
+
+  --product-card-admin-primary-text:
+    var(--signup-button-text);
+
+  --product-card-admin-border:
+    var(--form-input-border);
+
+  --product-card-admin-danger:
+    #b42318;
+
+  --product-card-admin-danger-bg:
+    #fff1f0;
+
+  --product-card-admin-success:
+    #16794a;
+
+  --product-card-admin-success-bg:
+    #edfdf4;
+
+  --product-card-admin-warning:
+    #9a6700;
+
+  --product-card-admin-warning-bg:
+    #fff8c5;
+
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+
+  overflow: hidden;
+
+  background:
+    var(--product-card-admin-surface);
+
+  color:
+    var(--product-card-admin-text);
+
+  font-family:
+    'Montserrat',
+    Arial,
+    Helvetica,
+    sans-serif;
+}
+
+[data-theme='dark']
+.product-card-admin {
+  --product-card-admin-text-muted:
+    #d2d7ca;
+
+  --product-card-admin-danger:
+    #ff9b92;
+
+  --product-card-admin-danger-bg:
+    #3c1f1c;
+
+  --product-card-admin-success:
+    #9ae6b4;
+
+  --product-card-admin-success-bg:
+    #173c25;
+
+  --product-card-admin-warning:
+    #f8d66d;
+
+  --product-card-admin-warning-bg:
+    #3d3216;
+}
+
+.product-card-admin--invalid {
+  align-items: center;
+  justify-content: center;
+
+  min-height: 240px;
+
+  padding: 28px;
+}
+
+.product-card-admin__empty-message {
+  color:
+    var(--product-card-admin-text-muted);
+
+  text-align: center;
+}
+
+/* ==================================================
+   Product image
+================================================== */
+
+.product-card-admin__image-section {
+  position: relative;
+
+  width: 100%;
+  aspect-ratio: 16 / 10;
+
+  overflow: hidden;
+
+  border-bottom:
+    1px
+    solid
+    var(--product-card-admin-border);
+
+  background:
+    var(--product-card-admin-surface-secondary);
+}
+
+.product-card-admin__thumbnail {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  transition:
+    transform 260ms ease;
+}
+
+.product-card-admin:hover
+.product-card-admin__thumbnail {
+  transform:
+    scale(1.025);
+}
+
+.product-card-admin__thumbnail-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+
+  width: 100%;
+  height: 100%;
+
+  color:
+    var(--product-card-admin-text-muted);
+
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.product-card-admin__thumbnail-placeholder-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.product-card-admin__image-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  left: 12px;
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+
+  pointer-events: none;
+}
+
+.product-card-admin__type-badge,
+.product-card-admin__stock-badge {
+  display: inline-flex;
+  align-items: center;
+
+  min-height: 27px;
+
+  border:
+    1px
+    solid
+    rgba(255, 255, 255, 0.28);
+
+  border-radius: 999px;
+
+  padding:
+    5px
+    9px;
+
+  background:
+    rgba(25, 25, 25, 0.76);
+
+  color: #ffffff;
+
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+
+  backdrop-filter:
+    blur(6px);
+}
+
+.product-card-admin__type-badge {
+  max-width: 54%;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.product-card-admin__stock-badge {
+  flex-shrink: 0;
+}
+
+.product-card-admin__stock-badge--available {
+  background:
+    rgba(22, 121, 74, 0.88);
+}
+
+.product-card-admin__stock-badge--empty {
+  background:
+    rgba(180, 35, 24, 0.88);
+}
+
+/* ==================================================
+   Main card body
+================================================== */
+
+.product-card-admin__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+
+  min-width: 0;
+
+  padding:
+    20px;
+}
+
+.product-card-admin__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  margin-bottom: 16px;
+}
+
+.product-card-admin__heading {
+  min-width: 0;
+}
+
+.product-card-admin__eyebrow {
+  display: block;
+
+  margin-bottom: 4px;
+
+  color:
+    var(--product-card-admin-primary);
+
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.product-card-admin__name {
+  margin: 0;
+
+  overflow-wrap: anywhere;
+
+  color:
+    var(--product-card-admin-text-strong);
+
+  font-family:
+    'Carnivalee Freakshow',
+    serif;
+
+  font-size:
+    clamp(
+      1.7rem,
+      3vw,
+      2.2rem
+    );
+
+  font-weight: normal;
+  line-height: 1.06;
+}
+
+.product-card-admin__price {
+  flex-shrink: 0;
+
+  color:
+    var(--product-card-admin-primary);
+
+  font-size: 1.05rem;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+/* ==================================================
+   Product details
+================================================== */
+
+.product-card-admin__details {
+  margin-bottom: 18px;
+}
+
+.product-card-admin__description {
+  display: -webkit-box;
+
+  overflow: hidden;
+
+  margin:
+    0
+    0
+    16px;
+
+  color:
+    var(--product-card-admin-text-muted);
+
+  font-size: 0.86rem;
+  line-height: 1.6;
+
+  -webkit-box-orient:
+    vertical;
+
+  -webkit-line-clamp:
+    3;
+}
+
+.product-card-admin__detail-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+
+  gap: 9px;
+
+  margin: 0;
+}
+
+.product-card-admin__detail-item {
+  min-width: 0;
+
+  border:
+    1px
+    solid
+    var(--product-card-admin-border);
+
+  border-radius: 9px;
+
+  padding:
+    10px;
+
+  background:
+    var(--product-card-admin-surface-secondary);
+}
+
+.product-card-admin__detail-item dt {
+  margin-bottom: 4px;
+
+  color:
+    var(--product-card-admin-text-muted);
+
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.product-card-admin__detail-item dd {
+  min-width: 0;
+
+  overflow: hidden;
+
+  margin: 0;
+
+  color:
+    var(--product-card-admin-text-strong);
+
+  font-size: 0.78rem;
+  font-weight: 750;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ==================================================
+   Loading and warnings
+================================================== */
+
+.product-card-admin__loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  min-height: 76px;
+
+  border:
+    1px
+    dashed
+    var(--product-card-admin-border);
+
+  border-radius: 9px;
+
+  color:
+    var(--product-card-admin-text-muted);
+
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.product-card-admin__loading-state--media {
+  min-height: 120px;
+}
+
+.product-card-admin__spinner {
+  display: inline-block;
+
+  width: 24px;
+  height: 24px;
+
+  border:
+    3px
+    solid
+    color-mix(
+      in srgb,
+      var(--product-card-admin-primary)
+        20%,
+      transparent
+    );
+
+  border-top-color:
+    var(--product-card-admin-primary);
+
+  border-radius: 50%;
+
+  animation:
+    product-card-admin-spin
+    700ms
+    linear
+    infinite;
+}
+
+.product-card-admin__spinner--small {
+  width: 18px;
+  height: 18px;
+
+  border-width: 2px;
+}
+
+@keyframes product-card-admin-spin {
+  to {
+    transform:
+      rotate(360deg);
+  }
+}
+
+.product-card-admin__inline-warning {
+  margin:
+    0
+    0
+    12px;
+
+  border:
+    1px
+    solid
+    var(--product-card-admin-warning);
+
+  border-radius: 8px;
+
+  padding:
+    9px
+    11px;
+
+  background:
+    var(--product-card-admin-warning-bg);
+
+  color:
+    var(--product-card-admin-warning);
+
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+/* ==================================================
+   Discount section
+================================================== */
+
+.product-card-admin__discount-section {
+  margin-bottom: 20px;
+}
+
+.product-card-admin__discount-card {
+  border:
+    1px
+    solid
+    color-mix(
+      in srgb,
+      var(--product-card-admin-primary)
+        38%,
+      var(--product-card-admin-border)
+    );
+
+  border-radius: 11px;
+
+  padding:
+    13px;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--product-card-admin-primary)
+        10%,
+      var(--product-card-admin-surface)
+    );
+}
+
+.product-card-admin__discount-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.product-card-admin__discount-value {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+
+  min-width: 0;
+}
+
+.product-card-admin__discount-icon-wrapper {
+  position: relative;
+
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+
+  width: 46px;
+  height: 46px;
+}
+
+.product-card-admin__discount-icon {
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+}
+
+.product-card-admin__discount-amount {
+  position: absolute;
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 4px;
+
+  color: #ffffff;
+
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.product-card-admin__discount-label {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color:
+    var(--product-card-admin-text-muted);
+
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.product-card-admin__discounted-price {
+  display: block;
+
+  color:
+    var(--product-card-admin-text-strong);
+
+  font-size: 0.9rem;
+}
+
+.product-card-admin__discount-button {
+  flex-shrink: 0;
+
+  min-height: 34px;
+
+  border:
+    1px
+    solid
+    var(--product-card-admin-border);
+
+  border-radius: 7px;
+
+  padding:
+    7px
+    10px;
+
+  background:
+    var(--button-bg);
+
+  color:
+    var(--button-text);
+
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 750;
+
+  cursor: pointer;
+
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.product-card-admin__discount-button:hover {
+  border-color:
+    var(--product-card-admin-primary);
+
+  background:
+    var(--product-card-admin-primary);
+
+  color:
+    var(--product-card-admin-primary-text);
+}
+
+.product-card-admin__discount-dates {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap: 8px;
+
+  margin-top: 11px;
+
+  border-top:
+    1px
+    solid
+    color-mix(
+      in srgb,
+      var(--product-card-admin-primary)
+        28%,
+      transparent
+    );
+
+  padding-top: 10px;
+}
+
+.product-card-admin__discount-dates div {
+  min-width: 0;
+}
+
+.product-card-admin__discount-dates span {
+  display: block;
+
+  margin-bottom: 2px;
+
+  color:
+    var(--product-card-admin-text-muted);
+
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.product-card-admin__discount-dates strong {
+  display: block;
+
+  color:
+    var(--product-card-admin-text-strong);
+
+  font-size: 0.73rem;
+}
+
+.product-card-admin__add-discount-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  width: 100%;
+  min-height: 42px;
+
+  border:
+    1px
+    dashed
+    var(--product-card-admin-primary);
+
+  border-radius: 9px;
+
+  padding:
+    9px
+    13px;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--product-card-admin-primary)
+        8%,
+      var(--product-card-admin-surface)
+    );
+
+  color:
+    var(--product-card-admin-text-strong);
+
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 750;
+
+  cursor: pointer;
+
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.product-card-admin__add-discount-button:hover {
+  border-style: solid;
+
+  background:
+    var(--product-card-admin-primary);
+
+  color:
+    var(--product-card-admin-primary-text);
+}
+
+.product-card-admin__add-discount-icon {
+  width: 23px;
+  height: 23px;
+
+  object-fit: contain;
+}
+
+/* ==================================================
+   Media
+================================================== */
+
+.product-card-admin__media-section {
+  margin-top: auto;
+
+  border-top:
+    1px
+    solid
+    var(--product-card-admin-border);
+
+  padding-top: 17px;
+}
+
+.product-card-admin__section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-bottom: 11px;
+}
+
+.product-card-admin__section-heading h4 {
+  margin: 0;
+
+  color:
+    var(--product-card-admin-text-strong);
+
+  font-family:
+    'Carnivalee Freakshow',
+    serif;
+
+  font-size: 1.45rem;
+  font-weight: normal;
+  line-height: 1;
+}
+
+.product-card-admin__media-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 28px;
+  min-height: 24px;
+
+  border:
+    1px
+    solid
+    var(--product-card-admin-border);
+
+  border-radius: 999px;
+
+  padding:
+    3px
+    8px;
+
+  background:
+    var(--product-card-admin-surface-secondary);
+
+  color:
+    var(--product-card-admin-text-strong);
+
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.product-card-admin__media-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+
+  gap: 7px;
+}
+
+.product-card-admin__media-item {
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+
+  overflow: hidden;
+
+  border:
+    1px
+    solid
+    var(--product-card-admin-border);
+
+  border-radius: 8px;
+
+  background:
+    var(--product-card-admin-surface-secondary);
+}
+
+.product-card-admin__media-preview {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+.product-card-admin__no-media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 90px;
+
+  border:
+    1px
+    dashed
+    var(--product-card-admin-border);
+
+  border-radius: 9px;
+
+  color:
+    var(--product-card-admin-text-muted);
+
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* ==================================================
+   Footer actions
+================================================== */
+
+.product-card-admin__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  border-top:
+    1px
+    solid
+    var(--product-card-admin-border);
+
+  padding:
+    14px
+    20px;
+
+  background:
+    var(--product-card-admin-surface-secondary);
+}
+
+.product-card-admin__edit-button,
+.product-card-admin__delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  min-height: 40px;
+
+  border:
+    1px
+    solid;
+
+  border-radius: 8px;
+
+  padding:
+    8px
+    14px;
+
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 750;
+
+  cursor: pointer;
+
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.product-card-admin__edit-button {
+  flex: 1;
+
+  border-color:
+    var(--product-card-admin-primary);
+
+  background:
+    var(--product-card-admin-primary);
+
+  color:
+    var(--product-card-admin-primary-text);
+}
+
+.product-card-admin__edit-button:hover {
+  background:
+    var(--product-card-admin-primary-hover);
+
+  color:
+    var(--btn-hover-text);
+
+  transform:
+    translateY(-1px);
+}
+
+.product-card-admin__delete-button {
+  border-color:
+    var(--product-card-admin-danger);
+
+  background:
+    var(--product-card-admin-danger-bg);
+
+  color:
+    var(--product-card-admin-danger);
+}
+
+.product-card-admin__delete-button:hover {
+  filter:
+    brightness(0.96);
+
+  transform:
+    translateY(-1px);
+}
+
+.product-card-admin__delete-icon {
+  width: 17px;
+  height: 17px;
+
+  object-fit: contain;
+}
+
+.product-card-admin__edit-button:disabled,
+.product-card-admin__delete-button:disabled,
+.product-card-admin__discount-button:disabled,
+.product-card-admin__add-discount-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ==================================================
+   Embedded form host
+================================================== */
+
+.product-card-admin__form-host {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+}
+
+/* ==================================================
+   Delete confirmation modal
+================================================== */
+
+.product-card-admin-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+
+  display: grid;
+  place-items: center;
+
+  overflow-y: auto;
+
+  padding: 22px;
+
+  background:
+    rgba(0, 0, 0, 0.58);
+
+  backdrop-filter:
+    blur(5px);
+}
+
+.product-card-admin-modal__dialog {
+  width:
+    min(
+      470px,
+      100%
+    );
+
+  border:
+    1px
+    solid
+    var(--product-card-admin-border);
+
+  border-radius: 16px;
+
+  padding:
+    26px;
+
+  background:
+    var(--product-card-admin-surface);
+
+  color:
+    var(--product-card-admin-text);
+
+  box-shadow:
+    0
+    30px
+    80px
+    rgba(0, 0, 0, 0.34);
+
+  text-align: center;
+}
+
+.product-card-admin-modal__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 58px;
+  height: 58px;
+
+  margin:
+    0
+    auto
+    17px;
+
+  border:
+    1px
+    solid
+    var(--product-card-admin-danger);
+
+  border-radius: 50%;
+
+  background:
+    var(--product-card-admin-danger-bg);
+}
+
+.product-card-admin-modal__icon img {
+  width: 27px;
+  height: 27px;
+
+  object-fit: contain;
+}
+
+.product-card-admin-modal__eyebrow {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color:
+    var(--product-card-admin-danger);
+
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.product-card-admin-modal__content h3 {
+  margin:
+    0
+    0
+    10px;
+
+  color:
+    var(--product-card-admin-text-strong);
+
+  font-family:
+    'Carnivalee Freakshow',
+    serif;
+
+  font-size: 2.2rem;
+  font-weight: normal;
+  line-height: 1.05;
+}
+
+.product-card-admin-modal__content p {
+  margin:
+    0
+    auto;
+
+  max-width: 380px;
+
+  color:
+    var(--product-card-admin-text-muted);
+
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.product-card-admin-modal__actions {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap: 10px;
+
+  margin-top: 23px;
+}
+
+.product-card-admin-modal__cancel,
+.product-card-admin-modal__confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 43px;
+
+  border:
+    1px
+    solid;
+
+  border-radius: 8px;
+
+  padding:
+    9px
+    13px;
+
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.product-card-admin-modal__cancel {
+  border-color:
+    var(--product-card-admin-border);
+
+  background:
+    var(--button-bg);
+
+  color:
+    var(--button-text);
+}
+
+.product-card-admin-modal__cancel:hover {
+  border-color:
+    var(--product-card-admin-primary);
+
+  background:
+    var(--product-card-admin-surface-hover);
+}
+
+.product-card-admin-modal__confirm {
+  border-color:
+    var(--product-card-admin-danger);
+
+  background:
+    var(--product-card-admin-danger);
+
+  color: #ffffff;
+}
+
+.product-card-admin-modal__confirm:hover {
+  filter:
+    brightness(0.92);
+}
+
+.product-card-admin-modal__cancel:disabled,
+.product-card-admin-modal__confirm:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ==================================================
+   Focus states
+================================================== */
+
+.product-card-admin button:focus-visible,
+.product-card-admin-modal button:focus-visible {
+  outline:
+    3px
+    solid
+    color-mix(
+      in srgb,
+      var(--product-card-admin-primary)
+        35%,
+      transparent
+    );
+
+  outline-offset: 2px;
+}
+
+/* ==================================================
+   Tablet and compact card layouts
+================================================== */
+
+@media (
+  max-width: 900px
+) {
+  .product-card-admin__detail-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+
+  .product-card-admin__detail-item:last-child {
+    grid-column:
+      1
+      / -1;
+  }
+}
+
+/* ==================================================
+   Mobile
+================================================== */
+
+@media (
+  max-width: 620px
+) {
+  .product-card-admin__body {
+    padding:
+      17px;
+  }
+
+  .product-card-admin__header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .product-card-admin__price {
+    font-size: 1rem;
+  }
+
+  .product-card-admin__detail-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .product-card-admin__detail-item:last-child {
+    grid-column: auto;
+  }
+
+  .product-card-admin__discount-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .product-card-admin__discount-button {
+    width: 100%;
+  }
+
+  .product-card-admin__footer {
+    align-items: stretch;
+    flex-direction: column;
+
+    padding:
+      13px
+      17px;
+  }
+
+  .product-card-admin__edit-button,
+  .product-card-admin__delete-button {
+    width: 100%;
+  }
+
+  .product-card-admin-modal {
+    padding: 14px;
+  }
+
+  .product-card-admin-modal__dialog {
+    padding:
+      22px
+      17px;
+  }
+
+  .product-card-admin-modal__actions {
+    grid-template-columns:
+      1fr;
+  }
+
+  /*
+   * Disable movement-based hover effects on small touch
+   * displays.
+   */
+  .product-card-admin:hover
+  .product-card-admin__thumbnail {
+    transform: none;
+  }
+
+  .product-card-admin__edit-button:hover,
+  .product-card-admin__delete-button:hover {
+    transform: none;
+  }
+}
+
+/* ==================================================
+   Reduced motion
+================================================== */
+
+@media (
+  prefers-reduced-motion:
+    reduce
+) {
+  .product-card-admin__thumbnail,
+  .product-card-admin__edit-button,
+  .product-card-admin__delete-button {
+    transition: none;
+  }
+
+  .product-card-admin:hover
+  .product-card-admin__thumbnail,
+  .product-card-admin__edit-button:hover,
+  .product-card-admin__delete-button:hover {
+    transform: none;
+  }
+
+  .product-card-admin__spinner {
+    animation-duration:
+      1400ms;
+  }
+}
+
+
+/*
+OLD CSS
+*/
+
 .product-tile {
   margin: 10px;
   /* existing styling... */
