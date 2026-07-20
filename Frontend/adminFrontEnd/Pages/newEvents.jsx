@@ -1461,12 +1461,12 @@ const Events = () => {
     try {
       setLoading(true);
       setError(null);
-
+  
       const response =
         await adminApi.get(
           '/admin-event/events'
         );
-
+  
       const rawEvents = Array.isArray(
         response.data
       )
@@ -1480,27 +1480,31 @@ const Events = () => {
               )
             ? response.data.data
             : [];
-
+  
       const normalizedEvents =
         rawEvents
           .map(normalizeEventRecord)
           .filter(Boolean);
-
+  
       setEvents(normalizedEvents);
-
+  
       const occurrences =
         normalizedEvents.flatMap(
           generateEventOccurrences
         );
-
+  
       setCalendarEvents(occurrences);
+  
+      return normalizedEvents;
     } catch (fetchError) {
       console.error(
         'Fetch error:',
         fetchError
       );
-
+  
       setError('Unable to load events.');
+  
+      throw fetchError;
     } finally {
       setLoading(false);
     }
