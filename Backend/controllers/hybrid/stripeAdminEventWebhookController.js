@@ -18,11 +18,16 @@ const sequelize = require(
 );
 
 const {
-  sendEventRefundNotificationEmail,
-} = require(
-  '../../utils/eventRefundNotificationEmail.js'
-);
-
+    EMAIL_SEND_TYPES,
+    sendEmailRequest,
+  } = require(
+    '../email/events/emailResendController.js'
+  );
+  const {
+    buildEventRefundNotificationEmail,
+  } = require(
+    '../email/event-templates/eventRefundNotification.js'
+  );
 /*
  * ============================================================
  * Stripe configuration
@@ -1314,6 +1319,8 @@ const getEventDateForEmail = (
   );
 };
 
+  
+    
 /*
  * ============================================================
  * Refund processing
@@ -1465,7 +1472,17 @@ const processAdminEventRefund =
           'start_time',
         ]
       );
-
+    /*
+    * Event cleanup must not depend on notification delivery.
+    *
+    * At this point Stripe confirmed the refund succeeded,
+    * reservation statuses have been updated, and inventory has
+    * already been released.
+    */
+    const deletionResult =
+    await deleteEventAfterSuccessfulRefunds(
+    eventId
+    );
     /*
      * A PaymentIntent may be associated with multiple
      * EventReservation records.
@@ -1530,8 +1547,7 @@ const processAdminEventRefund =
         );
     }
 
-    const failedNotifications =
-      [];
+    const notificationResults = [];
 
     for (
       const [
@@ -1547,21 +1563,32 @@ const processAdminEventRefund =
               refund.id
             )
         );
-
+    
       if (alreadyNotified) {
         console.log(
           'Admin event refund notification already sent:',
           {
             refundId:
               refund.id,
-
+    
             purchaserEmail,
           }
         );
-
+    
+        notificationResults.push({
+          purchaserEmail,
+          skipped: true,
+          reason:
+            'already_notified',
+          success: true,
+          attemptedCount: 0,
+          successfulCount: 0,
+          failedCount: 0,
+        });
+    
         continue;
       }
-
+    
       const purchaserName =
         getField(
           purchaserReservations[0],
@@ -1572,7 +1599,7 @@ const processAdminEventRefund =
             'customer_name',
           ]
         );
-
+    
       const totalQuantity =
         purchaserReservations.reduce(
           (
@@ -1591,116 +1618,240 @@ const processAdminEventRefund =
           },
           0
         );
-
+    
+        const refundEmail =
+        buildEventRefundNotificationEmail({
+          customerName:
+            purchaserName,
+      
+          eventName,
+      
+          eventDate,
+      
+          eventStartTime,
+      
+          refundAmount:
+            refund.amount,
+      
+          currency:
+            refund.currency,
+      
+          refundId:
+            refund.id,
+      
+          quantity:
+            totalQuantity,
+      
+          cancellationReason:
+            refund.metadata
+              ?.cancellationReason ||
+            null,
+        });
+      let emailResult;
+    
       try {
-        const emailResult =
-          await sendEventRefundNotificationEmail({
-            to:
-              purchaserEmail,
+        emailResult =
+  await sendEmailRequest({
+            type:
+            EMAIL_SEND_TYPES
+                .DIRECT_USER,
 
-            customerName:
-              purchaserName,
+            recipient:
+            purchaserEmail,
 
-            eventName,
+            from:
+            refundEmail.from,
 
-            eventDate,
+            replyTo:
+            refundEmail.replyTo,
 
-            eventStartTime,
+            subject:
+            refundEmail.subject,
 
-            refundAmount:
-              refund.amount,
-
-            currency:
-              refund.currency,
-
-            refundId:
-              refund.id,
-
-            quantity:
-              totalQuantity,
-
-            cancellationReason:
-              refund.metadata
-                ?.cancellationReason ||
-              null,
-          });
-
+            html:
+            refundEmail.html,
+        });
+      } catch (error) {
+        /*
+         * sendEmailRequest should normally return failures as data,
+         * but this protects the webhook from an unexpected exception.
+         */
+        emailResult = {
+          success: false,
+          completed: false,
+          attemptedCount: 0,
+          successfulCount: 0,
+          failedCount: 1,
+          results: [],
+          errors: [
+            {
+              recipient:
+                purchaserEmail,
+              message:
+                error.message,
+            },
+          ],
+        };
+      }
+    
+      const recipientResult =
+        emailResult?.results?.find(
+          (result) =>
+            normalizeEmail(
+              result?.recipient
+            ) === purchaserEmail
+        ) ||
+        emailResult?.results?.[0] ||
+        null;
+    
+      if (
+        emailResult.success &&
+        recipientResult?.success !== false
+      ) {
         await markRefundNotificationSent({
           reservations:
             purchaserReservations,
-
+    
           refund,
-
-          emailResult,
+    
+          emailResult: {
+            emailId:
+              recipientResult?.emailId ||
+              null,
+    
+            id:
+              recipientResult?.emailId ||
+              null,
+          },
         });
-
+    
         console.log(
           'Admin event refund notification sent:',
           {
             refundId:
               refund.id,
-
+    
             purchaserEmail,
-
+    
             emailId:
-              emailResult
-                ?.emailId ||
-              emailResult?.id ||
+              recipientResult?.emailId ||
               null,
           }
         );
-      } catch (error) {
+      } else {
+        const firstError =
+          emailResult?.errors?.[0] ||
+          recipientResult?.error ||
+          null;
+    
+        const notificationError =
+          new Error(
+            firstError?.message ||
+              'Unable to send the refund notification email.'
+          );
+    
         await markRefundNotificationFailed({
           reservations:
             purchaserReservations,
-
+    
           refund,
-
-          error,
+    
+          error:
+            notificationError,
         });
-
-        failedNotifications.push({
-          purchaserEmail,
-          message:
-            error.message,
-        });
+    
+        console.error(
+          'Admin event refund notification failed:',
+          {
+            refundId:
+              refund.id,
+    
+            purchaserEmail,
+    
+            error:
+              notificationError.message,
+          }
+        );
       }
+    
+      notificationResults.push({
+        purchaserEmail,
+    
+        skipped: false,
+    
+        success:
+          emailResult.success === true,
+    
+        completed:
+          emailResult.completed === true,
+    
+        attemptedCount:
+          emailResult.attemptedCount ||
+          0,
+    
+        successfulCount:
+          emailResult.successfulCount ||
+          0,
+    
+        failedCount:
+          emailResult.failedCount ||
+          0,
+    
+        errors:
+          emailResult.errors ||
+          [],
+      });
     }
-
-    if (
-      failedNotifications.length >
-      0
-    ) {
-      const error = new Error(
-        `${failedNotifications.length} event refund notification email(s) failed.`
+    
+    const notificationAttemptedCount =
+      notificationResults.reduce(
+        (
+          total,
+          result
+        ) =>
+          total +
+          Number(
+            result.attemptedCount ||
+              0
+          ),
+        0
       );
-
-      error.failedNotifications =
-        failedNotifications;
-
-      throw error;
-    }
+    
+    const notificationFailedCount =
+      notificationResults.reduce(
+        (
+          total,
+          result
+        ) =>
+          total +
+          Number(
+            result.failedCount ||
+              0
+          ),
+        0
+      );
 
     /*
-     * Every successful refund webhook checks whether this was the
-     * final refund for the event. The final successful delivery
-     * releases the last sold inventory and deletes the event.
-     */
-    const deletionResult =
-      await deleteEventAfterSuccessfulRefunds(
-        eventId
-      );
-
+    * Return refund cleanup and notification results separately.
+    * Email delivery failures do not reverse or block event cleanup.
+    */
     return {
-      handled: true,
-
-      eventDeleted:
-        deletionResult.deleted,
-
-      deletionReason:
-        deletionResult.reason ||
-        null,
-    };
+        handled: true,
+      
+        eventDeleted:
+          deletionResult.deleted,
+      
+        deletionReason:
+          deletionResult.reason ||
+          null,
+      
+        notificationAttemptedCount,
+      
+        notificationFailedCount,
+      
+        notifications:
+          notificationResults,
+      };
   };
 
 /*
@@ -1855,27 +2006,46 @@ const handleAdminEventWebhook =
           deletionReason:
             result.deletionReason ||
             null,
+            notificationAttemptedCount:
+            result
+              .notificationAttemptedCount ??
+            null,
+          
+          notificationFailedCount:
+            result
+              .notificationFailedCount ??
+            null,
         }
       );
 
       return res
         .status(200)
         .json({
-          received: true,
+            received: true,
 
-          handled:
+            handled:
             result.handled,
 
-          reason:
+            reason:
             result.reason ||
             null,
 
-          eventDeleted:
+            eventDeleted:
             result.eventDeleted ??
             null,
 
-          deletionReason:
+            deletionReason:
             result.deletionReason ||
+            null,
+
+            notificationAttemptedCount:
+            result
+                .notificationAttemptedCount ??
+            null,
+
+            notificationFailedCount:
+            result
+                .notificationFailedCount ??
             null,
         });
     } catch (error) {
@@ -1898,11 +2068,6 @@ const handleAdminEventWebhook =
 
           message:
             error.message,
-
-          failedNotifications:
-            error
-              .failedNotifications ||
-            null,
 
           stack:
             error.stack,
