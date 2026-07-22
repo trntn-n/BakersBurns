@@ -2,12 +2,12 @@
 'use strict';
 
 const {
-  FROM_ADRESSES,
+  FROM_ADDRESSES,
 } = require('../email/email-constants');
 
 const {
   sendEmailRequest,
-  EMAIL_SEND_TYPES,
+  EMAIL_SEND_TYPES
 } = require('../email/emailResendController');
 
 /*
@@ -584,7 +584,7 @@ const sendContactMessage = async (
           EMAIL_SEND_TYPES.ALL_ADMIN,
 
         from:
-          FROM_ADRESSES.CONTACT,
+          FROM_ADDRESSES.CONTACT,
 
         replyTo: email,
 
