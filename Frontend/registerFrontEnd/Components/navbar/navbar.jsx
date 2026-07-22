@@ -40,6 +40,11 @@ const NAVIGATION_ITEMS = [
     path: "/events",
   },
   {
+    label: "Contact",
+    shortLabel: "Contact",
+    path: "/contact",
+  },
+  {
     label: "About",
     shortLabel: "About",
     path: "/about",

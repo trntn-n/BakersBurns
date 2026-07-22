@@ -21,7 +21,7 @@ const {
     EMAIL_SEND_TYPES,
     sendEmailRequest,
   } = require(
-    '../email/events/emailResendController.js'
+    '../email/emailResendController.js'
   );
   const {
     buildEventRefundNotificationEmail,

@@ -32,6 +32,9 @@ import AcceptPrivacyTerms from './Pages/Cart/privacy&terms';
 const About = React.lazy(() =>
   import('./Pages/About/About')
 );
+const Contact = React.lazy(() => 
+  import('./Pages/Contact/Contact')
+);
 
 const Gallery = React.lazy(() =>
   import('./Pages/Gallery/Gallery')
@@ -173,7 +176,10 @@ function App() {
               path="/verify"
               element={<VerifyEmail />}
             />
-
+            <Route 
+              path="/contact"
+              element={<Contact />}
+            />
             <Route
               path="/passwordreset"
               element={<PasswordResetForm />}

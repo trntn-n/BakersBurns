@@ -3,7 +3,7 @@
 
 const { Resend } = require('resend');
 
-const User = require('../../../models/user');
+const User = require('../../models/user');
 
 /*
  * ============================================================

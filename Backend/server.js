@@ -37,34 +37,34 @@ const emailVerificationRoutes = require('./routes/verificationRoutes');
 const productRoutes = require('./routes/admin/productRoutes');
 const userRoutes = require('./routes/user/userRoutes');
 const accountSettingsRoutes = require('./routes/accountSettingsRoutes');
-const galleryRoutes = require('./routes/admin/galleryRoutes');
-const authRoutes = require('./routes/authRoutes');
-const storeRoutes = require('./routes/user/storeRoutes');
-const verifiedRoutes = require('./routes/verifiedRoutes');
-const signupRoutes = require('./routes/register/signupRoutes');
-const adminMessagingRoutes = require('./routes/admin/adminMessageRoutes');
-const userMessagingRoutes = require('./routes/user/userMessagingRoutes');
-const adminEmailRoutes = require('./routes/admin/adminEmailRoutes');
-const ordersRoutes = require('./routes/admin/ordersRoutes');
-const stripeRoutes = require('./routes/user/stripeRoutes');
-const passkeyRoutes = require('./routes/admin/adminPasskeyRoutes');
-const stripeWebhookRoutes = require('./routes/stripeWebhookRoutes.js');
-const userOrderRoutes = require('./routes/user/orderRoutes');
-const registerStoreRoutes = require('./routes/register/storeRegister');
-const adminEventRoutes = require('./routes/admin/adminEventRoutes');
-const userEventRoutes = require('./routes/user/eventRoutes');
-const userGalleryRoutes = require('./routes/user/galleryRoutes');
-const registerRates = require('./routes/register/rates.js');
-const registerCartRoutes = require('./routes/register/cartRoutes');
-const notificationRoutes = require('./routes/admin/notifcationRoutes');
-const socialRoutes = require('./routes/register/socialRoutes');
-const adminSocialRoutes = require('./routes/admin/adminSocialRoutes');
-const adminDiscountRoutes = require('./routes/admin/adminDiscountRoutes');
-const { rateLimiter } = require('./utils/rateLimiter');
-const googleRoutes = require('./routes/register/googleRoutes');
-const invoiceRoutes = require('./routes/admin/invoiceRoutes');
-const registerEventRoutes = require('./routes/register/eventRoutes');
-
+const galleryRoutes =         require('./routes/admin/galleryRoutes');
+const authRoutes =            require('./routes/authRoutes');
+const storeRoutes =           require('./routes/user/storeRoutes');
+const verifiedRoutes =        require('./routes/verifiedRoutes');
+const signupRoutes =          require('./routes/register/signupRoutes');
+const adminMessagingRoutes =  require('./routes/admin/adminMessageRoutes');
+const userMessagingRoutes =   require('./routes/user/userMessagingRoutes');
+const adminEmailRoutes =      require('./routes/admin/adminEmailRoutes');
+const ordersRoutes =          require('./routes/admin/ordersRoutes');
+const stripeRoutes =          require('./routes/user/stripeRoutes');
+const passkeyRoutes =         require('./routes/admin/adminPasskeyRoutes');
+const stripeWebhookRoutes =   require('./routes/stripeWebhookRoutes.js');
+const userOrderRoutes =       require('./routes/user/orderRoutes');
+const registerStoreRoutes =   require('./routes/register/storeRegister');
+const adminEventRoutes =      require('./routes/admin/adminEventRoutes');
+const userEventRoutes =       require('./routes/user/eventRoutes');
+const userGalleryRoutes =     require('./routes/user/galleryRoutes');
+const registerRates =         require('./routes/register/rates.js');
+const registerCartRoutes =    require('./routes/register/cartRoutes');
+const notificationRoutes =    require('./routes/admin/notifcationRoutes');
+const socialRoutes =          require('./routes/register/socialRoutes');
+const adminSocialRoutes =     require('./routes/admin/adminSocialRoutes');
+const adminDiscountRoutes =   require('./routes/admin/adminDiscountRoutes');
+const { rateLimiter } =       require('./utils/rateLimiter');
+const googleRoutes =          require('./routes/register/googleRoutes');
+const invoiceRoutes =         require('./routes/admin/invoiceRoutes');
+const registerEventRoutes =   require('./routes/register/eventRoutes');
+const contactRoutes =         require('./routes/register/contactRoutes.js');
  // Assuming passport.js is in the same directory
 
 
@@ -175,6 +175,7 @@ app.use('/register-store', lowSecurityRateLimiter('register-store'), registerSto
 app.use('/register-cart', lowSecurityRateLimiter('register-cart'), registerCartRoutes); 
 app.use('/register-rates', lowSecurityRateLimiter('register-rates'), registerRates);
 app.use('/register-events', lowSecurityRateLimiter('register-events'), registerEventRoutes);
+app.use('/contact', mediumSecurityRateLimiter('contact'), contactRoutes);
 
 
 // User routes
