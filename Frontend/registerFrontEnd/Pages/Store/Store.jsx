@@ -33,6 +33,11 @@ const formatSaleDate = (date) => {
   });
 };
 
+const getProductQuantity = (product) => {
+  const quantity = Number(product?.quantity);
+  return Number.isFinite(quantity) ? quantity : 0;
+};
+
 const Store = () => {
   const [products, setProducts] = useState([]);
   const [selectedType, setSelectedType] = useState('All');
@@ -59,13 +64,74 @@ const Store = () => {
     fetchProducts();
   }, []);
 
+  /*
+   * Only products with a quantity greater than zero are considered
+   * available for the public store.
+   */
+  const availableProducts = useMemo(() => {
+    return products.filter((product) => getProductQuantity(product) > 0);
+  }, [products]);
+
+  /*
+   * Add together the product quantities in each category.
+   *
+   * Example:
+   * Shirts:
+   *   Product A quantity: 0
+   *   Product B quantity: 4
+   *
+   * Shirts category quantity: 4
+   *
+   * The Shirts menu item will therefore be rendered.
+   */
+  const categoryQuantities = useMemo(() => {
+    return products.reduce((categoryTotals, product) => {
+      const productType = product.type?.trim();
+      const productQuantity = getProductQuantity(product);
+
+      if (!productType) {
+        return categoryTotals;
+      }
+
+      categoryTotals[productType] =
+        (categoryTotals[productType] || 0) + productQuantity;
+
+      return categoryTotals;
+    }, {});
+  }, [products]);
+
+  /*
+   * Only include categories whose combined available quantity
+   * is greater than zero.
+   */
+  const availableTypes = useMemo(() => {
+    return Object.entries(categoryQuantities)
+      .filter(([, totalQuantity]) => totalQuantity > 0)
+      .map(([productType]) => productType);
+  }, [categoryQuantities]);
+
+  /*
+   * If the selected category becomes unavailable after the products
+   * are refreshed, return the user to the All category.
+   */
+  useEffect(() => {
+    if (
+      selectedType !== 'All' &&
+      !availableTypes.includes(selectedType)
+    ) {
+      setSelectedType('All');
+    }
+  }, [availableTypes, selectedType]);
+
   const filteredProducts = useMemo(() => {
     if (selectedType === 'All') {
-      return products;
+      return availableProducts;
     }
 
-    return products.filter((product) => product.type === selectedType);
-  }, [products, selectedType]);
+    return availableProducts.filter(
+      (product) => product.type === selectedType
+    );
+  }, [availableProducts, selectedType]);
 
   const closeProductPreview = () => {
     setSelectedProduct(null);
@@ -84,17 +150,23 @@ const Store = () => {
       <StoreNavbar
         selectedType={selectedType}
         onTypeSelect={setSelectedType}
+        availableTypes={availableTypes}
+        categoryQuantities={categoryQuantities}
       />
 
       <div className="bb-store-shell">
         <header className="bb-store-header">
           <div>
-            <span className="bb-store-eyebrow">BakersBurns collection</span>
+            <span className="bb-store-eyebrow">
+              BakersBurns collection
+            </span>
+
             <h1>Store</h1>
           </div>
 
           <div className="bb-store-header__summary">
             <strong>{selectedType}</strong>
+
             <span>
               {filteredProducts.length}{' '}
               {filteredProducts.length === 1 ? 'product' : 'products'}
@@ -103,12 +175,21 @@ const Store = () => {
         </header>
 
         {error ? (
-          <section className="bb-store-state bb-store-state--error" role="alert">
-            <div className="bb-store-state__icon" aria-hidden="true">
+          <section
+            className="bb-store-state bb-store-state--error"
+            role="alert"
+          >
+            <div
+              className="bb-store-state__icon"
+              aria-hidden="true"
+            >
               !
             </div>
+
             <h2>Store unavailable</h2>
+
             <p>{error}</p>
+
             <button
               type="button"
               className="bb-store-button bb-store-button--primary"
@@ -124,12 +205,16 @@ const Store = () => {
           >
             {filteredProducts.map((product) => {
               const isDiscounted = Boolean(product.isDiscounted);
+
               const saleEndDate = isDiscounted
                 ? formatSaleDate(product.discountEndDate)
                 : '';
 
               return (
-                <article className="bb-store-card" key={product.id}>
+                <article
+                  className="bb-store-card"
+                  key={product.id}
+                >
                   <button
                     type="button"
                     className="bb-store-card__button"
@@ -152,8 +237,12 @@ const Store = () => {
                       {isDiscounted && (
                         <span className="bb-store-card__discount">
                           {product.discountType === 'percentage'
-                            ? `-${formatPrice(product.discountAmount)}%`
-                            : `-$${formatPrice(product.discountAmount)}`}
+                            ? `-${formatPrice(
+                                product.discountAmount
+                              )}%`
+                            : `-$${formatPrice(
+                                product.discountAmount
+                              )}`}
                         </span>
                       )}
 
@@ -175,12 +264,15 @@ const Store = () => {
                             <span className="bb-store-card__price-original">
                               ${formatPrice(product.price)}
                             </span>
+
                             <strong>
                               ${formatPrice(product.discountPrice)}
                             </strong>
                           </>
                         ) : (
-                          <strong>${formatPrice(product.price)}</strong>
+                          <strong>
+                            ${formatPrice(product.price)}
+                          </strong>
                         )}
                       </div>
 
@@ -197,13 +289,18 @@ const Store = () => {
           </section>
         ) : (
           <section className="bb-store-state">
-            <div className="bb-store-state__icon" aria-hidden="true">
+            <div
+              className="bb-store-state__icon"
+              aria-hidden="true"
+            >
               0
             </div>
-            <h2>No matching products</h2>
+
+            <h2>No products available</h2>
+
             <p>
-              There are no products available in the {selectedType} category
-              right now.
+              There are no products currently available in the{' '}
+              {selectedType} category.
             </p>
 
             {selectedType !== 'All' && (
