@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { registerApi } from '../../config/axios';
 import './store_menu.css';
 
@@ -13,7 +13,16 @@ const getThumbnailUrl = (thumbnail) => {
   return `${baseUrl}/uploads/${thumbnail}`;
 };
 
-const StoreNavbar = ({ onTypeSelect, selectedType = 'All' }) => {
+const normalizeType = (type) => {
+  return String(type || '').trim().toLowerCase();
+};
+
+const StoreNavbar = ({
+  onTypeSelect,
+  selectedType = 'All',
+  availableTypes = [],
+  categoryQuantities = {},
+}) => {
   const [productTypes, setProductTypes] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoadingTypes, setIsLoadingTypes] = useState(true);
@@ -43,6 +52,50 @@ const StoreNavbar = ({ onTypeSelect, selectedType = 'All' }) => {
     fetchProductTypes();
   }, []);
 
+  /*
+   * Create a normalized lookup so capitalization or whitespace
+   * differences do not cause valid categories to be excluded.
+   */
+  const availableTypeLookup = useMemo(() => {
+    return new Set(availableTypes.map(normalizeType));
+  }, [availableTypes]);
+
+  /*
+   * Only keep categories that:
+   * 1. Exist in availableTypes.
+   * 2. Have a combined quantity greater than zero.
+   */
+  const visibleProductTypes = useMemo(() => {
+    return productTypes.filter((productType) => {
+      const type = String(productType?.type || '').trim();
+
+      if (!type) {
+        return false;
+      }
+
+      const normalizedType = normalizeType(type);
+
+      const matchingQuantityEntry = Object.entries(
+        categoryQuantities
+      ).find(([categoryType]) => {
+        return normalizeType(categoryType) === normalizedType;
+      });
+
+      const categoryQuantity = Number(
+        matchingQuantityEntry?.[1] || 0
+      );
+
+      return (
+        availableTypeLookup.has(normalizedType) &&
+        categoryQuantity > 0
+      );
+    });
+  }, [
+    productTypes,
+    availableTypeLookup,
+    categoryQuantities,
+  ]);
+
   useEffect(() => {
     if (!isOpen) return undefined;
 
@@ -53,7 +106,10 @@ const StoreNavbar = ({ onTypeSelect, selectedType = 'All' }) => {
     };
 
     document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, [isOpen]);
 
   const handleTypeClick = (type) => {
@@ -70,11 +126,15 @@ const StoreNavbar = ({ onTypeSelect, selectedType = 'All' }) => {
         aria-expanded={isOpen}
         aria-controls="bb-storemenu-panel"
       >
-        <span className="bb-storemenu-trigger__icon" aria-hidden="true">
+        <span
+          className="bb-storemenu-trigger__icon"
+          aria-hidden="true"
+        >
           <span />
           <span />
           <span />
         </span>
+
         Categories
       </button>
 
@@ -98,7 +158,10 @@ const StoreNavbar = ({ onTypeSelect, selectedType = 'All' }) => {
         >
           <header className="bb-storemenu-header">
             <div>
-              <span className="bb-storemenu-eyebrow">Browse the store</span>
+              <span className="bb-storemenu-eyebrow">
+                Browse the store
+              </span>
+
               <h2>Categories</h2>
             </div>
 
@@ -116,7 +179,9 @@ const StoreNavbar = ({ onTypeSelect, selectedType = 'All' }) => {
             <button
               type="button"
               className={`bb-storemenu-all${
-                selectedType === 'All' ? ' bb-storemenu-all--active' : ''
+                selectedType === 'All'
+                  ? ' bb-storemenu-all--active'
+                  : ''
               }`}
               onClick={() => handleTypeClick('All')}
             >
@@ -132,48 +197,63 @@ const StoreNavbar = ({ onTypeSelect, selectedType = 'All' }) => {
               <div className="bb-storemenu-status bb-storemenu-status--error">
                 {typeError}
               </div>
-            ) : productTypes.length > 0 ? (
+            ) : visibleProductTypes.length > 0 ? (
               <div className="bb-storemenu-list">
-                {productTypes.map((productType, sectionIndex) => {
-                  const isActive = selectedType === productType.type;
-                  const thumbnails = Array.isArray(productType.thumbnails)
-                    ? productType.thumbnails.slice(0, 3)
-                    : [];
+                {visibleProductTypes.map(
+                  (productType, sectionIndex) => {
+                    const type = String(
+                      productType.type || ''
+                    ).trim();
 
-                  return (
-                    <button
-                      type="button"
-                      key={`${productType.type}-${sectionIndex}`}
-                      className={`bb-storemenu-category${
-                        isActive ? ' bb-storemenu-category--active' : ''
-                      }`}
-                      onClick={() => handleTypeClick(productType.type)}
-                    >
-                      <div className="bb-storemenu-category__heading">
-                        <span>Shop category</span>
-                        <h3>{productType.type}s</h3>
-                      </div>
+                    const isActive =
+                      normalizeType(selectedType) ===
+                      normalizeType(type);
 
-                      <div className="bb-storemenu-thumbnails">
-                        {thumbnails.length > 0 ? (
-                          thumbnails.map((thumbnail, thumbIndex) => (
-                            <img
-                              key={`${productType.type}-${thumbIndex}`}
-                              src={getThumbnailUrl(thumbnail)}
-                              alt=""
-                              aria-hidden="true"
-                              loading="lazy"
-                            />
-                          ))
-                        ) : (
-                          <span className="bb-storemenu-thumbnails__empty">
-                            No previews
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
+                    const thumbnails = Array.isArray(
+                      productType.thumbnails
+                    )
+                      ? productType.thumbnails.slice(0, 3)
+                      : [];
+
+                    return (
+                      <button
+                        type="button"
+                        key={`${type}-${sectionIndex}`}
+                        className={`bb-storemenu-category${
+                          isActive
+                            ? ' bb-storemenu-category--active'
+                            : ''
+                        }`}
+                        onClick={() => handleTypeClick(type)}
+                      >
+                        <div className="bb-storemenu-category__heading">
+                          <span>Shop category</span>
+                          <h3>{type}s</h3>
+                        </div>
+
+                        <div className="bb-storemenu-thumbnails">
+                          {thumbnails.length > 0 ? (
+                            thumbnails.map(
+                              (thumbnail, thumbIndex) => (
+                                <img
+                                  key={`${type}-${thumbIndex}`}
+                                  src={getThumbnailUrl(thumbnail)}
+                                  alt=""
+                                  aria-hidden="true"
+                                  loading="lazy"
+                                />
+                              )
+                            )
+                          ) : (
+                            <span className="bb-storemenu-thumbnails__empty">
+                              No previews
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  }
+                )}
               </div>
             ) : (
               <div className="bb-storemenu-status">
