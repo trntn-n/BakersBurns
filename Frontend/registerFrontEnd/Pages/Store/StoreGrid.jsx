@@ -1,29 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { registerApi } from '../../config/axios';
 import LoadingPage from '../../Components/loading';
 import ProductModal from './ProductModal';
 import './storeGrid.css';
 
+const getProductImageUrl = (thumbnail) => {
+  if (!thumbnail) return '';
+
+  const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL || '';
+  return `${baseUrl}/uploads/${thumbnail}`;
+};
+
+const formatPrice = (price) => {
+  const parsedPrice = Number.parseFloat(price);
+  return Number.isFinite(parsedPrice) ? parsedPrice.toFixed(2) : '0.00';
+};
+
 const StoreGrid = () => {
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
 
-  // Fetch products on mount
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await registerApi.get('/register-store/products');
+      setProducts(response.data?.products || []);
+    } catch (requestError) {
+      console.error('Error fetching products:', requestError);
+      setError('We could not load the products. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoading(true);
-      try {
-        const response = await registerApi.get('/register-store/products');
-        setProducts(response.data.products || []);
-      } catch (err) {
-        console.error('Error fetching products:', err);
-        setError('Failed to load products. Please try again later.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchProducts();
   }, []);
 
@@ -36,43 +50,94 @@ const StoreGrid = () => {
   };
 
   if (isLoading) {
-    return <LoadingPage />;
-  }
-
-  if (error) {
-    return <div className="store-grid-error">{error}</div>;
+    return (
+      <div className="bb-storegrid-loading">
+        <LoadingPage />
+      </div>
+    );
   }
 
   return (
-    <div className="store-grid-container">
-      {selectedProduct && (
-        <ProductModal product={selectedProduct} onClose={closeProductPreview} />
-      )}
-      <div className="store-grid">
-        {products.length > 0 ? (
-          products.map((product) => (
-            <div
-              key={product.id}
-              className="store-grid-item"
-              onClick={() => openProductPreview(product)}
-            >
-              <div className="store-grid-item-image">
-                <img
-                  src={`${import.meta.env.VITE_IMAGE_BASE_URL}/uploads/${product.thumbnail}`}
-                  alt={product.name}
-                />
-              </div>
-              <div className="store-grid-item-info">
-                <h3 >{product.name}</h3>
-                <p className="title">${parseFloat(product.price).toFixed(2)}</p>
-              </div>
-            </div>
-          ))
-        ) : (
-          <p className="store-grid-no-products">No products available.</p>
-        )}
+    <section className="bb-storegrid-section" aria-labelledby="bb-storegrid-title">
+      <div className="bb-storegrid-section__header">
+        <div>
+          <span className="bb-storegrid-eyebrow">Featured collection</span>
+          <h2 id="bb-storegrid-title">Shop BakersBurns</h2>
+        </div>
+
+        <p>
+          Explore our currently available products and select an item to view
+          more details.
+        </p>
       </div>
-    </div>
+
+      {error ? (
+        <div className="bb-storegrid-state bb-storegrid-state--error" role="alert">
+          <div className="bb-storegrid-state__icon" aria-hidden="true">
+            !
+          </div>
+          <h3>Products unavailable</h3>
+          <p>{error}</p>
+          <button
+            type="button"
+            className="bb-storegrid-button"
+            onClick={fetchProducts}
+          >
+            Try again
+          </button>
+        </div>
+      ) : products.length > 0 ? (
+        <div className="bb-storegrid-grid">
+          {products.map((product) => (
+            <article className="bb-storegrid-card" key={product.id}>
+              <button
+                type="button"
+                className="bb-storegrid-card__button"
+                onClick={() => openProductPreview(product)}
+                aria-label={`View ${product.name}`}
+              >
+                <div className="bb-storegrid-card__image">
+                  {product.thumbnail ? (
+                    <img
+                      src={getProductImageUrl(product.thumbnail)}
+                      alt={product.name}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="bb-storegrid-card__placeholder">
+                      <span>No image</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bb-storegrid-card__content">
+                  <span className="bb-storegrid-card__label">
+                    View product
+                  </span>
+                  <h3>{product.name}</h3>
+                  <p>${formatPrice(product.price)}</p>
+                </div>
+              </button>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="bb-storegrid-state">
+          <div className="bb-storegrid-state__icon" aria-hidden="true">
+            0
+          </div>
+          <h3>No products available</h3>
+          <p>Please check back soon for new BakersBurns products.</p>
+        </div>
+      )}
+
+      {selectedProduct && (
+        <ProductModal
+          product={selectedProduct}
+          onClose={closeProductPreview}
+        />
+      )}
+    </section>
   );
 };
 

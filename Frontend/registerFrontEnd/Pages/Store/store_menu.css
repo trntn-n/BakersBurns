@@ -1,154 +1,339 @@
-/* Sidebar container */
-.store-navbar {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 30%; /* Default width for larger screens */
-  height: 100%;
-  background-color: var(--bg-color);
-  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
-  transform: translateX(100%); /* Hidden by default */
-  transition: transform 0.3s ease;
+/* store_menu.css */
+
+.bb-storemenu-trigger,
+.bb-storemenu-panel {
+  --bb-storemenu-surface: var(--container-bg);
+  --bb-storemenu-surface-secondary: var(--bg-section);
+  --bb-storemenu-surface-hover: var(--button-hover);
+  --bb-storemenu-text: var(--text-color);
+  --bb-storemenu-heading: var(--header-color);
+  --bb-storemenu-muted: var(--about-text);
+  --bb-storemenu-primary: var(--btn-bg);
+  --bb-storemenu-primary-hover: var(--btn-hover);
+  --bb-storemenu-primary-text: var(--signup-button-text);
+  --bb-storemenu-border: var(--form-input-border);
+  --bb-storemenu-shadow: var(--container-shadow);
+  --bb-storemenu-danger: #b42318;
 }
 
-.store-navbar.open {
+.bb-storemenu-trigger {
+  position: fixed;
+  top: 108px;
+  left: 18px;
+  z-index: 850;
+  display: inline-flex;
+  min-height: 43px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--bb-storemenu-border);
+  border-radius: 999px;
+  padding: 9px 15px;
+  background: var(--bb-storemenu-surface);
+  color: var(--bb-storemenu-heading);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: var(--bb-storemenu-shadow);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.bb-storemenu-trigger:hover {
+  transform: translateY(-1px);
+  border-color: var(--bb-storemenu-primary);
+  background: var(--bb-storemenu-surface-hover);
+}
+
+.bb-storemenu-trigger:focus-visible,
+.bb-storemenu-close:focus-visible,
+.bb-storemenu-all:focus-visible,
+.bb-storemenu-category:focus-visible {
+  outline: 3px solid color-mix(
+    in srgb,
+    var(--bb-storemenu-primary) 35%,
+    transparent
+  );
+  outline-offset: 2px;
+}
+
+.bb-storemenu-trigger__icon {
+  display: grid;
+  width: 18px;
+  gap: 3px;
+}
+
+.bb-storemenu-trigger__icon span {
+  display: block;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--bb-storemenu-primary);
+}
+
+.bb-storemenu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1800;
+  visibility: hidden;
+  background: rgba(0, 0, 0, 0);
+  pointer-events: none;
+  transition:
+    background-color 220ms ease,
+    visibility 220ms ease;
+}
+
+.bb-storemenu-overlay--open {
+  visibility: visible;
+  background: rgba(0, 0, 0, 0.62);
+  pointer-events: auto;
+  backdrop-filter: blur(4px);
+}
+
+.bb-storemenu-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: min(420px, 92vw);
+  height: 100%;
+  overflow: hidden;
+  transform: translateX(-102%);
+  border-right: 1px solid var(--bb-storemenu-border);
+  background: var(--bb-storemenu-surface);
+  color: var(--bb-storemenu-text);
+  font-family: 'Montserrat', sans-serif;
+  box-shadow: 22px 0 60px rgba(0, 0, 0, 0.28);
+  transition: transform 240ms ease;
+}
+
+.bb-storemenu-panel--open {
   transform: translateX(0);
 }
 
-/* Close button */
-.close-button {
-  background: none;
-  background: var(--btn-bg);
-
-  color: var(--inverted-button-text);
-  border: none;
-  font-size: 1rem;
-  cursor: pointer;
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
+.bb-storemenu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--bb-storemenu-border);
+  padding: 24px;
+  background: var(--bb-storemenu-surface-secondary);
 }
 
-/* Content container */
-.store-navbar-content {
-  padding: 60px 20px 20px;
-  overflow-y: auto;
-  height: 100%;
-}
-
-/* Each product type section */
-.store-navbar-section {
-  margin-bottom: 3rem;
-  padding: 3rem;
-  border-top: 0.1rem solid var(--btn-bg);
-  border-bottom: 0.1rem solid var(--btn-bg);
-  border-left: none;
-  border-right: none;
-  
-}
-
-.store-navbar-title {
-  margin-bottom: 3rem;
-  border-top: 0.1rem solid var(--btn-bg);
-  border-bottom: 0.1rem solid var(--btn-bg);
-  border-left: none;
-  border-right: none;
-  
-}
-
-
-/* 'All Products' button */
-.all-products {
-  background: none;
-  background: var(--btn-bg);
-
-  color: var(--inverted-button-text);
-  border: none;
-  font-size: 1rem;
-  cursor: pointer;
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-}
-
-/* General button styling */
-.store-navbar-item {
+.bb-storemenu-eyebrow,
+.bb-storemenu-category__heading span {
   display: block;
-  width: 100%;
-  background: var(--btn-bg);
-
-  color: var(--inverted-button-text);
-  border: none;
-  padding: 10px;
-  margin-bottom: 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: left;
-  font-size: 14px;
+  color: var(--bb-storemenu-primary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
-/* Thumbnail container set as a grid */
-.thumbnail-container {
+.bb-storemenu-header h2 {
+  margin: 5px 0 0;
+  color: var(--bb-storemenu-heading);
+  font-family: 'Carnivalee Freakshow', Georgia, serif;
+  font-size: 2.5rem;
+  font-weight: normal;
+  line-height: 1;
+}
+
+.bb-storemenu-close {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: 8px;
-  height: 150px; /* Adjust height as needed */
+  width: 41px;
+  height: 41px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid var(--bb-storemenu-border);
+  border-radius: 10px;
+  padding: 0;
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-size: 1.55rem;
+  cursor: pointer;
 }
 
-/* Grid placement for images */
-/* First image occupies the entire left column, spanning two rows */
-.thumbnail-container img:nth-child(1) {
-  grid-column: 1;
-  grid-row: 1 / span 2;
-  height: 10rem;
-  width: 10rem;
+.bb-storemenu-close:hover {
+  border-color: var(--bb-storemenu-primary);
+  background: var(--button-hover);
 }
 
-/* Second image goes in the top right cell */
-.thumbnail-container img:nth-child(2) {
-  grid-column: 2;
-  grid-row: 1;
-  height: 5rem;
-  width: 5rem;
+.bb-storemenu-content {
+  height: calc(100% - 90px);
+  overflow-y: auto;
+  padding: 18px;
 }
 
-/* Third image goes in the bottom right cell */
-.thumbnail-container img:nth-child(3) {
-  grid-column: 2;
-  grid-row: 2;
-  height: 5rem;
-  width: 5rem;
+.bb-storemenu-all {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--bb-storemenu-border);
+  border-radius: 13px;
+  padding: 16px;
+  background: var(--bb-storemenu-surface-secondary);
+  color: var(--bb-storemenu-heading);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
 }
 
-/* Ensure images fill their grid cells */
-.thumbnail-container img {
+.bb-storemenu-all:hover,
+.bb-storemenu-all--active {
+  border-color: var(--bb-storemenu-primary);
+  background: color-mix(
+    in srgb,
+    var(--bb-storemenu-primary) 13%,
+    var(--bb-storemenu-surface)
+  );
+}
+
+.bb-storemenu-all span {
+  font-weight: 850;
+}
+
+.bb-storemenu-all strong {
+  color: var(--bb-storemenu-muted);
+  font-size: 0.72rem;
+}
+
+.bb-storemenu-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.bb-storemenu-category {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) 126px;
+  align-items: center;
+  gap: 16px;
+  overflow: hidden;
+  border: 1px solid var(--bb-storemenu-border);
+  border-radius: 14px;
+  padding: 15px;
+  background: var(--bb-storemenu-surface);
+  color: var(--bb-storemenu-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.bb-storemenu-category:hover {
+  transform: translateX(2px);
+  border-color: var(--bb-storemenu-primary);
+  background: var(--bb-storemenu-surface-hover);
+}
+
+.bb-storemenu-category--active {
+  border-color: var(--bb-storemenu-primary);
+  background: color-mix(
+    in srgb,
+    var(--bb-storemenu-primary) 12%,
+    var(--bb-storemenu-surface)
+  );
+}
+
+.bb-storemenu-category__heading {
+  min-width: 0;
+}
+
+.bb-storemenu-category__heading h3 {
+  overflow: hidden;
+  margin: 5px 0 0;
+  color: var(--bb-storemenu-heading);
+  font-family: 'Carnivalee Freakshow', Georgia, serif;
+  font-size: 1.8rem;
+  font-weight: normal;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bb-storemenu-thumbnails {
+  display: grid;
+  height: 66px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  overflow: hidden;
+  border-radius: 9px;
+  background: var(--bb-storemenu-surface-secondary);
+}
+
+.bb-storemenu-thumbnails img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-/* Reopen button styling */
-.reopen-button {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: var(--btn-bg);
-
-  color: var(--inverted-button-text);
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  z-index: 10000;
-  font-size: 16px;
+.bb-storemenu-thumbnails__empty {
+  display: grid;
+  grid-column: 1 / -1;
+  place-items: center;
+  color: var(--bb-storemenu-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 
-/* Media query for smaller devices (full screen width) */
-@media (max-width: 600px) {
-  .store-navbar {
+.bb-storemenu-status {
+  margin-top: 14px;
+  border: 1px dashed var(--bb-storemenu-border);
+  border-radius: 12px;
+  padding: 26px 18px;
+  color: var(--bb-storemenu-muted);
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.bb-storemenu-status--error {
+  color: var(--bb-storemenu-danger);
+}
+
+@media (max-width: 680px) {
+  .bb-storemenu-trigger {
+    top: 88px;
+    left: 12px;
+  }
+
+  .bb-storemenu-panel {
     width: 100%;
-    transform: translateX(100%);
+  }
+
+  .bb-storemenu-header {
+    padding: 20px 18px;
+  }
+
+  .bb-storemenu-content {
+    padding: 14px;
+  }
+
+  .bb-storemenu-category {
+    grid-template-columns: minmax(0, 1fr) 104px;
+  }
+
+  .bb-storemenu-thumbnails {
+    height: 58px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-storemenu-trigger,
+  .bb-storemenu-panel,
+  .bb-storemenu-panel *,
+  .bb-storemenu-overlay {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }
