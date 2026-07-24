@@ -474,8 +474,16 @@ const createCheckoutSession = async (req, res) => {
      * We create the Checkout Session directly on that account
      * instead of using transfer_data.destination.
      */
-    const connectedAccountId =
-      process.env.BAKERS_BURNS_ACCOUNT_ID;
+    let connectedAccountId;
+    if(process.env.STRIPE_MODE === 'test') {
+      connectedAccountId = process.env.BAKERS_BURNS_TEST_ACCOUNT_ID;
+    } else if (process.env.STRIPE_MODE === 'live') {
+      connectedAccountId = process.env.BAKERS_BURNS_LIVE_ACCOUNT_ID;
+    } else {
+      throw new Error(
+        `Connected account ID for ${process.env.STRIPE_MODE} mode is missing or invalid.`
+      );
+    }
 
     if (!connectedAccountId?.startsWith('acct_')) {
       throw new Error(
