@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Cookies from "js-cookie";
 
 import PrivacyPolicy from "../../Components/Privacy&Terms/privacyPolicy";
@@ -618,121 +618,373 @@ const PrivacyPolicyAndTerms = () => {
     isToSChecked &&
     !loading;
 
-  return (
-    <div className="privacy-terms-container">
-      <h2>
-        Review Privacy Policy and
-        Terms of Service
-      </h2>
+  const isAgreementModalOpen =
+    isPolicyModalOpen ||
+    isToSModalOpen;
 
-      <div className="toggle-wrapper">
-        <span className="toggle-label">
-          Privacy Policy
-        </span>
+  const checkoutType =
+    Cookies.get(
+      "checkoutType"
+    ) || "cart";
 
-        <div
-          className={`toggle-container ${
-            isPolicyChecked
-              ? "checked"
-              : ""
-          }`}
-          onClick={() =>
-            handleToggle("privacy")
-          }
-          role="switch"
-          aria-checked={
-            isPolicyChecked
-          }
-          tabIndex={0}
-          onKeyDown={(event) => {
-            if (
-              event.key === "Enter" ||
-              event.key === " "
-            ) {
-              event.preventDefault();
+  /*
+   * Keep the document behind the agreement from
+   * scrolling while the policy itself owns scrolling.
+   * Escape closes only non-destructive review modals.
+   */
+  useEffect(() => {
+    if (
+      !isAgreementModalOpen &&
+      !confirmDisagree
+    ) {
+      return undefined;
+    }
 
-              handleToggle(
-                "privacy"
-              );
-            }
-          }}
-        >
-          <div className="toggle-handle" />
-        </div>
-      </div>
+    const previousOverflow =
+      document.body.style.overflow;
 
-      <div className="toggle-wrapper">
-        <span className="toggle-label">
-          Terms of Service
-        </span>
+    document.body.style.overflow =
+      "hidden";
 
-        <div
-          className={`toggle-container ${
-            isToSChecked
-              ? "checked"
-              : ""
-          }`}
-          onClick={() =>
-            handleToggle("tos")
-          }
-          role="switch"
-          aria-checked={
-            isToSChecked
-          }
-          tabIndex={0}
-          onKeyDown={(event) => {
-            if (
-              event.key === "Enter" ||
-              event.key === " "
-            ) {
-              event.preventDefault();
+    const handleKeyDown = (
+      event
+    ) => {
+      if (event.key !== "Escape") {
+        return;
+      }
 
-              handleToggle("tos");
-            }
-          }}
-        >
-          <div className="toggle-handle" />
-        </div>
-      </div>
+      if (confirmDisagree) {
+        setPendingToggle(null);
+        setConfirmDisagree(false);
+      } else {
+        setIsPolicyModalOpen(false);
+        setIsToSModalOpen(false);
+      }
+    };
 
-      {error && (
-        <p
-          className="privacy-terms-error"
-          style={{
-            color: "red",
-          }}
-          role="alert"
-        >
-          {error}
-        </p>
-      )}
+    document.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
 
-      <button
-        type="button"
-        onClick={handleCheckout}
-        disabled={!canProceed}
-        style={{
-          marginTop: "20px",
-          padding: "10px 20px",
-          background: canProceed
-            ? "green"
-            : "gray",
-          color: "white",
-          border: "none",
-          borderRadius: "5px",
-          cursor: canProceed
-            ? "pointer"
-            : "not-allowed",
-        }}
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
+
+      document.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
+  }, [
+    confirmDisagree,
+    isAgreementModalOpen,
+  ]);
+
+  const renderAgreementModal = ({
+    type,
+    title,
+    description,
+    hasReachedBottom,
+    children,
+  }) => (
+    <div
+      className="bb-acceptance-modal-overlay"
+      role="presentation"
+      onMouseDown={handleDisagree}
+    >
+      <section
+        className="bb-acceptance-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`bb-acceptance-${type}-title`}
+        onMouseDown={(event) =>
+          event.stopPropagation()
+        }
       >
-        {loading
-          ? "Processing..."
-          : "Accept & Proceed to Checkout"}
-      </button>
+        <header className="bb-acceptance-modal-header">
+          <div>
+            <span className="bb-acceptance-eyebrow">
+              Required agreement
+            </span>
 
-      {isPolicyModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
+            <h2
+              id={`bb-acceptance-${type}-title`}
+            >
+              {title}
+            </h2>
+
+            <p>{description}</p>
+          </div>
+
+          <button
+            type="button"
+            className="bb-acceptance-modal-close"
+            onClick={handleDisagree}
+            aria-label={`Close ${title}`}
+          >
+            ×
+          </button>
+        </header>
+
+        <div
+          className="bb-acceptance-modal-scroll"
+          tabIndex={0}
+          aria-label={`${title} document`}
+        >
+          {children}
+        </div>
+
+        <footer className="bb-acceptance-modal-footer">
+          <div
+            className={`bb-acceptance-scroll-status ${
+              hasReachedBottom
+                ? "bb-acceptance-scroll-status--complete"
+                : ""
+            }`}
+            aria-live="polite"
+          >
+            <span aria-hidden="true">
+              {hasReachedBottom
+                ? "✓"
+                : "↓"}
+            </span>
+
+            <p>
+              {hasReachedBottom
+                ? "You reached the end and can now agree."
+                : "Scroll through the entire document to enable agreement."}
+            </p>
+          </div>
+
+          <div className="bb-acceptance-modal-actions">
+            <button
+              type="button"
+              className="bb-acceptance-button bb-acceptance-button--secondary"
+              onClick={handleDisagree}
+            >
+              I Don&apos;t Agree
+            </button>
+
+            <button
+              type="button"
+              className="bb-acceptance-button bb-acceptance-button--primary"
+              onClick={() =>
+                handleAgree(type)
+              }
+              disabled={
+                !hasReachedBottom
+              }
+            >
+              Agree and Continue
+            </button>
+          </div>
+        </footer>
+      </section>
+    </div>
+  );
+
+  return (
+    <main className="bb-acceptance-page">
+      <section className="bb-acceptance-card">
+        <header className="bb-acceptance-header">
+          <span className="bb-acceptance-eyebrow">
+            One final step
+          </span>
+
+          <h1>
+            Review and accept
+          </h1>
+
+          <p>
+            Please review both documents
+            before continuing to secure
+            checkout.
+          </p>
+
+          <div className="bb-acceptance-checkout-type">
+            <span aria-hidden="true">
+              {checkoutType ===
+              "ticket"
+                ? "◆"
+                : "◈"}
+            </span>
+
+            <div>
+              <strong>
+                {checkoutType ===
+                "ticket"
+                  ? "Event ticket checkout"
+                  : "Product checkout"}
+              </strong>
+
+              <small>
+                Your selections are saved
+                while you review.
+              </small>
+            </div>
+          </div>
+        </header>
+
+        <div className="bb-acceptance-body">
+          <div className="bb-acceptance-progress">
+            <span
+              className={
+                isPolicyChecked
+                  ? "bb-acceptance-progress--complete"
+                  : ""
+              }
+            />
+
+            <span
+              className={
+                isToSChecked
+                  ? "bb-acceptance-progress--complete"
+                  : ""
+              }
+            />
+          </div>
+
+          <div className="bb-acceptance-list">
+            <article
+              className={`bb-acceptance-item ${
+                isPolicyChecked
+                  ? "bb-acceptance-item--accepted"
+                  : ""
+              }`}
+            >
+              <div className="bb-acceptance-item-icon">
+                <span aria-hidden="true">
+                  {isPolicyChecked
+                    ? "✓"
+                    : "01"}
+                </span>
+              </div>
+
+              <div className="bb-acceptance-item-copy">
+                <h2>Privacy Policy</h2>
+
+                <p>
+                  Review how BakersBurns
+                  collects, uses, and
+                  protects your information.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="bb-acceptance-review-button"
+                onClick={() =>
+                  handleToggle(
+                    "privacy"
+                  )
+                }
+              >
+                {isPolicyChecked
+                  ? "Change"
+                  : "Review"}
+              </button>
+            </article>
+
+            <article
+              className={`bb-acceptance-item ${
+                isToSChecked
+                  ? "bb-acceptance-item--accepted"
+                  : ""
+              }`}
+            >
+              <div className="bb-acceptance-item-icon">
+                <span aria-hidden="true">
+                  {isToSChecked
+                    ? "✓"
+                    : "02"}
+                </span>
+              </div>
+
+              <div className="bb-acceptance-item-copy">
+                <h2>
+                  Terms of Service
+                </h2>
+
+                <p>
+                  Review the conditions
+                  that apply when using
+                  BakersBurns and completing
+                  your purchase.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="bb-acceptance-review-button"
+                onClick={() =>
+                  handleToggle("tos")
+                }
+              >
+                {isToSChecked
+                  ? "Change"
+                  : "Review"}
+              </button>
+            </article>
+          </div>
+
+          {error && (
+            <p
+              className="bb-acceptance-alert"
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
+
+          <div className="bb-acceptance-security-note">
+            <span aria-hidden="true">
+              ✓
+            </span>
+
+            <p>
+              Your acceptance is remembered
+              for 24 hours on this device.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleCheckout}
+            disabled={!canProceed}
+            className="bb-acceptance-checkout-button"
+          >
+            {loading ? (
+              <>
+                <span
+                  className="bb-acceptance-spinner"
+                  aria-hidden="true"
+                />
+                Preparing Checkout...
+              </>
+            ) : (
+              "Continue to Secure Checkout"
+            )}
+          </button>
+
+          {!canProceed && !loading && (
+            <p className="bb-acceptance-helper">
+              Review and accept both
+              documents to continue.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {isPolicyModalOpen &&
+        renderAgreementModal({
+          type: "privacy",
+          title: "Privacy Policy",
+          description:
+            "How we collect, use, and protect your information.",
+          hasReachedBottom:
+            isPolicyScrolledToBottom,
+          children: (
             <PrivacyPolicy
               onReachBottom={() =>
                 setIsPolicyScrolledToBottom(
@@ -740,48 +992,18 @@ const PrivacyPolicyAndTerms = () => {
                 )
               }
             />
+          ),
+        })}
 
-            <div className="modal-buttons">
-              <button
-                type="button"
-                onClick={() =>
-                  handleAgree(
-                    "privacy"
-                  )
-                }
-                disabled={
-                  !isPolicyScrolledToBottom
-                }
-              >
-                Agree
-              </button>
-
-              <p
-                style={{
-                  marginTop: 20,
-                  padding: 10,
-                }}
-              >
-                You must scroll to the
-                bottom to click agree.
-              </p>
-
-              <button
-                type="button"
-                onClick={
-                  handleDisagree
-                }
-              >
-                I Don&apos;t Agree
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isToSModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
+      {isToSModalOpen &&
+        renderAgreementModal({
+          type: "tos",
+          title: "Terms of Service",
+          description:
+            "The terms that apply to your use of BakersBurns.",
+          hasReachedBottom:
+            isToSScrolledToBottom,
+          children: (
             <TermsOfService
               onReachBottom={() =>
                 setIsToSScrolledToBottom(
@@ -789,80 +1011,72 @@ const PrivacyPolicyAndTerms = () => {
                 )
               }
             />
-
-            <div className="modal-buttons">
-              <button
-                type="button"
-                onClick={() =>
-                  handleAgree("tos")
-                }
-                disabled={
-                  !isToSScrolledToBottom
-                }
-              >
-                Agree
-              </button>
-
-              <p
-                style={{
-                  marginTop: 20,
-                  padding: 10,
-                }}
-              >
-                You must scroll to the
-                bottom to click agree.
-              </p>
-
-              <button
-                type="button"
-                onClick={
-                  handleDisagree
-                }
-              >
-                I Don&apos;t Agree
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          ),
+        })}
 
       {confirmDisagree && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2>
-              Are you sure?
+        <div
+          className="bb-acceptance-modal-overlay"
+          role="presentation"
+          onMouseDown={
+            handleCancelDisagree
+          }
+        >
+          <section
+            className="bb-acceptance-confirm-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="bb-acceptance-confirm-title"
+            onMouseDown={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <span
+              className="bb-acceptance-confirm-icon"
+              aria-hidden="true"
+            >
+              !
+            </span>
+
+            <span className="bb-acceptance-eyebrow">
+              Confirm your choice
+            </span>
+
+            <h2 id="bb-acceptance-confirm-title">
+              Withdraw acceptance?
             </h2>
 
             <p>
-              Pressing
-              &quot;Yes&quot; means
-              you do not want to use
-              our website.
+              You will need to accept this
+              document again before you can
+              complete checkout.
             </p>
 
-            <div className="modal-buttons">
+            <div className="bb-acceptance-modal-actions">
               <button
                 type="button"
+                className="bb-acceptance-button bb-acceptance-button--danger"
                 onClick={
                   handleConfirmDisagree
                 }
               >
-                Yes
+                Withdraw Acceptance
               </button>
 
               <button
                 type="button"
+                className="bb-acceptance-button bb-acceptance-button--secondary"
                 onClick={
                   handleCancelDisagree
                 }
               >
-                Cancel
+                Keep Accepted
               </button>
             </div>
-          </div>
+          </section>
         </div>
       )}
-    </div>
+    </main>
   );
 };
 
