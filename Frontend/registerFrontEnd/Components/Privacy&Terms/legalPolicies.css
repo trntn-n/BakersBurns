@@ -1,0 +1,261 @@
+@font-face {
+    font-family: 'Carnivalee Freakshow';
+    src: url('../../assets/CarnivaleeFreakshow-DLrm.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+  
+  .bb-legal-page,
+  .bb-legal-page *,
+  .bb-legal-page *::before,
+  .bb-legal-page *::after {
+    box-sizing: border-box;
+  }
+  
+  .bb-legal-page {
+    --bb-legal-accent: #d99752;
+    --bb-legal-accent-bright: #f0b878;
+    --bb-legal-page-text: #fffaf4;
+    --bb-legal-page-muted: #ead8c7;
+    --bb-legal-surface: rgba(52, 29, 18, 0.92);
+    --bb-legal-surface-soft: rgba(255, 248, 239, 0.07);
+    --bb-legal-border: rgba(255, 238, 219, 0.18);
+    --bb-legal-divider: rgba(217, 151, 82, 0.26);
+    --bb-legal-shadow: 0 24px 70px rgba(20, 9, 4, 0.28);
+    --bb-legal-focus: #ffd19e;
+  
+    min-height: 100vh;
+    width: 100%;
+    padding: 132px 24px 72px;
+    background:
+      radial-gradient(circle at 15% 5%, rgba(188, 116, 58, 0.24), transparent 34rem),
+      linear-gradient(145deg, rgba(83, 45, 25, 0.97), rgba(42, 22, 14, 0.98)),
+      var(--wood-bg-dark, #351f14);
+    color: var(--bb-legal-page-text);
+    font-family: 'Montserrat', Arial, sans-serif;
+  }
+  
+  [data-theme='dark'] .bb-legal-page {
+    --bb-legal-accent: #e0a15d;
+    --bb-legal-accent-bright: #ffc580;
+    --bb-legal-page-text: #fffaf5;
+    --bb-legal-page-muted: #e7d4c2;
+    --bb-legal-surface: rgba(29, 17, 12, 0.94);
+    --bb-legal-surface-soft: rgba(255, 248, 239, 0.055);
+    --bb-legal-border: rgba(255, 238, 219, 0.15);
+    --bb-legal-divider: rgba(224, 161, 93, 0.24);
+    --bb-legal-shadow: 0 26px 76px rgba(0, 0, 0, 0.4);
+  
+    background:
+      radial-gradient(circle at 15% 5%, rgba(136, 75, 37, 0.2), transparent 34rem),
+      linear-gradient(145deg, rgba(47, 27, 18, 0.99), rgba(20, 12, 9, 0.99)),
+      var(--wood-bg-dark, #1f130d);
+  }
+  
+  .bb-legal-privacy-document,
+  .bb-legal-terms-document {
+    width: min(980px, 100%);
+    margin: 0 auto;
+    overflow: hidden;
+    border: 1px solid var(--bb-legal-border);
+    border-radius: 22px;
+    background: var(--bb-legal-surface);
+    box-shadow: var(--bb-legal-shadow);
+  }
+  
+  .bb-legal-privacy-header,
+  .bb-legal-terms-header {
+    position: relative;
+    padding: clamp(32px, 6vw, 58px);
+    border-bottom: 1px solid var(--bb-legal-border);
+    background:
+      linear-gradient(135deg, rgba(217, 151, 82, 0.17), transparent 58%),
+      var(--bb-legal-surface-soft);
+  }
+  
+  .bb-legal-privacy-eyebrow,
+  .bb-legal-terms-eyebrow {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--bb-legal-accent-bright);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  
+  .bb-legal-privacy-header h1,
+  .bb-legal-terms-header h1 {
+    margin: 0;
+    color: var(--bb-legal-page-text);
+    font-family: 'Carnivalee Freakshow', Georgia, serif;
+    font-size: clamp(3rem, 8vw, 5.2rem);
+    font-weight: normal;
+    line-height: 0.98;
+    text-wrap: balance;
+  }
+  
+  .bb-legal-privacy-date,
+  .bb-legal-terms-date {
+    margin: 18px 0 0;
+    color: var(--bb-legal-accent-bright);
+    font-size: 0.88rem;
+    letter-spacing: 0.02em;
+  }
+  
+  .bb-legal-privacy-intro,
+  .bb-legal-terms-intro {
+    max-width: 720px;
+    margin: 18px 0 0;
+    color: var(--bb-legal-page-muted);
+    font-size: clamp(1rem, 2vw, 1.08rem);
+    line-height: 1.75;
+  }
+  
+  .bb-legal-privacy-content,
+  .bb-legal-terms-content {
+    padding: clamp(26px, 5vw, 52px);
+  }
+  
+  .bb-legal-privacy-section,
+  .bb-legal-terms-section {
+    scroll-margin-top: 120px;
+    padding: 0 0 32px;
+    margin: 0 0 32px;
+    border-bottom: 1px solid var(--bb-legal-divider);
+  }
+  
+  .bb-legal-privacy-section:last-of-type,
+  .bb-legal-terms-section:last-of-type {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+  
+  .bb-legal-privacy-section h2,
+  .bb-legal-terms-section h2 {
+    margin: 0 0 15px;
+    color: var(--bb-legal-page-text);
+    font-family: 'Carnivalee Freakshow', Georgia, serif;
+    font-size: clamp(1.75rem, 4vw, 2.45rem);
+    font-weight: normal;
+    line-height: 1.12;
+  }
+  
+  .bb-legal-privacy-section p,
+  .bb-legal-terms-section p,
+  .bb-legal-privacy-section li,
+  .bb-legal-terms-section li {
+    color: var(--bb-legal-page-muted);
+    font-size: 1rem;
+    line-height: 1.78;
+  }
+  
+  .bb-legal-privacy-section p,
+  .bb-legal-terms-section p {
+    margin: 0 0 14px;
+  }
+  
+  .bb-legal-privacy-section p:last-child,
+  .bb-legal-terms-section p:last-child {
+    margin-bottom: 0;
+  }
+  
+  .bb-legal-privacy-section ul,
+  .bb-legal-terms-section ul {
+    display: grid;
+    gap: 10px;
+    margin: 14px 0 18px;
+    padding-left: 1.35rem;
+  }
+  
+  .bb-legal-privacy-section li::marker,
+  .bb-legal-terms-section li::marker {
+    color: var(--bb-legal-accent);
+  }
+  
+  .bb-legal-privacy-section strong,
+  .bb-legal-terms-section strong {
+    color: var(--bb-legal-page-text);
+    font-weight: 750;
+  }
+  
+  .bb-legal-privacy-page a,
+  .bb-legal-terms-page a {
+    border-radius: 3px;
+    color: var(--bb-legal-accent-bright);
+    font-weight: 700;
+    text-decoration-color: rgba(240, 184, 120, 0.58);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition:
+      color 150ms ease,
+      text-decoration-color 150ms ease;
+  }
+  
+  .bb-legal-privacy-page a:hover,
+  .bb-legal-terms-page a:hover {
+    color: #ffffff;
+    text-decoration-color: currentColor;
+  }
+  
+  .bb-legal-privacy-page a:focus-visible,
+  .bb-legal-terms-page a:focus-visible {
+    outline: 3px solid var(--bb-legal-focus);
+    outline-offset: 4px;
+  }
+  
+  .bb-legal-privacy-link {
+    display: inline-block;
+    overflow-wrap: anywhere;
+  }
+  
+  .bb-legal-privacy-sentinel,
+  .bb-legal-terms-sentinel {
+    width: 100%;
+    height: 1px;
+  }
+  
+  @media (max-width: 680px) {
+    .bb-legal-page {
+      padding: 104px 12px 40px;
+    }
+  
+    .bb-legal-privacy-document,
+    .bb-legal-terms-document {
+      border-radius: 16px;
+    }
+  
+    .bb-legal-privacy-header,
+    .bb-legal-terms-header {
+      padding: 28px 20px;
+    }
+  
+    .bb-legal-privacy-content,
+    .bb-legal-terms-content {
+      padding: 28px 20px;
+    }
+  
+    .bb-legal-privacy-section,
+    .bb-legal-terms-section {
+      margin-bottom: 26px;
+      padding-bottom: 26px;
+    }
+  
+    .bb-legal-privacy-section p,
+    .bb-legal-terms-section p,
+    .bb-legal-privacy-section li,
+    .bb-legal-terms-section li {
+      font-size: 0.96rem;
+      line-height: 1.72;
+    }
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    .bb-legal-privacy-page a,
+    .bb-legal-terms-page a {
+      transition: none;
+    }
+  }
+  

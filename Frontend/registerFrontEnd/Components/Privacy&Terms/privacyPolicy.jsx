@@ -1,59 +1,70 @@
-import React, {useRef, useEffect} from 'react';
-import './privacy.css'; // Optional: Add a CSS file for styling this component
+import React, { useEffect, useRef } from 'react';
+import './legalPolicies.css';
 
 
 
-const PrivacyPolicy = ( {onReachBottom}) => {
-    const bottomRef = useRef(null);
+const PrivacyPolicy = ({ onReachBottom }) => {
+  const bottomRef = useRef(null);
 
   useEffect(() => {
+    const bottomElement = bottomRef.current;
+
+    if (!bottomElement || typeof IntersectionObserver === 'undefined') {
+      return undefined;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
-        if (entry.isIntersecting) {
-          console.log("Privacy Policy bottom reached.");
-          onReachBottom(true); // Notify parent
+
+        if (entry?.isIntersecting && typeof onReachBottom === 'function') {
+          onReachBottom(true);
         }
       },
-      { threshold: 1.0 } // Fully visible
+      { threshold: 1 }
     );
 
-    if (bottomRef.current) {
-      observer.observe(bottomRef.current);
-    }
+    observer.observe(bottomElement);
 
     return () => {
-      if (bottomRef.current) {
-        observer.unobserve(bottomRef.current);
-      }
+      observer.disconnect();
     };
   }, [onReachBottom]);
-    return (
-        <div
-       
-         className="privacy-policy" style={{padding:'10px', width:'100%'}}>
-            <h1>Privacy Policy</h1>
-            <p><strong>Effective Date:</strong> 12/8/2024</p>
 
-            <section className='privacy-section'>
+    return (
+      <main className="bb-legal-page bb-legal-privacy-page">
+        <article
+          className="bb-legal-privacy-document"
+          aria-labelledby="bb-legal-privacy-title"
+        >
+          <header className="bb-legal-privacy-header">
+            <span className="bb-legal-privacy-eyebrow">BakersBurns policies</span>
+            <h1 id="bb-legal-privacy-title">Privacy Policy</h1>
+            <p className="bb-legal-privacy-date">
+              <strong>Effective Date:</strong> December 8, 2024
+            </p>
+            <p className="bb-legal-privacy-intro">
+              This policy explains what information BakersBurns collects, how it
+              is used, and the choices available to you.
+            </p>
+          </header>
+
+          <div className="bb-legal-privacy-content">
+
+            <section className="bb-legal-privacy-section">
                 <h2>1. Business Information</h2>
                 <p><strong>Company Name:</strong> BakersBurns</p>
                 <strong>
                 <a
                     href="mailto:trentyn.nicholas@gmail.com"
-                    style={{
-                        textDecoration: 'none',
-                        color: 'inherit',
-                        cursor: 'pointer',
-                        fontSize:'1rem'
-                    }}
+                    className="bb-legal-privacy-link"
                 >
                     trentyn.nicholas@gmail.com
                 </a>
                 </strong>
             </section>
 
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>2. Information We Collect</h2>
                 <p>We may collect the following types of personal information from you when you use our Website:</p>
                 <ul>
@@ -62,7 +73,7 @@ const PrivacyPolicy = ( {onReachBottom}) => {
                     <li><strong>Third-Party Data Collection:</strong> We integrate with third-party tools such as Stripe, FedEx, UPS, USPS, and Google, which may also collect information as part of their services.</li>
                 </ul>
             </section>
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>7. Data Security</h2>
                 <p>We prioritize the security of your personal information and implement robust measures to protect your data:</p>
                 <ul>
@@ -90,7 +101,7 @@ const PrivacyPolicy = ( {onReachBottom}) => {
             </section>
 
 
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>3. How We Use Your Information</h2>
                 <p>We may use your personal information for the following purposes:</p>
                 <ul>
@@ -102,7 +113,7 @@ const PrivacyPolicy = ( {onReachBottom}) => {
                 <p>(Even though we do not actively collect data for analytics or behavior tracking, we reserve the right to do so in the future.)</p>
             </section>
 
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>4. Sharing Your Information</h2>
                 <p>We share your data with the following third parties solely for specific purposes:</p>
                 <ul>
@@ -113,7 +124,7 @@ const PrivacyPolicy = ( {onReachBottom}) => {
                 <p>We ensure that sensitive data, such as your shipping address, is hashed in our database for added security.</p>
             </section>
 
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>5. Data Retention</h2>
                 <p>We retain user data for the following periods:</p>
                 <ul>
@@ -124,12 +135,12 @@ const PrivacyPolicy = ( {onReachBottom}) => {
                 <p>Users can request access to their data or deletion of specific information (e.g., email or account data) by contacting us.</p>
             </section>
 
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>6. Children’s Privacy</h2>
                 <p>Our Website is not specifically intended for children under 13. We do not knowingly collect data from minors. If we become aware that we have collected information from a child under 13, we will delete it immediately.</p>
             </section>
 
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>7. Data Security</h2>
                 <p>We prioritize the security of your personal information and implement the following measures:</p>
                 <ul>
@@ -140,7 +151,7 @@ const PrivacyPolicy = ( {onReachBottom}) => {
                 </ul>
             </section>
 
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>8. User Rights</h2>
                 <p>You have the following rights concerning your data:</p>
                 <ul>
@@ -150,12 +161,12 @@ const PrivacyPolicy = ( {onReachBottom}) => {
                 <p>We provide an opt-in notification during sign-up for promotional and tracking-related emails.</p>
             </section>
 
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>9. Third-Party Links</h2>
                 <p>Our Website may link to third-party documentation (e.g., carrier and Google API documentation). We are not responsible for the privacy practices or content of these third-party websites.</p>
             </section>
 
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>10. Policy Updates</h2>
                 <p>We reserve the right to update this Privacy Policy at any time. When significant changes are made:</p>
                 <ul>
@@ -164,7 +175,7 @@ const PrivacyPolicy = ( {onReachBottom}) => {
                 </ul>
                 <p>We encourage users to review this Privacy Policy periodically.</p>
             </section>
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>11. Legal Basis for Data Processing</h2>
                 <p>
                     We process your personal information based on the following legal grounds:
@@ -176,7 +187,7 @@ const PrivacyPolicy = ( {onReachBottom}) => {
                     <li><strong>Legal Obligations:</strong> To comply with applicable laws, such as tax or regulatory requirements.</li>
                 </ul>
             </section>
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>12. Cookies and Tracking Technologies</h2>
                 <p>
                     Bakers Burns uses cookies and similar tracking technologies to enhance user experience and monitor website performance. By using our Website, you agree to the use of these technologies as described below:
@@ -190,7 +201,7 @@ const PrivacyPolicy = ( {onReachBottom}) => {
                     Users can control cookie settings through their browser. However, disabling cookies may impact Website functionality.
                 </p>
             </section>
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>13. International Data Transfers</h2>
                 <p>
                     Bakers Burns operates globally, and your personal information may be processed in countries outside your own. By using our Website, you acknowledge and agree to the following:
@@ -200,7 +211,7 @@ const PrivacyPolicy = ( {onReachBottom}) => {
                     <li>Where required, we implement appropriate safeguards, such as data transfer agreements or reliance on lawful frameworks like Standard Contractual Clauses.</li>
                 </ul>
             </section>
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>14. Breach Notification Policy</h2>
                 <p>
                     In the event of a data breach involving your personal information, Bakers Burns will:
@@ -211,7 +222,7 @@ const PrivacyPolicy = ( {onReachBottom}) => {
                     <li>Provide guidance on protective measures users can take to secure their information.</li>
                 </ul>
             </section>
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>15. Data Minimization and Storage</h2>
                 <p>
                     Bakers Burns is committed to collecting and storing only the data necessary for providing our services. Our practices include:
@@ -222,7 +233,7 @@ const PrivacyPolicy = ( {onReachBottom}) => {
                     <li><strong>Secure Deletion:</strong> When data is no longer needed, we securely delete or anonymize it to protect user privacy.</li>
                 </ul>
             </section>
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>16. User Rights</h2>
                 <p>
                     Bakers Burns is committed to ensuring all users have control over their personal data. Regardless of your location, you have the following rights:
@@ -251,7 +262,7 @@ const PrivacyPolicy = ( {onReachBottom}) => {
                     To exercise these rights, please contact us at <strong>trentyn.nicholas@gmail.com</strong>. We will respond to all verified requests within 30 days, unless an extension is required due to the complexity of the request, in which case you will be notified.
                 </p>
             </section>
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <h2>17. Behavioral Tracking and Analytics</h2>
                 <p>
                     While we do not currently engage in behavioral tracking, we reserve the right to implement analytics tools in the future to enhance user experience and improve our services. If implemented, these tools may:
@@ -274,7 +285,7 @@ const PrivacyPolicy = ( {onReachBottom}) => {
 
 
 
-            <section className='privacy-section'>
+            <section className="bb-legal-privacy-section">
                 <p>If you have any questions or concerns about this Privacy Policy, please contact us at </p>
                 <strong>
                
@@ -282,7 +293,7 @@ const PrivacyPolicy = ( {onReachBottom}) => {
                 </strong>
                 
             </section>
-            <section className="privacy-section">
+            <section className="bb-legal-privacy-section">
                 <h2>Guest Checkout</h2>
                 <p>
                     By using Guest Checkout, you agree to the creation of a temporary account to facilitate the processing of your order. The following applies:
@@ -304,18 +315,19 @@ const PrivacyPolicy = ( {onReachBottom}) => {
             </section>
             <a
                     href="mailto:trentyn.nicholas@gmail.com"
-                    style={{
-                        textDecoration: 'none',
-                        color: 'inherit',
-                        cursor: 'pointer',
-                        fontSize:'1rem'
-                    }}
+                    className="bb-legal-privacy-link"
                 >
                     trentyn.nicholas@gmail.com
                 </a>
 
-      <div ref={bottomRef} style={{ height: "1px" }}></div>
-        </div>
+            <div
+              ref={bottomRef}
+              className="bb-legal-privacy-sentinel"
+              aria-hidden="true"
+            />
+          </div>
+        </article>
+      </main>
     );
 };
 

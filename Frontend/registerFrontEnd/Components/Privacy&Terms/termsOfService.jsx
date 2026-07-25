@@ -1,50 +1,62 @@
 import React, { useRef, useEffect } from 'react';
-import './privacy.css';
+import './legalPolicies.css';
 
 const TermsOfService = ({ onReachBottom }) => {
   const bottomRef = useRef(null);
 
   useEffect(() => {
+    const bottomElement = bottomRef.current;
+
+    if (!bottomElement || typeof IntersectionObserver === 'undefined') {
+      return undefined;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
-        if (entry.isIntersecting) {
-          console.log("Privacy Policy bottom reached.");
-          onReachBottom(true); // Notify parent
+
+        if (entry?.isIntersecting && typeof onReachBottom === 'function') {
+          onReachBottom(true);
         }
       },
-      { threshold: 1.0 } // Fully visible
+      { threshold: 1 }
     );
 
-    if (bottomRef.current) {
-      observer.observe(bottomRef.current);
-    }
+    observer.observe(bottomElement);
 
     return () => {
-      if (bottomRef.current) {
-        observer.unobserve(bottomRef.current);
-      }
+      observer.disconnect();
     };
   }, [onReachBottom]);
-  return (
-    <div 
-    style={{ 
-      padding: '20px',
-      lineHeight: '1.6',
-      fontFamily: 'Arial, sans-serif'
-       }}
-      className="privacy-policy">
-      <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>Terms of Service</h1>
-      <p>Published 12/9/2024</p>
 
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+  return (
+    <main className="bb-legal-page bb-legal-terms-page">
+      <article
+        className="bb-legal-terms-document"
+        aria-labelledby="bb-legal-terms-title"
+      >
+        <header className="bb-legal-terms-header">
+          <span className="bb-legal-terms-eyebrow">BakersBurns policies</span>
+          <h1 id="bb-legal-terms-title">Terms of Service</h1>
+          <p className="bb-legal-terms-date">
+            <strong>Published:</strong> December 9, 2024
+          </p>
+          <p className="bb-legal-terms-intro">
+            Please read these terms carefully before using the BakersBurns
+            website, purchasing products, or registering for an event.
+          </p>
+        </header>
+
+        <div className="bb-legal-terms-content">
+
+      <section className="bb-legal-terms-section">
         <h2>1. Acceptance of Terms</h2>
         <p>
           By accessing or using the services provided by Bakers Burns ("the Platform"), you ("the User") agree to comply with these Terms of Service ("Terms"). If you do not agree with these Terms, you must discontinue use of the Platform immediately.
         </p>
       </section>
 
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
         <h2>2. Services Provided</h2>
         <p>
           Bakers Burns offers an e-commerce platform enabling users to:
@@ -58,7 +70,7 @@ const TermsOfService = ({ onReachBottom }) => {
         </ul>
       </section>
 
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
         <h2>3. User Obligations</h2>
         <p>
           As a condition of use, you agree to:
@@ -69,20 +81,20 @@ const TermsOfService = ({ onReachBottom }) => {
         </ul>
       </section>
 
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
         <h2>4. Account Registration</h2>
         <p>
           Users must create an account to access certain features of the Platform. You are responsible for maintaining the confidentiality of your login credentials and all activities conducted under your account.
         </p>
       </section>
 
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
         <h2>5. Payment and Refund Policy</h2>
         <p>
           Payments for goods and services are processed through third-party payment processors. Refunds or cancellations are subject to our <a href="/refund-policy">Refund Policy</a> and are evaluated on a case-by-case basis.
         </p>
       </section>
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
         <h2>6. Order Cancellation Policy</h2>
         <p>
           Orders placed on Bakers Burns may be canceled under the following conditions:
@@ -100,35 +112,35 @@ const TermsOfService = ({ onReachBottom }) => {
         </ul>
       </section>
 
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
         <h2>7. Intellectual Property</h2>
         <p>
           All content uploaded by Users to the Platform becomes the property of Bakers Burns. The Platform reserves the right to use such content, including user-generated materials, for promotional and marketing purposes, subject to applicable laws.
         </p>
       </section>
 
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
         <h2>8. Limitation of Liability</h2>
         <p>
           Bakers Burns is not liable for any direct, indirect, incidental, or consequential damages arising from the use or inability to use the Platform, including but not limited to errors, interruptions, or data loss.
         </p>
       </section>
 
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
         <h2>9. Termination</h2>
         <p>
           Bakers Burns reserves the right to suspend or terminate user accounts without notice for any violation of these Terms, including but not limited to fraudulent activities, abuse, or unauthorized use of the Platform.
         </p>
       </section>
 
-      <section style={{ marginBottom: '20px' }}>
+      <section className="bb-legal-terms-section">
         <h2>10. Governing Law</h2>
         <p>
           These Terms are governed by the laws of the United States, without regard to its conflict of laws principles.
         </p>
       </section>
 
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
   <h2>11. Dispute Resolution</h2>
   <p>In the event of a dispute, Users agree to the following process:</p>
   <ul>
@@ -145,7 +157,7 @@ const TermsOfService = ({ onReachBottom }) => {
 </section>
 
 
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
         <h2>12. Shipping & Handling</h2>
         <p>
           Bakers Burns aims to ensure timely delivery of all purchased items. However, we are not responsible for delays, damages, or losses caused by third-party shipping providers. By using the Platform, you agree to the following:
@@ -169,7 +181,7 @@ const TermsOfService = ({ onReachBottom }) => {
         </ul>
       </section>
 
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
         <h2>13. Privacy and Data Protection</h2>
         <p>
           Bakers Burns is committed to protecting user privacy. By using the Platform, you agree to our collection, use, and sharing of your personal data as outlined in our <a href="/privacy-policy">Privacy Policy</a>. 
@@ -190,7 +202,7 @@ const TermsOfService = ({ onReachBottom }) => {
         </ul>
       </section>
 
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
         <h2>14. Prohibited Conduct</h2>
         <p>
           Users agree not to engage in any of the following prohibited activities on the Platform:
@@ -203,7 +215,7 @@ const TermsOfService = ({ onReachBottom }) => {
           <li>Violating any applicable local, state, national, or international laws while using the Platform.</li>
         </ul>
       </section>
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
         <h2>15. Disclaimer of Warranties</h2>
         <p>
           The Platform and its services are provided "as is" and "as available" without warranties of any kind. Bakers Burns disclaims all warranties, express or implied, including but not limited to:
@@ -218,14 +230,14 @@ const TermsOfService = ({ onReachBottom }) => {
         </p>
       </section>
 
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
         <h2>15. Age Restrictions</h2>
         <p>
           By using the Platform, you confirm that you are at least 18 years old or have the permission of a legal guardian to use the Platform. Bakers Burns does not knowingly collect personal information from individuals under the age of 13.
         </p>
       </section>
 
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
         <h2>17. Third-Party Services</h2>
         <p>
           Bakers Burns integrates with trusted third-party service providers to enhance platform functionality. These services include, but are not limited to:
@@ -246,13 +258,13 @@ const TermsOfService = ({ onReachBottom }) => {
         </p>
       </section>
 
-        <section style={{ marginBottom: '20px' }} className='privacy-section'>
+        <section className="bb-legal-terms-section">
           <h2>18. Force Majeure</h2>
           <p>
             Bakers Burns is not liable for any failure or delay in performance caused by circumstances beyond its reasonable control, including but not limited to natural disasters, acts of government, labor disputes, pandemics, power outages, or internet service interruptions.
           </p>
         </section>
-        <section style={{ marginBottom: '20px' }} className='privacy-section'>
+        <section className="bb-legal-terms-section">
           <h2>19. Promotions and Discounts</h2>
           <p>
             Bakers Burns may offer promotions, discounts, or special offers from time to time. By participating in these offers, you agree to the following:
@@ -272,7 +284,7 @@ const TermsOfService = ({ onReachBottom }) => {
             </li>
           </ul>
         </section>
-        <section style={{ marginBottom: '20px' }} className='privacy-section'>
+        <section className="bb-legal-terms-section">
           <h2>20. Custom Orders</h2>
           <p>
             Bakers Burns may offer custom or personalized products. By placing a custom order, you agree to the following:
@@ -289,7 +301,7 @@ const TermsOfService = ({ onReachBottom }) => {
             </li>
           </ul>
         </section>
-        <section style={{ marginBottom: '20px' }} className='privacy-section'>
+        <section className="bb-legal-terms-section">
           <h2>21. Product Allergies Disclaimer</h2>
           <p>
             Bakers Burns strives to provide clear and accurate product information, including ingredient lists where applicable. By purchasing and using our products, you acknowledge and agree to the following:
@@ -311,13 +323,13 @@ const TermsOfService = ({ onReachBottom }) => {
         </section>
 
 
-      <section style={{ marginBottom: '20px' }} className='privacy-section'>
+      <section className="bb-legal-terms-section">
         <h2>22. Modifications</h2>
         <p>
         Bakers Burns reserves the right to modify these Terms at any time. Users will be notified of any material changes via email or by a notice on the Platform. Continued use of the Platform constitutes acceptance of the revised Terms.
         </p>
        </section>
-      <section className="terms-section">
+      <section className="bb-legal-terms-section">
         <h2>Guest Checkout</h2>
         <p>
           By proceeding with Guest Checkout, you agree to the following terms related to your order and account creation:
@@ -341,9 +353,14 @@ const TermsOfService = ({ onReachBottom }) => {
 
 
 
-      <div ref={bottomRef} style={{ height: "1px" }}></div>
-    </div>
-    
+          <div
+            ref={bottomRef}
+            className="bb-legal-terms-sentinel"
+            aria-hidden="true"
+          />
+        </div>
+      </article>
+    </main>
   );
 };
 
