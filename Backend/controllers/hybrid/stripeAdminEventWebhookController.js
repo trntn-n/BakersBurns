@@ -21,12 +21,12 @@ const {
     EMAIL_SEND_TYPES,
     sendEmailRequest,
   } = require(
-    '../email/emailResendController.js'
+    '../../email/emailResendController.js'
   );
   const {
     buildEventRefundNotificationEmail,
   } = require(
-    '../email/event-templates/eventRefundNotification.js'
+    '../../email/event-templates/eventRefundNotification.js'
   );
 /*
  * ============================================================

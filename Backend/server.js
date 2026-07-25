@@ -237,7 +237,8 @@ const {startDiscountCron} = require('./controllers/admin/cron/discountCronJob.js
 const cleanupMediaCron = require('./utils/mediaCronJob');
 const scheduleCronJob = require('./utils/ordersCronJob');
 const { register } = require('module');
-
+const {startEventCheckoutHoldCron} = require('./cron/eventCheckoutHoldCron.js');
+const {startEventNotificationCron} = require('./cron/evenNotification.js');
 cron.schedule('* * * * *', () => {
   console.log('Cron job running every minute...');
 
@@ -274,13 +275,16 @@ sequelize.authenticate()
       console.log("🚀 Running media cleanup cron...");
       cleanupMediaCron();
   
+    console.log('🚀 Initializing event checkout hold cron job...');
+    startEventCheckoutHoldCron();
 
     console.log("🚀 Initializing order cron job...");
     scheduleCronJob();
 
     console.log("🚀 Initializing discount cron job...");
     startDiscountCron();
-    
+    console.log("[EVENT-NOTIFICATION_CRON] running...");
+    startEventNotificationCron();
     console.log("🚀 Initializing UPS tracking cron job...");
     checkShippedOrders();
     checkShippedOrdersUsps();
@@ -290,6 +294,7 @@ sequelize.authenticate()
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });
+    
   })
   .catch((err) => {
     console.error('❌ Database connection failed:', err.message);

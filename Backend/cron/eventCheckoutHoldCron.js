@@ -4,13 +4,13 @@ const cron = require('node-cron');
 const { Op } = require('sequelize');
 
 const EventCheckoutHold = require(
-  '../../../models/eventCheckoutHold'
+  '../models/eventCheckoutHold'
 );
 
 const {
   releaseEventCheckoutHold,
 } = require(
-  '../../../services/eventCheckoutInventoryService'
+  '../services/eventCheckoutInventoryService'
 );
 
 /*

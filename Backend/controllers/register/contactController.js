@@ -3,12 +3,12 @@
 
 const {
   FROM_ADDRESSES,
-} = require('../email/email-constants');
+} = require('../../email/email-constants');
 
 const {
   sendEmailRequest,
   EMAIL_SEND_TYPES
-} = require('../email/emailResendController');
+} = require('../../email/emailResendController');
 
 /*
  * ============================================================
