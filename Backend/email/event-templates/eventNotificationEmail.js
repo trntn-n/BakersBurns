@@ -459,10 +459,5 @@ const sendScheduledEventReminder =
   };
 
 module.exports = {
-  /*
-   * Keep your existing export here:
-   *
-   * sendEventReminderSubscriptionConfirmation,
-   */
   sendScheduledEventReminder,
 };
