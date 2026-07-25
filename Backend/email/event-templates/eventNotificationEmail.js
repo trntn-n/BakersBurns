@@ -7,6 +7,8 @@ const {
   '../../email/emailResendController'
 );
 
+const {FROM_ADDRESSES} = require('../email-constants');
+
 const escapeHtml = (value) => {
   return String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -408,10 +410,7 @@ const sendScheduledEventReminder =
 
         recipient: normalizedEmail,
 
-        from:
-          process.env
-            .EVENT_EMAIL_FROM ||
-          process.env.RESEND_FROM_EMAIL,
+        from: FROM_ADDRESSES.EVENT_UPDATE,
 
         replyTo:
           process.env
