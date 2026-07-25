@@ -1,9 +1,10 @@
 module.exports = {
     FROM_ADDRESSES: {
-        STORE: 'Bakers Burns <orders@bakersburns.com>',
-        EVENTS: 'Bakers Burns Events <events@bakersburns.com>',
-        SUPPORT: 'Bakers Burns Support <support@bakersburns.com>',
-        NO_REPLY: 'Bakers Burns <noreply@bakersburns.com>',
-        CONTACT: 'Bakers Burns <contact@bakersburns.com>'
+        STORE: 'BakersBurns <orders@bakersburns.com>',
+        EVENTS: 'BakersBurns Events <events@bakersburns.com>',
+        SUPPORT: 'BakersBurns Support <support@bakersburns.com>',
+        NO_REPLY: 'BakersBurns <noreply@bakersburns.com>',
+        CONTACT: 'BakersBurns <contact@bakersburns.com>',
+        EVENT_UPDATE: 'BakersBurns <upcoming-events@bakersburns.com>',
     }
 }
