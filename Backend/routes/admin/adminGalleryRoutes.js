@@ -7,6 +7,7 @@ const {
   getGalleryItems,
   addGalleryItem,
   updateGalleryItem,
+  replaceGalleryItem,
   deleteGalleryItem,
 } = require(
   "../../controllers/admin/galleryController"
@@ -36,6 +37,12 @@ router.post(
 router.patch(
   "/update-gallery-items/:filename",
   updateGalleryItem
+);
+
+router.put(
+  "/replace-gallery-items/:filename",
+  upload.single("image"),
+  replaceGalleryItem
 );
 
 router.delete(
