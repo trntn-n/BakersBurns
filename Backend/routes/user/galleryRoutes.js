@@ -1,8 +1,18 @@
-const express = require('express');
-const router = express.Router();
-const { getUserGallery } = require('../../controllers/user/userGalleryController');
+"use strict";
 
-// Define the route to get gallery items
-router.get('/get-gallery', getUserGallery);
+const express = require("express");
+
+const {
+  getUserGallery,
+} = require(
+  "../../controllers/user/userGalleryController"
+);
+
+const router = express.Router();
+
+router.get(
+  "/get-gallery",
+  getUserGallery
+);
 
 module.exports = router;

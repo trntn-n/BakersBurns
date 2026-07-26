@@ -93,40 +93,78 @@ const getGalleryImageUrl = (
     ).replace(/\/+$/, "");
 
   const normalizedImageName =
-    String(imageName).replace(
-      /^\/+/,
-      ""
-    );
+    String(imageName)
+      .replace(/^\/+/, "")
+      .split("/")
+      .pop();
 
-  return `${backendUrl}/galleryuploads/${normalizedImageName}`;
+  return `${backendUrl}/galleryuploads/${encodeURIComponent(
+    normalizedImageName
+  )}`;
+};
+
+const createTitleFromFilename = (
+  filename
+) => {
+  const filenameWithoutExtension =
+    String(filename || "")
+      .replace(/\.[^/.]+$/, "")
+      .replace(/[-_]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  if (!filenameWithoutExtension) {
+    return "BakersBurns creation";
+  }
+
+  return filenameWithoutExtension.replace(
+    /\b\w/g,
+    (character) =>
+      character.toUpperCase()
+  );
 };
 
 const normalizeGalleryItem = (
   item,
   index
 ) => {
+  const isFilename =
+    typeof item === "string";
+
   const images =
     normalizeImageList(
-      item?.image
+      isFilename
+        ? item
+        : item?.image ??
+            item?.filename
     );
 
+  const coverImage =
+    images[0] || "";
+
   return {
-    ...item,
+    ...(isFilename ? {} : item),
     id:
-      item?.id ??
+      (isFilename
+        ? coverImage
+        : item?.id) ??
       `gallery-${index}`,
     title:
       String(
-        item?.title ||
-        "BakersBurns creation"
+        (!isFilename &&
+          item?.title) ||
+          createTitleFromFilename(
+            coverImage
+          )
       ).trim(),
     description:
       String(
-        item?.description || ""
+        (!isFilename &&
+          item?.description) ||
+          ""
       ).trim(),
     images,
-    coverImage:
-      images[0] || "",
+    coverImage,
   };
 };
 
