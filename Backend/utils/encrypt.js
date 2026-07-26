@@ -18,7 +18,7 @@ if (encryptionKey.length !== 32) {
   );
 }
 
-const encryptAddress = (address) => {
+const encrypt = (address) => {
   if (!address) {
     return null;
   }
@@ -44,7 +44,7 @@ const encryptAddress = (address) => {
   return `${iv.toString("hex")}:${encrypted.toString("hex")}`;
 };
 
-const decryptAddress = (encryptedValue) => {
+const decrypt = (encryptedValue) => {
   if (!encryptedValue) {
     return null;
   }
@@ -108,6 +108,6 @@ const parseAddress = (value) => {
 };
 
 module.exports = {
-  encryptAddress,
-  decryptAddress,
+  encrypt,
+  decrypt,
 };
