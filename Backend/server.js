@@ -37,7 +37,6 @@ const emailVerificationRoutes = require('./routes/verificationRoutes');
 const productRoutes =           require('./routes/admin/productRoutes');
 const userRoutes =              require('./routes/user/userRoutes');
 const accountSettingsRoutes =   require('./routes/accountSettingsRoutes');
-const galleryRoutes =           require('./routes/admin/galleryRoutes');
 const authRoutes =              require('./routes/authRoutes');
 const storeRoutes =             require('./routes/user/storeRoutes');
 const verifiedRoutes =          require('./routes/verifiedRoutes');
@@ -65,7 +64,7 @@ const googleRoutes =            require('./routes/register/googleRoutes');
 const invoiceRoutes =           require('./routes/admin/invoiceRoutes');
 const registerEventRoutes =     require('./routes/register/eventRoutes');
 const contactRoutes =           require('./routes/register/contactRoutes.js');
-const adminGalleryRoutes =      require('./routes/admin/galleryRoutes.js');
+const adminGalleryRoutes =      require('./routes/admin/adminGalleryRoutes.js');
  // Assuming passport.js is in the same directory
 
 
@@ -206,7 +205,6 @@ app.use('/google', googleRoutes);
 // Admin routes (protected by adminAuthMiddleware)
 app.use('/invoice-routes', adminAuthMiddleware('admin'), mediumSecurityRateLimiter('invoice-routes'), invoiceRoutes);
 app.use('/products', adminAuthMiddleware('admin'), mediumSecurityRateLimiter('admin-products'), productRoutes);
-app.use('/gallery-manager', adminAuthMiddleware('admin'), mediumSecurityRateLimiter('gallery-manager'), galleryRoutes);
 app.use('/admin-mail', adminAuthMiddleware('admin'), mediumSecurityRateLimiter('admin-mail'), adminEmailRoutes);
 app.use('/orders', adminAuthMiddleware('admin'), mediumSecurityRateLimiter('orders'), ordersRoutes);
 app.use('/admin-message-routes', adminAuthMiddleware('admin'), mediumSecurityRateLimiter('admin-messaging'), adminMessagingRoutes);
