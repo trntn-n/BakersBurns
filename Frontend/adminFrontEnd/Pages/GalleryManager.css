@@ -354,6 +354,25 @@
     margin-top: 16px;
   }
   
+  .bb-admin-gallery-card-actions--editor {
+    grid-template-columns:
+      1.15fr 1fr 1fr;
+  }
+  
+  .bb-admin-gallery-icon-button--edit {
+    border-color:
+      rgba(201, 130, 69, 0.3);
+    background:
+      rgba(201, 130, 69, 0.1);
+    color:
+      var(--bb-admin-gallery-brown);
+  }
+  
+  [data-theme="dark"]
+    .bb-admin-gallery-icon-button--edit {
+    color: #efb983;
+  }
+  
   .bb-admin-gallery-icon-button {
     min-height: 38px;
   
@@ -896,6 +915,450 @@
         1 !important;
       transition-duration:
         0.01ms !important;
+    }
+  }
+  
+  /* ==========================================
+     Integrated browser photo editor
+     Unique prefix: bb-photo-editor
+     ========================================== */
+  
+  .bb-photo-editor-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 5100;
+  
+    display: grid;
+    overflow-y: auto;
+    place-items: center;
+  
+    padding: 20px;
+  
+    background:
+      rgba(13, 9, 7, 0.84);
+    backdrop-filter: blur(12px);
+  }
+  
+  .bb-photo-editor {
+    width: min(1500px, 100%);
+    max-height:
+      calc(100vh - 40px);
+    overflow-y: auto;
+  
+    padding:
+      clamp(20px, 3vw, 34px);
+  
+    border:
+      1px solid
+      var(--bb-admin-gallery-border);
+    border-radius: 24px;
+    background:
+      var(--bb-admin-gallery-surface);
+    box-shadow:
+      0 34px 100px
+        rgba(0, 0, 0, 0.5);
+    color:
+      var(--bb-admin-gallery-text);
+  }
+  
+  .bb-photo-editor-header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 24px;
+  
+    margin-bottom: 24px;
+  }
+  
+  .bb-photo-editor-header h2 {
+    overflow-wrap: anywhere;
+    margin: 5px 0 0;
+  
+    font-size:
+      clamp(1.4rem, 3vw, 2rem);
+    letter-spacing: -0.025em;
+  }
+  
+  .bb-photo-editor-layout {
+    display: grid;
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(280px, 370px);
+    gap: clamp(22px, 3vw, 38px);
+  }
+  
+  .bb-photo-editor-canvas-column {
+    min-width: 0;
+  }
+  
+  .bb-photo-editor-stage {
+    position: relative;
+  
+    display: grid;
+    width: 100%;
+    max-height: 68vh;
+    overflow: hidden;
+    place-items: center;
+  
+    border:
+      1px solid
+      rgba(255, 255, 255, 0.09);
+    border-radius: 18px;
+    background:
+      repeating-conic-gradient(
+        #25211e 0% 25%,
+        #1d1a18 0% 50%
+      )
+      50% / 22px 22px;
+    box-shadow:
+      inset 0 0 0 1px
+        rgba(0, 0, 0, 0.35);
+  }
+  
+  .bb-photo-editor-stage img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+  
+    width: 100%;
+    height: 100%;
+  
+    object-fit: cover;
+    filter:
+      brightness(
+        var(
+          --bb-photo-brightness,
+          100%
+        )
+      )
+      contrast(
+        var(
+          --bb-photo-contrast,
+          100%
+        )
+      )
+      saturate(
+        var(
+          --bb-photo-saturation,
+          100%
+        )
+      );
+    transform:
+      translate(
+        calc(
+          -50% +
+            var(
+              --bb-photo-pan-x,
+              0%
+            )
+        ),
+        calc(
+          -50% +
+            var(
+              --bb-photo-pan-y,
+              0%
+            )
+        )
+      )
+      rotate(
+        var(
+          --bb-photo-rotation,
+          0deg
+        )
+      )
+      scale(
+        calc(
+          var(
+              --bb-photo-zoom,
+              1
+            ) *
+            var(
+              --bb-photo-scale-x,
+              1
+            )
+        ),
+        calc(
+          var(
+              --bb-photo-zoom,
+              1
+            ) *
+            var(
+              --bb-photo-scale-y,
+              1
+            )
+        )
+      );
+    transform-origin: center;
+  }
+  
+  .bb-photo-editor-grid-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+  
+    border:
+      1px solid
+      rgba(255, 255, 255, 0.4);
+    background-image:
+      linear-gradient(
+        to right,
+        transparent 33.1%,
+        rgba(255, 255, 255, 0.36)
+          33.3%,
+        rgba(255, 255, 255, 0.36)
+          33.6%,
+        transparent 33.8%,
+        transparent 66.2%,
+        rgba(255, 255, 255, 0.36)
+          66.4%,
+        rgba(255, 255, 255, 0.36)
+          66.7%,
+        transparent 66.9%
+      ),
+      linear-gradient(
+        to bottom,
+        transparent 33.1%,
+        rgba(255, 255, 255, 0.36)
+          33.3%,
+        rgba(255, 255, 255, 0.36)
+          33.6%,
+        transparent 33.8%,
+        transparent 66.2%,
+        rgba(255, 255, 255, 0.36)
+          66.4%,
+        rgba(255, 255, 255, 0.36)
+          66.7%,
+        transparent 66.9%
+      );
+    pointer-events: none;
+  }
+  
+  .bb-photo-editor-stage-help {
+    margin: 12px 0 0;
+  
+    color:
+      var(--bb-admin-gallery-text-soft);
+    font-size: 0.84rem;
+    line-height: 1.55;
+  }
+  
+  .bb-photo-editor-controls {
+    display: grid;
+    align-content: start;
+    gap: 14px;
+  }
+  
+  .bb-photo-editor-control-group {
+    display: grid;
+    gap: 16px;
+  
+    padding: 18px;
+  
+    border:
+      1px solid
+      var(--bb-admin-gallery-border);
+    border-radius: 16px;
+    background:
+      var(
+        --bb-admin-gallery-surface-soft
+      );
+  }
+  
+  .bb-photo-editor-control-heading h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+  }
+  
+  .bb-photo-editor-segmented {
+    display: grid;
+    grid-template-columns:
+      repeat(4, minmax(0, 1fr));
+    gap: 5px;
+  
+    padding: 4px;
+  
+    border:
+      1px solid
+      var(--bb-admin-gallery-border);
+    border-radius: 11px;
+    background:
+      var(--bb-admin-gallery-surface);
+  }
+  
+  .bb-photo-editor-segmented button {
+    min-height: 36px;
+    padding: 6px;
+  
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color:
+      var(--bb-admin-gallery-text-soft);
+    font-size: 0.72rem;
+    font-weight: 750;
+    cursor: pointer;
+  }
+  
+  .bb-photo-editor-segmented
+    .bb-photo-editor-segmented--active {
+    background:
+      linear-gradient(
+        135deg,
+        #a96737,
+        #6e422b
+      );
+    box-shadow:
+      0 5px 14px
+        rgba(74, 42, 24, 0.2);
+    color: #fff;
+  }
+  
+  .bb-photo-editor-range {
+    display: grid;
+    gap: 8px;
+  }
+  
+  .bb-photo-editor-range > span {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  
+    font-size: 0.79rem;
+  }
+  
+  .bb-photo-editor-range strong {
+    font-weight: 750;
+  }
+  
+  .bb-photo-editor-range output {
+    color:
+      var(--bb-admin-gallery-text-soft);
+    font-variant-numeric:
+      tabular-nums;
+  }
+  
+  .bb-photo-editor-range input {
+    width: 100%;
+    accent-color:
+      var(--bb-admin-gallery-amber);
+    cursor: pointer;
+  }
+  
+  .bb-photo-editor-action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+  
+  .bb-photo-editor-action-grid button {
+    min-height: 40px;
+  
+    border:
+      1px solid
+      var(--bb-admin-gallery-border);
+    border-radius: 10px;
+    background:
+      var(--bb-admin-gallery-surface);
+    color:
+      var(--bb-admin-gallery-text);
+    font-size: 0.78rem;
+    font-weight: 750;
+    cursor: pointer;
+  }
+  
+  .bb-photo-editor-action-grid
+    button:hover,
+  .bb-photo-editor-action-grid
+    .bb-photo-editor-action--active {
+    border-color:
+      rgba(201, 130, 69, 0.42);
+    background:
+      rgba(201, 130, 69, 0.12);
+    color:
+      var(--bb-admin-gallery-amber);
+  }
+  
+  .bb-photo-editor-error {
+    margin-top: 18px;
+    padding: 12px 14px;
+  
+    border:
+      1px solid
+      rgba(179, 58, 53, 0.3);
+    border-radius: 11px;
+    background:
+      rgba(179, 58, 53, 0.1);
+    color: #d75c56;
+    font-size: 0.86rem;
+  }
+  
+  .bb-photo-editor-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  
+    margin-top: 24px;
+    padding-top: 20px;
+  
+    border-top:
+      1px solid
+      var(--bb-admin-gallery-border);
+  }
+  
+  .bb-photo-editor-footer > div {
+    display: flex;
+    gap: 10px;
+  }
+  
+  @media (max-width: 1050px) {
+    .bb-photo-editor-layout {
+      grid-template-columns: 1fr;
+    }
+  
+    .bb-photo-editor-controls {
+      grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+    }
+  }
+  
+  @media (max-width: 760px) {
+    .bb-admin-gallery-card-actions--editor {
+      grid-template-columns: 1fr;
+    }
+  
+    .bb-photo-editor-backdrop {
+      align-items: end;
+      padding: 0;
+    }
+  
+    .bb-photo-editor {
+      width: 100%;
+      max-height: 96vh;
+      padding: 18px;
+  
+      border-radius: 22px 22px 0 0;
+    }
+  
+    .bb-photo-editor-controls {
+      grid-template-columns: 1fr;
+    }
+  
+    .bb-photo-editor-footer {
+      align-items: stretch;
+      flex-direction: column;
+    }
+  
+    .bb-photo-editor-footer > div {
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+  
+    .bb-photo-editor-footer
+      .bb-admin-gallery-button {
+      width: 100%;
     }
   }
   

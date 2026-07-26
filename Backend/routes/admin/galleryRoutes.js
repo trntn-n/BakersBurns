@@ -1,25 +1,53 @@
-const express = require('express');
-const { galleryUploadMiddleware } = require('../../config/multer');
+"use strict";
+
+const express = require("express");
+const multer = require("multer");
+
 const {
-  addGalleryItem,
   getGalleryItems,
+  addGalleryItem,
   updateGalleryItem,
+  replaceGalleryItem,
   deleteGalleryItem,
-} = require('../../controllers/admin/galleryController');
+} = require(
+  "../../controllers/admin/adminGalleryController"
+);
 
 const router = express.Router();
 
-// Route to fetch all gallery items
-router.get('/get-gallery-items', getGalleryItems);
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    files: 1,
+    fileSize: 15 * 1024 * 1024,
+  },
+});
 
-// Route to add new gallery items with multer middleware
-router.post('/add-gallery-items', galleryUploadMiddleware, addGalleryItem);
+router.get(
+  "/get-gallery-items",
+  getGalleryItems
+);
 
+router.post(
+  "/add-gallery-items",
+  upload.single("image"),
+  addGalleryItem
+);
 
-// Route to update a gallery item
-router.put('/update-gallery-item/:id', updateGalleryItem);
+router.patch(
+  "/update-gallery-items/:filename",
+  updateGalleryItem
+);
 
-// Route to delete a gallery item
-router.delete('/delete-gallery-items/:id', deleteGalleryItem);
+router.put(
+  "/replace-gallery-items/:filename",
+  upload.single("image"),
+  replaceGalleryItem
+);
+
+router.delete(
+  "/delete-gallery-items/:filename",
+  deleteGalleryItem
+);
 
 module.exports = router;

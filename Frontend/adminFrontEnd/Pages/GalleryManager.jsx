@@ -17,6 +17,7 @@ import {
 } from "react-toastify";
 
 import { adminApi } from "../config/axios";
+import PhotoEditor from "./photoEditor";
 
 import "react-toastify/dist/ReactToastify.css";
 import "./GalleryManager.css";
@@ -191,6 +192,8 @@ const AdminGallery = () => {
     useState("");
   const [deleteItem, setDeleteItem] =
     useState(null);
+  const [editorItem, setEditorItem] =
+    useState(null);
 
   const fetchGallery =
     useCallback(async () => {
@@ -247,7 +250,8 @@ const AdminGallery = () => {
     uploadOpen ||
       viewItem ||
       renameItem ||
-      deleteItem
+      deleteItem ||
+      editorItem
   );
 
   useEffect(() => {
@@ -269,6 +273,7 @@ const AdminGallery = () => {
           setViewItem(null);
           setRenameItem(null);
           setDeleteItem(null);
+          setEditorItem(null);
         }
       }
     };
@@ -537,6 +542,24 @@ const AdminGallery = () => {
     }
   };
 
+  const handleEditorSaved = (
+    updatedItem
+  ) => {
+    setGalleryItems((current) =>
+      current.map((item) =>
+        item.filename ===
+        editorItem.filename
+          ? updatedItem
+          : item
+      )
+    );
+
+    setEditorItem(null);
+    toast.success(
+      "Edited image saved."
+    );
+  };
+
   return (
     <main className="bb-admin-gallery">
       <ToastContainer
@@ -735,7 +758,19 @@ const AdminGallery = () => {
                         </span>
                       </div>
 
-                      <div className="bb-admin-gallery-card-actions">
+                      <div className="bb-admin-gallery-card-actions bb-admin-gallery-card-actions--editor">
+                        <button
+                          type="button"
+                          className="bb-admin-gallery-icon-button bb-admin-gallery-icon-button--edit"
+                          onClick={() =>
+                            setEditorItem(
+                              item
+                            )
+                          }
+                        >
+                          Edit photo
+                        </button>
+
                         <button
                           type="button"
                           className="bb-admin-gallery-icon-button"
@@ -1116,6 +1151,25 @@ const AdminGallery = () => {
               </button>
             </div>
           </ModalShell>
+        )}
+
+        {editorItem && (
+          <PhotoEditor
+            item={editorItem}
+            endpoint={
+              GALLERY_ENDPOINT
+            }
+            imageUrl={getImageUrl(
+              editorItem.filename
+            )}
+            onClose={() =>
+              !saving &&
+              setEditorItem(null)
+            }
+            onSaved={
+              handleEditorSaved
+            }
+          />
         )}
       </AnimatePresence>
     </main>

@@ -405,7 +405,8 @@ const updateGalleryItem = async (
 ) => {
   try {
     const currentFilename =
-      req.params.filename;
+      req.params.filename ||
+      req.params.id;
     const currentPath =
       resolveExistingFile(
         currentFilename
@@ -482,7 +483,8 @@ const deleteGalleryItem = async (
 ) => {
   try {
     const filename =
-      req.params.filename;
+      req.params.filename ||
+      req.params.id;
     const filePath =
       resolveExistingFile(filename);
 
@@ -502,9 +504,128 @@ const deleteGalleryItem = async (
   }
 };
 
+const replaceGalleryItem = async (
+  req,
+  res
+) => {
+  let temporaryPath = null;
+
+  try {
+    const currentFilename =
+      req.params.filename ||
+      req.params.id;
+    const currentPath =
+      resolveExistingFile(
+        currentFilename
+      );
+
+    await fs.access(currentPath);
+
+    if (!req.file?.buffer) {
+      throw createHttpError(
+        400,
+        "An edited image is required."
+      );
+    }
+
+    const detectedExtension =
+      detectImageExtension(
+        req.file.buffer
+      );
+
+    if (!detectedExtension) {
+      throw createHttpError(
+        400,
+        "The edited file is not a supported image."
+      );
+    }
+
+    const currentBaseName =
+      path.parse(
+        currentFilename
+      ).name;
+    const newFilename =
+      `${currentBaseName}${detectedExtension}`;
+    const newPath = path.join(
+      GALLERY_DIRECTORY,
+      newFilename
+    );
+
+    if (
+      newPath !== currentPath
+    ) {
+      try {
+        await fs.access(newPath);
+
+        throw createHttpError(
+          409,
+          "An image with the edited filename already exists."
+        );
+      } catch (accessError) {
+        if (
+          accessError?.code !==
+          "ENOENT"
+        ) {
+          throw accessError;
+        }
+      }
+    }
+
+    temporaryPath = path.join(
+      GALLERY_DIRECTORY,
+      `.gallery-edit-${Date.now()}-${process.pid}.tmp`
+    );
+
+    await fs.writeFile(
+      temporaryPath,
+      req.file.buffer,
+      {
+        flag: "wx",
+        mode: 0o644,
+      }
+    );
+
+    /*
+     * Renaming a completed temporary file keeps
+     * visitors from receiving a partially written
+     * image during an edit.
+     */
+    await fs.rename(
+      temporaryPath,
+      newPath
+    );
+    temporaryPath = null;
+
+    if (
+      newPath !== currentPath
+    ) {
+      await fs.unlink(currentPath);
+    }
+
+    return res.status(200).json(
+      await toGalleryItem(
+        newFilename
+      )
+    );
+  } catch (error) {
+    if (temporaryPath) {
+      await fs
+        .unlink(temporaryPath)
+        .catch(() => undefined);
+    }
+
+    return sendControllerError(
+      res,
+      error,
+      "Unable to replace edited gallery file"
+    );
+  }
+};
+
 module.exports = {
   getGalleryItems,
   addGalleryItem,
   updateGalleryItem,
+  replaceGalleryItem,
   deleteGalleryItem,
 };
