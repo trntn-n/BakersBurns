@@ -1,126 +1,400 @@
-/***********************************************/
-/* 1. Basic Reset (No Force Scroll on <html>) */
-/***********************************************/
+.bb-admin-home {
+  --bb-ah-text: #fffaf4;
+  --bb-ah-muted: #cdbbaa;
+  --bb-ah-line: rgba(239, 207, 174, 0.15);
+  --bb-ah-card: rgba(35, 27, 23, 0.9);
+  --bb-ah-copper: #c87841;
+  position: relative;
+  min-height: 100vh;
+  padding: clamp(6rem, 10vw, 9rem) clamp(1rem, 4vw, 4rem) 3rem;
+  overflow: hidden;
+  color: var(--bb-ah-text);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(137, 70, 37, 0.25), transparent 34rem),
+    linear-gradient(145deg, #0d0b0a 0%, #1c1512 48%, #100c0a 100%);
+  isolation: isolate;
+}
 
-
-/***********************************************/
-/* 2. Home Container with Forced Scrolling    */
-/***********************************************/
-.home-container {
-  /* Fill the entire viewport height */
-  width: 100%;
-  height: 100vh;
-
-  /* Make it scrollable if content overflows */
-  overflow-y: auto; 
-  overflow-x: hidden; /* if horizontal scroll isn't desired */
-
-  /* Optional background color from your theme */
-  background-color: var(--hero-bg-overlay);
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 10px;
+.bb-admin-home *,
+.bb-admin-home *::before,
+.bb-admin-home *::after {
   box-sizing: border-box;
 }
 
-/***********************************************/
-/* 3. Home Page Header                         */
-/***********************************************/
-.home-page-header {
-  margin-top: 5%; /* or 20%, adjust as needed */
-  font-family: monospace; 
-  padding: 20px;
-  /* color inherits var(--text-color) */
+.bb-admin-home-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
 }
 
-/***********************************************/
-/* 4. Fixed Background Image (Optional)        */
-/***********************************************/
-.background-image {
-  position: fixed;
-  top: 0;
-  left: 0;
+.bb-admin-home-glow {
+  position: absolute;
+  width: min(58vw, 760px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0.17;
+  filter: blur(90px);
+}
+
+.bb-admin-home-glow--one {
+  top: -30%;
+  left: -15%;
+  background: #c06a34;
+}
+
+.bb-admin-home-glow--two {
+  right: -22%;
+  bottom: -42%;
+  background: #744129;
+}
+
+.bb-admin-home-grid-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.32;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, #000, transparent 88%);
+}
+
+.bb-admin-home-shell {
+  width: min(1500px, 100%);
+  margin: 0 auto;
+}
+
+.bb-admin-home-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: clamp(2rem, 4vw, 3.5rem);
+}
+
+.bb-admin-home-eyebrow,
+.bb-admin-home-card-eyebrow {
+  display: block;
+  color: #eca36d;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.bb-admin-home-hero h1 {
+  max-width: 850px;
+  margin: 0.6rem 0 0;
+  font-size: clamp(2.8rem, 7vw, 6.7rem);
+  font-weight: 620;
+  line-height: 0.88;
+  letter-spacing: -0.065em;
+}
+
+.bb-admin-home-hero p {
+  max-width: 690px;
+  margin: 1.25rem 0 0;
+  color: var(--bb-ah-muted);
+  font-size: clamp(0.95rem, 1.4vw, 1.08rem);
+  line-height: 1.7;
+}
+
+.bb-admin-home-hero-mark {
+  display: grid;
+  flex: 0 0 auto;
+  width: 132px;
+  height: 132px;
+  place-items: center;
+  align-content: center;
+  border: 1px solid var(--bb-ah-line);
+  border-radius: 50%;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015));
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.08),
+    0 24px 60px rgba(0, 0, 0, 0.25);
+}
+
+.bb-admin-home-hero-mark span {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+}
+
+.bb-admin-home-hero-mark small {
+  color: var(--bb-ah-muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.bb-admin-home-apps {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bb-admin-home-card {
+  grid-column: span 3;
+  min-width: 0;
+}
+
+.bb-admin-home-card:nth-child(1),
+.bb-admin-home-card:nth-child(2) {
+  grid-column: span 6;
+}
+
+.bb-admin-home-card-link {
+  display: flex;
+  height: 100%;
+  min-height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--bb-ah-line);
+  border-radius: 1.3rem;
+  color: inherit;
+  text-decoration: none;
+  background:
+    linear-gradient(155deg, rgba(46, 35, 29, 0.96), rgba(25, 20, 17, 0.94));
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.21),
+    inset 0 1px rgba(255, 255, 255, 0.055);
+  transform: translateZ(0);
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.bb-admin-home-card-link:hover {
+  border-color: color-mix(in srgb, var(--bb-ah-accent, #c87841) 58%, transparent);
+  box-shadow:
+    0 32px 75px rgba(0, 0, 0, 0.3),
+    0 0 0 1px color-mix(in srgb, var(--bb-ah-accent, #c87841) 18%, transparent);
+  transform: translateY(-5px);
+}
+
+.bb-admin-home-card--copper {
+  --bb-ah-accent: #d1783d;
+}
+
+.bb-admin-home-card--sand {
+  --bb-ah-accent: #d4a878;
+}
+
+.bb-admin-home-card--amber {
+  --bb-ah-accent: #d99b48;
+}
+
+.bb-admin-home-card--rose {
+  --bb-ah-accent: #b96c62;
+}
+
+.bb-admin-home-card--clay {
+  --bb-ah-accent: #a86d4b;
+}
+
+.bb-admin-home-card--gold {
+  --bb-ah-accent: #c79a4d;
+}
+
+.bb-admin-home-card--terracotta {
+  --bb-ah-accent: #c06445;
+}
+
+.bb-admin-home-card--bronze {
+  --bb-ah-accent: #98704b;
+}
+
+.bb-admin-home-card-media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #171210;
+}
+
+.bb-admin-home-card:nth-child(n + 3)
+  .bb-admin-home-card-media {
+  aspect-ratio: 4 / 3;
+}
+
+.bb-admin-home-card-media img {
   width: 100%;
   height: 100%;
-  z-index: -1; 
-  /* For example:
-     background: url('/path/to/image.jpg') center center / cover no-repeat;
-  */
+  object-fit: cover;
+  filter: saturate(0.82) contrast(1.04);
+  transform: scale(1.01);
+  transition:
+    filter 350ms ease,
+    transform 550ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/***********************************************/
-/* 5. Tiles Container (Grid Layout)           */
-/***********************************************/
-.home-app-tiles {
+.bb-admin-home-card-link:hover
+  .bb-admin-home-card-media
+  img {
+  filter: saturate(1.05) contrast(1.04);
+  transform: scale(1.055);
+}
+
+.bb-admin-home-card-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, rgba(16, 12, 10, 0.76), transparent 55%),
+    linear-gradient(130deg, transparent 35%, color-mix(in srgb, var(--bb-ah-accent) 25%, transparent));
+}
+
+.bb-admin-home-card-arrow {
+  position: absolute;
+  top: 0.8rem;
+  right: 0.8rem;
   display: grid;
-  gap: 10px;
-  list-style: none;
-  
-  padding: 0;
-  
-  width: 100%;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(20, 15, 12, 0.56);
+  backdrop-filter: blur(12px);
+  transition:
+    color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
 }
 
-/* Responsive columns */
-@media (max-width: 600px) {
-  .home-app-tiles {
-    grid-template-columns: 1fr 1fr 1fr;
-  }
-}
-@media (min-width: 601px) and (max-width: 900px) {
-  .home-app-tiles {
-    grid-template-columns: 1fr 1fr 1fr 1fr;
-  }
-}
-@media (min-width: 901px) {
-  .home-app-tiles {
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-  }
+.bb-admin-home-card-link:hover
+  .bb-admin-home-card-arrow {
+  color: #24150e;
+  background: var(--bb-ah-accent);
+  transform: rotate(7deg);
 }
 
-/***********************************************/
-/* 6. Home Tile (Individual Grid Item)        */
-/***********************************************/
-.home-tile {
-  background-color: var(--hero-bg-overlay); 
-  box-shadow: var(--tile-shadow);
-
-  padding: 20px;
-  text-align: center;
-  border-radius: 10px;
-  color: var(--text-color);
-
-  transition: transform 0.3s, background-color 0.3s;
+.bb-admin-home-card-badge {
+  position: absolute;
+  bottom: 0.8rem;
+  left: 0.8rem;
+  z-index: 2;
 }
 
-.home-tile:hover {
-  transform: scale(1.05);
+.bb-admin-home-card-copy {
+  display: grid;
+  flex: 1;
+  align-content: start;
+  padding: 1.2rem;
 }
 
-/***********************************************/
-/* 7. Tile Content (Headings & Paragraphs)     */
-/***********************************************/
-.tile-content h3 {
+.bb-admin-home-card-eyebrow {
+  color: var(--bb-ah-accent);
+}
+
+.bb-admin-home-card-copy h2 {
+  margin: 0.45rem 0 0;
+  font-size: clamp(1.25rem, 2vw, 1.8rem);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+}
+
+.bb-admin-home-card-copy p {
+  margin: 0.65rem 0 0;
+  color: var(--bb-ah-muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.bb-admin-home-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--bb-ah-line);
+  color: var(--bb-ah-muted);
+  font-size: 0.75rem;
+}
+
+.bb-admin-home-footer span {
+  color: var(--bb-ah-text);
+  font-weight: 800;
+}
+
+.bb-admin-home-footer p {
   margin: 0;
-  font-size: 1.25rem;
-  color: var(--text-color);
 }
 
-.tile-content p {
-  font-size: 1rem;
-  color: var(--text-color);
-}
-
-/***********************************************/
-/* 8. Extra Small Screen Typography           */
-/***********************************************/
-@media (max-width: 480px) {
-  .tile-content h3 {
-    font-size: 0.7rem;
+@media (max-width: 1120px) {
+  .bb-admin-home-card {
+    grid-column: span 4;
   }
-  .tile-content p {
-    font-size: 0.55rem;
+
+  .bb-admin-home-card:nth-child(1),
+  .bb-admin-home-card:nth-child(2) {
+    grid-column: span 6;
+  }
+}
+
+@media (max-width: 760px) {
+  .bb-admin-home {
+    padding-inline: 0.75rem;
+  }
+
+  .bb-admin-home-hero {
+    align-items: flex-start;
+  }
+
+  .bb-admin-home-hero-mark {
+    display: none;
+  }
+
+  .bb-admin-home-card,
+  .bb-admin-home-card:nth-child(1),
+  .bb-admin-home-card:nth-child(2) {
+    grid-column: span 6;
+  }
+
+  .bb-admin-home-card:nth-child(n + 3)
+    .bb-admin-home-card-media {
+    aspect-ratio: 16 / 10;
+  }
+}
+
+@media (max-width: 520px) {
+  .bb-admin-home-card,
+  .bb-admin-home-card:nth-child(1),
+  .bb-admin-home-card:nth-child(2) {
+    grid-column: 1 / -1;
+  }
+
+  .bb-admin-home-card-media,
+  .bb-admin-home-card:nth-child(n + 3)
+    .bb-admin-home-card-media {
+    aspect-ratio: 16 / 9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-admin-home *,
+  .bb-admin-home *::before,
+  .bb-admin-home *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  .bb-admin-home {
+    --bb-ah-text: #fffaf4;
+    --bb-ah-muted: #ead8c5;
+    --bb-ah-line: rgba(255, 234, 211, 0.18);
+    background:
+      radial-gradient(circle at 12% 0%, rgba(235, 155, 92, 0.3), transparent 34rem),
+      linear-gradient(145deg, #3b2117 0%, #6a3a23 48%, #321b13 100%);
   }
 }
