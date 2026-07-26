@@ -1,7 +1,54 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import { registerApi } from "../../config/axios";
-import ConfirmationModal from "./cartPopUp"; // Correct import of ConfirmationModal
-// Utility to get session ID
+import "./quantityModal.css";
+
+const ADD_TO_CART_ENDPOINT =
+  "/register-cart/add-guest-cart";
+
+const getSessionId = () => {
+  let sessionId =
+    localStorage.getItem(
+      "sessionId"
+    );
+
+  if (!sessionId) {
+    sessionId =
+      `guest_${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(2, 11)}`;
+
+    localStorage.setItem(
+      "sessionId",
+      sessionId
+    );
+  }
+
+  return sessionId;
+};
+
+const getProductImageUrl = (
+  thumbnail
+) => {
+  if (!thumbnail) {
+    return "";
+  }
+
+  const baseUrl =
+    import.meta.env
+      .VITE_IMAGE_BASE_URL || "";
+
+  return `${baseUrl}/uploads/${thumbnail}`;
+};
+
+const formatPrice = (price) => {
+  const parsedPrice = Number(price);
+
+  return Number.isFinite(parsedPrice)
+    ? parsedPrice.toFixed(2)
+    : "0.00";
+};
 
 const QuantityModal = ({
   product,
@@ -9,190 +56,488 @@ const QuantityModal = ({
   onClose,
   onViewCart,
 }) => {
-  const [quantity, setQuantity] = useState(1);
-  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const navigate = useNavigate();
 
-  const handleIncrease = () => {
-    if (quantity < maxQuantity) {
-      setQuantity(quantity + 1);
+  const [quantity, setQuantity] =
+    useState(1);
+
+  const [status, setStatus] =
+    useState("selecting");
+
+  const [error, setError] =
+    useState("");
+
+  const availableQuantity =
+    useMemo(() => {
+      const parsedQuantity =
+        Number(maxQuantity);
+
+      if (
+        !Number.isFinite(
+          parsedQuantity
+        )
+      ) {
+        return 0;
+      }
+
+      return Math.max(
+        0,
+        Math.floor(
+          parsedQuantity
+        )
+      );
+    }, [maxQuantity]);
+
+  const productName =
+    product?.name ||
+    "Selected product";
+
+  const productImage =
+    getProductImageUrl(
+      product?.thumbnail
+    );
+
+  const isSaving =
+    status === "saving";
+
+  const wasAdded =
+    status === "added";
+
+  const isUnavailable =
+    availableQuantity < 1;
+
+  useEffect(() => {
+    const previousOverflow =
+      document.body.style
+        .overflow;
+
+    document.body.style.overflow =
+      "hidden";
+
+    const handleKeyDown = (
+      event
+    ) => {
+      if (
+        event.key === "Escape" &&
+        !isSaving
+      ) {
+        onClose?.();
+      }
+    };
+
+    document.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
+
+      document.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
+  }, [isSaving, onClose]);
+
+  useEffect(() => {
+    setQuantity(
+      availableQuantity > 0
+        ? 1
+        : 0
+    );
+    setStatus("selecting");
+    setError("");
+  }, [
+    availableQuantity,
+    product?.id,
+  ]);
+
+  const updateQuantity = (
+    nextQuantity
+  ) => {
+    const parsedQuantity =
+      Number.parseInt(
+        nextQuantity,
+        10
+      );
+
+    const normalizedQuantity =
+      Number.isFinite(
+        parsedQuantity
+      )
+        ? parsedQuantity
+        : 1;
+
+    setQuantity(
+      Math.min(
+        availableQuantity,
+        Math.max(
+          1,
+          normalizedQuantity
+        )
+      )
+    );
+  };
+
+  const handleAddToCart =
+    async (event) => {
+      event.preventDefault();
+
+      if (
+        !product?.id ||
+        isUnavailable
+      ) {
+        setError(
+          "This product is not currently available."
+        );
+
+        return;
+      }
+
+      try {
+        setStatus("saving");
+        setError("");
+
+        await registerApi.post(
+          ADD_TO_CART_ENDPOINT,
+          {
+            sessionId:
+              getSessionId(),
+            productId:
+              product.id,
+            quantity,
+          }
+        );
+
+        /*
+         * Keeps the navbar cart badge in sync with
+         * the newly added quantity.
+         */
+        window.dispatchEvent(
+          new Event(
+            "cartUpdated"
+          )
+        );
+
+        setStatus("added");
+      } catch (requestError) {
+        console.error(
+          "Error adding item to cart:",
+          requestError
+        );
+
+        setError(
+          requestError.response
+            ?.data?.message ||
+            "We could not add this item to your cart. Please try again."
+        );
+
+        setStatus("selecting");
+      }
+    };
+
+  const handleBackdropClick = (
+    event
+  ) => {
+    if (
+      event.target ===
+        event.currentTarget &&
+      !isSaving
+    ) {
+      onClose?.();
     }
   };
 
-  const handleDecrease = () => {
-    if (quantity > 1) {
-      setQuantity(quantity - 1);
-    }
+  const handleViewCart = () => {
+    onViewCart?.();
+    navigate("/cart");
   };
-
-  const handleInputChange = (e) => {
-    const value = parseInt(e.target.value, 10);
-    if (!value || value < 1) {
-      setQuantity(1);
-    } else if (value > maxQuantity) {
-      setQuantity(maxQuantity);
-    } else {
-      setQuantity(value);
-    }
-  };
-
-  const handleAddToCart = async () => {
-    const sessionId = getSessionId(); // Retrieve the session ID
-    if (!sessionId) {
-      alert("Session ID is missing. Unable to add to cart.");
-      return;
-    }
-
-    try {
-      // API call to add the item to the guest cart
-      await registerApi.post("/register-cart/add-guest-cart", {
-        sessionId,
-        productId: product.id,
-        quantity,
-      });
-
-      setShowConfirmationModal(true); // Show the confirmation modal
-      console.log(`${quantity} x ${product.name} added to cart!`);
-    } catch (error) {
-      console.error("Error adding item to guest cart:", error);
-      alert("An error occurred while adding the item to the cart. Please try again.");
-    }
-  };
-  const getSessionId = () => {
-    let sessionId = localStorage.getItem('sessionId');
-    if (!sessionId) {
-        sessionId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        localStorage.setItem('sessionId', sessionId)
-    }
-    return sessionId;
-}
 
   return (
-    <>
-      <div style={styles.backdrop} onClick={onClose}>
-        <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-          <h3 style={styles.heading}>Select Quantity</h3>
-          <div style={styles.quantityWrapper}>
-            <button style={styles.button} onClick={handleDecrease}>
-              -
-            </button>
-            <input
-              type="number"
-              value={quantity}
-              onChange={handleInputChange}
-              min="1"
-              max={maxQuantity}
-              style={styles.input}
-            />
-            <button  style={styles.button} onClick={handleIncrease}>
-              +
-            </button>
+    <div
+      className="bb-quantity-overlay"
+      role="presentation"
+      onMouseDown={
+        handleBackdropClick
+      }
+    >
+      <section
+        className={`bb-quantity-modal ${
+          wasAdded
+            ? "bb-quantity-modal--success"
+            : ""
+        }`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bb-quantity-title"
+      >
+        <button
+          type="button"
+          className="bb-quantity-close"
+          onClick={onClose}
+          disabled={isSaving}
+          aria-label="Close quantity selection"
+        >
+          ×
+        </button>
+
+        {wasAdded ? (
+          <div className="bb-quantity-success">
+            <span
+              className="bb-quantity-success-icon"
+              aria-hidden="true"
+            >
+              ✓
+            </span>
+
+            <span className="bb-quantity-eyebrow">
+              Added to your cart
+            </span>
+
+            <h2 id="bb-quantity-title">
+              Ready when you are
+            </h2>
+
+            <p>
+              <strong>
+                {quantity}{" "}
+                {quantity === 1
+                  ? "item"
+                  : "items"}
+              </strong>{" "}
+              of {productName}{" "}
+              {quantity === 1
+                ? "is"
+                : "are"}{" "}
+              now in your cart.
+            </p>
+
+            <div className="bb-quantity-actions">
+              <button
+                type="button"
+                className="bb-quantity-button bb-quantity-button--primary"
+                onClick={
+                  handleViewCart
+                }
+              >
+                View Cart
+              </button>
+
+              <button
+                type="button"
+                className="bb-quantity-button bb-quantity-button--secondary"
+                onClick={onClose}
+              >
+                Keep Shopping
+              </button>
+            </div>
           </div>
-          <p style={styles.stockInfo}>Available: {maxQuantity}</p>
-          <button style={styles.addToCartButton} onClick={handleAddToCart}>
-            Add to Cart
-          </button>
-          <button style={styles.cancelButton} onClick={onClose}>
-            Cancel
-          </button>
-        </div>
-      </div>
+        ) : (
+          <>
+            <header className="bb-quantity-header">
+              <span className="bb-quantity-eyebrow">
+                Add to your cart
+              </span>
 
-      {showConfirmationModal && (
-        <ConfirmationModal
-          message={`${quantity} x ${product.name} added to your cart!`}
-          onConfirm={onViewCart}
-          onCancel={() => setShowConfirmationModal(false)}
-        />
-      )}
-    </>
+              <h2 id="bb-quantity-title">
+                Select Quantity
+              </h2>
+
+              <p>
+                Choose how many you
+                would like before adding
+                this item to your cart.
+              </p>
+            </header>
+
+            <div className="bb-quantity-product">
+              <div className="bb-quantity-product-image">
+                {productImage ? (
+                  <img
+                    src={
+                      productImage
+                    }
+                    alt=""
+                  />
+                ) : (
+                  <span
+                    aria-hidden="true"
+                  >
+                    B
+                  </span>
+                )}
+              </div>
+
+              <div className="bb-quantity-product-copy">
+                <h3>
+                  {productName}
+                </h3>
+
+                {product?.price !==
+                  undefined && (
+                  <p>
+                    $
+                    {formatPrice(
+                      product.price
+                    )}
+                    {" "}each
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {error && (
+              <p
+                className="bb-quantity-alert"
+                role="alert"
+              >
+                {error}
+              </p>
+            )}
+
+            <form
+              className="bb-quantity-form"
+              onSubmit={
+                handleAddToCart
+              }
+            >
+              <div className="bb-quantity-picker">
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateQuantity(
+                      quantity - 1
+                    )
+                  }
+                  disabled={
+                    quantity <= 1 ||
+                    isSaving ||
+                    isUnavailable
+                  }
+                  aria-label="Decrease quantity"
+                >
+                  −
+                </button>
+
+                <label>
+                  <span className="bb-quantity-sr-only">
+                    Quantity
+                  </span>
+
+                  <input
+                    type="number"
+                    min="1"
+                    max={
+                      availableQuantity
+                    }
+                    value={quantity}
+                    onChange={(
+                      event
+                    ) =>
+                      updateQuantity(
+                        event.target
+                          .value
+                      )
+                    }
+                    disabled={
+                      isSaving ||
+                      isUnavailable
+                    }
+                    inputMode="numeric"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateQuantity(
+                      quantity + 1
+                    )
+                  }
+                  disabled={
+                    quantity >=
+                      availableQuantity ||
+                    isSaving ||
+                    isUnavailable
+                  }
+                  aria-label="Increase quantity"
+                >
+                  +
+                </button>
+              </div>
+
+              <div className="bb-quantity-availability">
+                <span
+                  className={
+                    isUnavailable
+                      ? "bb-quantity-availability-dot bb-quantity-availability-dot--unavailable"
+                      : "bb-quantity-availability-dot"
+                  }
+                  aria-hidden="true"
+                />
+
+                <p>
+                  {isUnavailable
+                    ? "Currently unavailable"
+                    : `${availableQuantity} available`}
+                </p>
+              </div>
+
+              <div className="bb-quantity-total">
+                <span>
+                  Item total
+                </span>
+
+                <strong>
+                  $
+                  {formatPrice(
+                    (Number(
+                      product?.price
+                    ) || 0) *
+                      quantity
+                  )}
+                </strong>
+              </div>
+
+              <div className="bb-quantity-actions">
+                <button
+                  type="submit"
+                  className="bb-quantity-button bb-quantity-button--primary"
+                  disabled={
+                    isSaving ||
+                    isUnavailable
+                  }
+                >
+                  {isSaving ? (
+                    <>
+                      <span
+                        className="bb-quantity-spinner"
+                        aria-hidden="true"
+                      />
+                      Adding...
+                    </>
+                  ) : (
+                    "Add to Cart"
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  className="bb-quantity-button bb-quantity-button--secondary"
+                  onClick={onClose}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+      </section>
+    </div>
   );
-};
-
-const styles = {
-  backdrop: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1000,
-  },
-  modal: {
-    backgroundColor: "#ffffff",
-    borderRadius: "10px",
-    textAlign: "center",
-    padding: "30px 20px",
-    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.2)",
-    maxWidth: "400px",
-    width: "90%",
-    position: "relative",
-  },
-  heading: {
-    fontSize: "1.5rem",
-    marginBottom: "20px",
-    color: "#333",
-  },
-  quantityWrapper: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "10px",
-    marginBottom: "20px",
-  },
-  button: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color:'white',
-    padding: "0", // Reset default padding
-    fontSize: "1.5rem",
-    background: "black",
-    border: "1px solid #ccc",
-    borderRadius: "5px",
-    cursor: "pointer",
-    width: "40px",
-    height: "40px",
-    lineHeight: "1",
-   
-  },
-  input: {
-    width: "60px",
-    textAlign: "center",
-    fontSize: "1rem",
-    padding: "5px",
-    border: "1px solid #ccc",
-    borderRadius: "5px",
-    marginTop: '15px'
-  },
-  stockInfo: {
-    fontSize: "0.9rem",
-    color: "#666",
-    marginBottom: "20px",
-  },
-  addToCartButton: {
-    padding: "10px 20px",
-    background: "linear-gradient(to right, #28a745, #218838)",
-    color: "#fff",
-    fontSize: "1rem",
-    border: "none",
-    borderRadius: "5px",
-    cursor: "pointer",
-    
-    margin:'10px'
-  },
-  cancelButton: {
-    padding: "10px 20px",
-    background: "linear-gradient(to right, #dc3545, #c82333)",
-    color: "#fff",
-    fontSize: "1rem",
-    border: "none",
-    borderRadius: "5px",
-    cursor: "pointer",
-  },
 };
 
 export default QuantityModal;

@@ -1,0 +1,320 @@
+@font-face {
+    font-family: "Carnivalee Freakshow";
+    src: url("../../assets/CarnivaleeFreakshow-DLrm.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+  
+  .bb-cart-confirm-overlay,
+  .bb-cart-confirm-overlay *,
+  .bb-cart-confirm-overlay *::before,
+  .bb-cart-confirm-overlay *::after {
+    box-sizing: border-box;
+  }
+  
+  .bb-cart-confirm-overlay {
+    --bb-cart-confirm-surface: var(--container-bg, #fffaf4);
+    --bb-cart-confirm-soft: var(--bg-section, #f3e7db);
+    --bb-cart-confirm-text: var(--text-color, #3a2920);
+    --bb-cart-confirm-heading: var(--header-color, #2c1b14);
+    --bb-cart-confirm-muted: var(--about-text, #756257);
+    --bb-cart-confirm-accent: var(--btn-bg, #a85e28);
+    --bb-cart-confirm-accent-hover: var(--btn-hover, #87491d);
+    --bb-cart-confirm-border: var(--form-input-border, #dbc6b4);
+    --bb-cart-confirm-success: #347756;
+    --bb-cart-confirm-focus: #e6a765;
+  
+    position: fixed;
+    z-index: 2700;
+    inset: 0;
+  
+    display: grid;
+    place-items: center;
+  
+    overflow-y: auto;
+    padding: 18px;
+  
+    background: rgba(18, 9, 5, 0.8);
+    backdrop-filter: blur(8px);
+  
+    font-family: "Montserrat", Arial, sans-serif;
+  }
+  
+  [data-theme="dark"]
+    .bb-cart-confirm-overlay {
+    --bb-cart-confirm-surface: #241812;
+    --bb-cart-confirm-soft: #302119;
+    --bb-cart-confirm-text: #f8eee5;
+    --bb-cart-confirm-heading: #fffaf4;
+    --bb-cart-confirm-muted: #d4c0b0;
+    --bb-cart-confirm-accent: #d18a4d;
+    --bb-cart-confirm-accent-hover: #e09b5e;
+    --bb-cart-confirm-border: #513a2e;
+    --bb-cart-confirm-success: #79c99f;
+  }
+  
+  .bb-cart-confirm-modal {
+    position: relative;
+  
+    width: min(440px, 100%);
+    max-height: calc(100dvh - 36px);
+    overflow-y: auto;
+  
+    border: 1px solid var(--bb-cart-confirm-border);
+    border-radius: 21px;
+    padding: clamp(30px, 6vw, 42px);
+  
+    background:
+      radial-gradient(
+        circle at 50% 0,
+        color-mix(
+          in srgb,
+          var(--bb-cart-confirm-success) 12%,
+          transparent
+        ),
+        transparent 14rem
+      ),
+      var(--bb-cart-confirm-surface);
+  
+    color: var(--bb-cart-confirm-text);
+    box-shadow: 0 30px 100px rgba(0, 0, 0, 0.46);
+  
+    text-align: center;
+  
+    animation:
+      bb-cart-confirm-enter
+      190ms ease-out;
+  }
+  
+  .bb-cart-confirm-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+  
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+  
+    border: 1px solid var(--bb-cart-confirm-border);
+    border-radius: 999px;
+  
+    background: var(--bb-cart-confirm-soft);
+    color: var(--bb-cart-confirm-heading);
+  
+    font-size: 1.45rem;
+    line-height: 1;
+  
+    cursor: pointer;
+  
+    transition:
+      border-color 150ms ease,
+      color 150ms ease,
+      transform 150ms ease;
+  }
+  
+  .bb-cart-confirm-close:hover {
+    border-color: var(--bb-cart-confirm-accent);
+    color: var(--bb-cart-confirm-accent);
+    transform: rotate(4deg);
+  }
+  
+  .bb-cart-confirm-icon {
+    display: grid;
+    width: 64px;
+    height: 64px;
+    place-items: center;
+  
+    margin: 4px auto 22px;
+    border-radius: 999px;
+  
+    background: var(--bb-cart-confirm-success);
+    color: #ffffff;
+    box-shadow:
+      0 0 0 9px
+      color-mix(
+        in srgb,
+        var(--bb-cart-confirm-success) 15%,
+        transparent
+      );
+  
+    font-size: 1.5rem;
+    font-weight: 900;
+  }
+  
+  .bb-cart-confirm-eyebrow {
+    display: block;
+  
+    color: var(--bb-cart-confirm-accent);
+    font-size: 0.73rem;
+    font-weight: 850;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+  }
+  
+  .bb-cart-confirm-modal h2 {
+    margin: 7px 0 12px;
+  
+    color: var(--bb-cart-confirm-heading);
+    font-family: "Carnivalee Freakshow", Georgia, serif;
+    font-size: clamp(2.7rem, 8vw, 3.7rem);
+    font-weight: normal;
+    line-height: 0.95;
+    text-wrap: balance;
+  }
+  
+  .bb-cart-confirm-message {
+    margin: 0;
+    overflow-wrap: anywhere;
+  
+    color: var(--bb-cart-confirm-muted);
+    font-size: 0.92rem;
+    line-height: 1.65;
+  }
+  
+  .bb-cart-confirm-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  
+    margin-top: 23px;
+    border: 1px solid var(--bb-cart-confirm-border);
+    border-radius: 13px;
+    padding: 14px;
+  
+    background: var(--bb-cart-confirm-soft);
+  
+    text-align: left;
+  }
+  
+  .bb-cart-confirm-summary > span {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 auto;
+    place-items: center;
+  
+    border-radius: 999px;
+  
+    background: var(--bb-cart-confirm-accent);
+    color: #ffffff;
+  }
+  
+  .bb-cart-confirm-summary strong,
+  .bb-cart-confirm-summary small {
+    display: block;
+  }
+  
+  .bb-cart-confirm-summary strong {
+    color: var(--bb-cart-confirm-heading);
+    font-size: 0.82rem;
+  }
+  
+  .bb-cart-confirm-summary small {
+    margin-top: 3px;
+  
+    color: var(--bb-cart-confirm-muted);
+    font-size: 0.72rem;
+    line-height: 1.45;
+  }
+  
+  .bb-cart-confirm-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  
+    margin-top: 23px;
+  }
+  
+  .bb-cart-confirm-button {
+    min-height: 47px;
+  
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 11px 15px;
+  
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 850;
+  
+    cursor: pointer;
+  
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      transform 150ms ease;
+  }
+  
+  .bb-cart-confirm-button--primary {
+    background: var(--bb-cart-confirm-accent);
+    color: #ffffff;
+  }
+  
+  .bb-cart-confirm-button--primary:hover {
+    background: var(--bb-cart-confirm-accent-hover);
+    transform: translateY(-1px);
+  }
+  
+  .bb-cart-confirm-button--secondary {
+    border-color: var(--bb-cart-confirm-border);
+    background: var(--bb-cart-confirm-soft);
+    color: var(--bb-cart-confirm-heading);
+  }
+  
+  .bb-cart-confirm-button--secondary:hover {
+    border-color: var(--bb-cart-confirm-accent);
+    transform: translateY(-1px);
+  }
+  
+  .bb-cart-confirm-overlay
+    button:focus-visible {
+    outline: 3px solid var(--bb-cart-confirm-focus);
+    outline-offset: 3px;
+  }
+  
+  @keyframes bb-cart-confirm-enter {
+    from {
+      opacity: 0;
+      transform:
+        translateY(16px)
+        scale(0.975);
+    }
+  
+    to {
+      opacity: 1;
+      transform:
+        translateY(0)
+        scale(1);
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .bb-cart-confirm-overlay {
+      place-items: end center;
+      padding: 8px;
+    }
+  
+    .bb-cart-confirm-modal {
+      width: 100%;
+      max-height: calc(100dvh - 16px);
+  
+      border-radius: 18px;
+      padding: 34px 20px 21px;
+    }
+  }
+  
+  @media (max-width: 370px) {
+    .bb-cart-confirm-actions {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    .bb-cart-confirm-overlay * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+  
