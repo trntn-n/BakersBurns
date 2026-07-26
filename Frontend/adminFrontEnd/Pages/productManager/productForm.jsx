@@ -462,7 +462,7 @@ const ProductForm = ({ product = {}, onClose }) => {
           <header className="bb-product-form__header">
             <div>
               <p className="bb-product-form__eyebrow">
-                Product Management
+                BakersBurns Product Management
               </p>
 
               <h2
