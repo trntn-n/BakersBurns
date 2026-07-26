@@ -65,6 +65,7 @@ const googleRoutes =            require('./routes/register/googleRoutes');
 const invoiceRoutes =           require('./routes/admin/invoiceRoutes');
 const registerEventRoutes =     require('./routes/register/eventRoutes');
 const contactRoutes =           require('./routes/register/contactRoutes.js');
+const adminGalleryRoutes =      require('./routes/admin/galleryRoutes.js');
  // Assuming passport.js is in the same directory
 
 
@@ -219,6 +220,7 @@ app.use('/galleryuploads', express.static(path.join(__dirname, 'galleryuploads')
 app.use('/admin', express.static(path.join(__dirname, 'public/admin')));
 app.use('/terms-of-service', express.static(path.join(__dirname, 'public/static/terms-of-service.html')));
 app.use('/privacy-policy', express.static(path.join(__dirname, 'public/static/privacy-policy.html')));
+app.use('/admin-gallery-routes', adminAuthMiddleware('admin'), mediumSecurityRateLimiter('admin-gallery'), adminGalleryRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {
