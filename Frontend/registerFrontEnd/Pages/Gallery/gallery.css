@@ -92,12 +92,13 @@
   
     position: absolute;
     inset: 0;
+    z-index: 1;
   
     background:
       linear-gradient(
         to bottom,
-        rgba(0, 0, 0, 0.04),
-        rgba(0, 0, 0, 0.25)
+        rgba(16, 10, 7, 0.18),
+        rgba(16, 10, 7, 0.46)
       );
   
     pointer-events: none;
@@ -106,6 +107,7 @@
   .bb-gallery-hero-grid {
     position: absolute;
     inset: 0;
+    z-index: 0;
   
     opacity: 0.11;
   
@@ -131,6 +133,7 @@
   
   .bb-gallery-hero-glow {
     position: absolute;
+    z-index: 1;
   
     border-radius: 50%;
   
@@ -212,23 +215,6 @@
     color: rgba(255, 255, 255, 0.77);
     font-size: clamp(1rem, 2vw, 1.16rem);
     line-height: 1.75;
-  }
-  
-  .bb-gallery-collage {
-    position: relative;
-  
-    width: min(100%, 580px);
-    max-height: 150px;
-    overflow: hidden;
-  
-    margin-top: 30px;
-  
-    opacity: 0.84;
-    pointer-events: none;
-  }
-  
-  .bb-gallery-collage img {
-    max-width: 100%;
   }
   
   .bb-gallery-content {
@@ -766,10 +752,6 @@
       padding:
         112px 17px
         62px;
-    }
-  
-    .bb-gallery-collage {
-      max-height: 110px;
     }
   
     .bb-gallery-section-heading {
