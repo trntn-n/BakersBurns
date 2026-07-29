@@ -794,84 +794,86 @@ const createEventCheckoutSession =
           'true',
       };
 
-      const lineItems =
-        holdSelections.map(
-          (selection) => ({
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name:
-                  `${eventName} — ` +
+      const lineItems = holdSelections.map(
+        (selection) => ({
+          price_data: {
+            currency: 'usd',
+      
+            product_data: {
+              name:
+                `${eventName} — ${selection.occurrenceDate}`,
+      
+              description: eventDescription,
+      
+              // Hat/art object that the customer keeps
+              tax_code: 'txcd_99999999',
+      
+              ...(eventImageUrl
+                ? {
+                    images: [eventImageUrl],
+                  }
+                : {}),
+      
+              metadata: {
+                eventId: String(eventRecord.id),
+                occurrenceId: String(
+                  selection.occurrenceId
+                ),
+                occurrenceDate:
                   selection.occurrenceDate,
-                description:
-                  eventDescription,
-                ...(eventImageUrl
-                  ? {
-                      images: [
-                        eventImageUrl,
-                      ],
-                    }
-                  : {}),
-                metadata: {
-                  eventId: String(
-                    eventRecord.id
-                  ),
-                  occurrenceId:
-                    String(
-                      selection
-                        .occurrenceId
-                    ),
-                  occurrenceDate:
-                    selection
-                      .occurrenceDate,
-                },
               },
-              unit_amount:
-                selection.unitAmount,
             },
-            quantity:
-              selection.quantity,
-          })
-        );
+      
+            unit_amount: selection.unitAmount,
+          },
+      
+          quantity: selection.quantity,
+        })
+      );
 
       /*
        * This creates a direct charge on
        * the selected connected account.
        */
       const checkoutSession =
-        await stripe.checkout.sessions.create(
-          {
-            mode: 'payment',
-            payment_method_types: [
-              'card',
-            ],
-            line_items: lineItems,
-            metadata:
-              stripeMetadata,
-            payment_intent_data: {
-              metadata:
-                stripeMetadata,
-            },
-            expires_at: Math.floor(
-              holdExpiresAt.getTime() /
-                1000
-            ),
-            success_url:
-              `${registerFrontend}/event-checkout-success` +
-              '?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url:
-              `${registerFrontend}/events/${eventRecord.id}` +
-              '?checkout=cancelled&session_id={CHECKOUT_SESSION_ID}',
-            billing_address_collection:
-              'required',
-          },
-          {
-            stripeAccount:
-              connectedAccountId,
-            idempotencyKey:
-              `event-hold-${holdToken}`,
-          }
-        );
+  await stripe.checkout.sessions.create(
+      {
+        mode: 'payment',
+
+        payment_method_types: ['card'],
+
+        line_items: lineItems,
+
+        automatic_tax: {
+          enabled: true,
+        },
+
+        billing_address_collection: 'required',
+
+        metadata: stripeMetadata,
+
+        payment_intent_data: {
+          metadata: stripeMetadata,
+        },
+
+        expires_at: Math.floor(
+          holdExpiresAt.getTime() / 1000
+        ),
+
+        success_url:
+          `${registerFrontend}/event-checkout-success` +
+          '?session_id={CHECKOUT_SESSION_ID}',
+
+        cancel_url:
+          `${registerFrontend}/events/${eventRecord.id}` +
+          '?checkout=cancelled&session_id={CHECKOUT_SESSION_ID}',
+      },
+      {
+        stripeAccount: connectedAccountId,
+        idempotencyKey:
+          `event-hold-${holdToken}`,
+      }
+    );
 
       if (
         !checkoutSession?.id ||
